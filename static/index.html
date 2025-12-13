@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ESP Desk Dashboard</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="background-glow"></div>
+    <div class="container">
+      <header class="header">
+        <div class="logo">
+          <span class="icon">🖥️</span>
+          <h1>ESP Desk</h1>
+        </div>
+        <div class="status-pill status-online">
+          <span class="dot"></span> SYSTEM ONLINE
+        </div>
+      </header>
+
+      <main class="grid-layout">
+        <!-- Preview Section -->
+        <section class="card preview-section">
+          <div class="card-header">
+            <h2>Live Preview</h2>
+            <span class="badge">128x64</span>
+          </div>
+          <div class="canvas-wrapper">
+            <canvas id="preview" width="512" height="256"></canvas>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-secondary" onclick="nextFrame()">
+              Skip Frame ⏭
+            </button>
+          </div>
+        </section>
+
+        <!-- Control Section -->
+        <section class="card control-section">
+          <div class="card-header">
+            <h2>Custom Message</h2>
+            <span class="badge" id="mode-badge">Auto Mode</span>
+          </div>
+          <div class="input-group">
+            <label for="customText">Enter your message:</label>
+            <textarea
+              id="customText"
+              placeholder="Type something cool..."
+              rows="3"
+              maxlength="50"
+            ></textarea>
+          </div>
+          <div class="action-row">
+            <button class="btn btn-primary" onclick="sendCustom()">
+              🚀 Display Now
+            </button>
+            <button class="btn btn-danger" onclick="resetSystem()">
+              🔄 Reset Logic
+            </button>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="js/app.js"></script>
+  </body>
+</html>
