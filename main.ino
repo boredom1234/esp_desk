@@ -42,6 +42,12 @@ void drawFrame(JsonDocument& doc) {
       int size = el["size"] | 1;
       const char* value = el["value"];
 
+      // Screen boundary check (Rule #8)
+      if (x < 0) x = 0;
+      if (x > 127) x = 127;
+      if (y < 0) y = 0;
+      if (y > 63) y = 63;
+
       display.setTextSize(size);
       display.setTextColor(SSD1306_WHITE);
       display.setCursor(x, y);
@@ -52,6 +58,14 @@ void drawFrame(JsonDocument& doc) {
       int y = el["y"] | 0;
       int w = el["width"] | 0;
       int h = el["height"] | 0;
+      
+      // Screen boundary check (Rule #8)
+      if (x < 0) x = 0;
+      if (y < 0) y = 0;
+      // Clamp dimensions to screen bounds
+      if (x + w > 128) w = 128 - x;
+      if (y + h > 64) h = 64 - y;
+      if (w <= 0 || h <= 0) continue;
       
       // Copy data from JSON array to byte buffer
       JsonArray data = el["bitmap"];
@@ -65,6 +79,22 @@ void drawFrame(JsonDocument& doc) {
         }
         display.drawBitmap(x, y, bmp, w, h, SSD1306_WHITE);
       }
+    }
+    else if (strcmp(type, "line") == 0) {
+      // Decorative lines for frames/borders
+      int x = el["x"] | 0;
+      int y = el["y"] | 0;
+      int w = el["width"] | 1;
+      int h = el["height"] | 1;
+      
+      // Screen boundary check
+      if (x < 0) x = 0;
+      if (y < 0) y = 0;
+      if (x + w > 128) w = 128 - x;
+      if (y + h > 64) h = 64 - y;
+      
+      // Draw filled rectangle for line
+      display.fillRect(x, y, w, h, SSD1306_WHITE);
     }
   }
 
@@ -82,8 +112,8 @@ int fetchFrame(const char* url) {
     return 1000;
   }
 
-  // Increased buffer size to 4096 to handle larger JSON with bitmaps
-  StaticJsonDocument<4096> doc;
+  // Increased buffer size to 8192 for large GIF animations
+  StaticJsonDocument<8192> doc;
   deserializeJson(doc, http.getString());
   http.end();
 
@@ -112,8 +142,24 @@ void setup() {
 }
 
 void loop() {
-  // Only fetch next frame. 
-  // This reduces network lag by 50% compared to fetching current+next.
+  // WiFi reconnection check
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi lost, reconnecting...");
+    WiFi.disconnect();
+    WiFi.begin(ssid, password);
+    int retries = 0;
+    while (WiFi.status() != WL_CONNECTED && retries < 20) {
+      delay(500);
+      retries++;
+    }
+    if (WiFi.status() != WL_CONNECTED) {
+      delay(5000); // Wait before retry
+      return;
+    }
+    Serial.println("WiFi reconnected");
+  }
+
+  // Only fetch next frame
   int duration = fetchFrame(FRAME_NEXT_URL);
   delay(duration);
 }

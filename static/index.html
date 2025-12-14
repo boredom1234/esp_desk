@@ -3,100 +3,266 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ESP Desk Dashboard</title>
+    <title>ESP Desk_OS | Control Dashboard</title>
+    <meta name="description" content="ESP32 OLED Display Control Dashboard" />
     <link rel="stylesheet" href="css/style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
   </head>
   <body>
     <div class="container">
+      <!-- Header -->
       <header class="header">
         <div class="logo">
-          <span class="icon">💠</span>
-          <h1>ESP Desk_OS</h1>
+          <span class="icon">◇</span>
+          <h1>ESP DESK_OS</h1>
         </div>
-        <div class="status-pill status-online">
-          <span class="dot"></span> ONLINE
+        <div class="status-pill">
+          <span class="dot"></span>
+          <span id="systemStatus">ONLINE</span>
         </div>
       </header>
 
+      <!-- Main Grid -->
       <main class="grid-layout">
-        <!-- Preview Section -->
+        <!-- Visual Feed -->
         <section class="card preview-section">
           <div class="card-header">
-            <h2>VISUAL FEED</h2>
-            <span class="badge">128x64 px</span>
+            <h2>Visual Feed</h2>
+            <div class="badge-group">
+              <span class="badge" id="frameBadge">Frame 1/1</span>
+              <span class="badge" id="mode-badge">AUTO</span>
+            </div>
           </div>
           <div class="canvas-wrapper">
             <canvas id="preview" width="512" height="256"></canvas>
           </div>
           <div class="card-actions">
-            <button class="btn btn-secondary" onclick="nextFrame()">
-              NEXT_FRAME >>
-            </button>
+            <div class="action-row">
+              <button class="btn btn-secondary" onclick="nextFrame()">
+                ◀ Prev
+              </button>
+              <button
+                class="btn btn-primary"
+                id="autoPlayBtn"
+                onclick="toggleAutoPlay()"
+              >
+                ▶ Auto-Play
+              </button>
+              <button class="btn btn-secondary" onclick="nextFrame()">
+                Next ▶
+              </button>
+            </div>
+            <div class="slider-group">
+              <label>Speed: <span id="speedValue">200ms</span></label>
+              <input
+                type="range"
+                id="speedSlider"
+                min="50"
+                max="1000"
+                value="200"
+                oninput="updateSpeed(this.value)"
+              />
+            </div>
           </div>
         </section>
 
-        <!-- Control Section -->
+        <!-- Quick Text -->
         <section class="card control-section">
           <div class="card-header">
-            <h2>COMMAND_LINE</h2>
-            <span class="badge" id="mode-badge">AUTO_SEQ</span>
+            <h2>Quick Text</h2>
           </div>
           <div class="input-group">
-            <label for="customText">INPUT_MESSAGE_DATA:</label>
+            <label for="customText">Message</label>
             <textarea
               id="customText"
-              placeholder="> ENTER TEXT STREAM..."
-              rows="3"
+              placeholder="Enter display text..."
+              rows="2"
               maxlength="50"
             ></textarea>
           </div>
+          <div class="style-selector">
+            <button
+              class="style-btn active"
+              data-style="normal"
+              onclick="selectStyle('normal')"
+            >
+              Normal
+            </button>
+            <button
+              class="style-btn"
+              data-style="centered"
+              onclick="selectStyle('centered')"
+            >
+              Centered
+            </button>
+            <button
+              class="style-btn"
+              data-style="framed"
+              onclick="selectStyle('framed')"
+            >
+              Framed
+            </button>
+          </div>
           <div class="action-row">
-            <button class="btn btn-primary" onclick="sendCustom()">
-              [ EXECUTE ]
+            <button class="btn btn-primary" onclick="sendCustomText()">
+              Display
             </button>
             <button class="btn btn-danger" onclick="resetSystem()">
-              [ RESTORE_DEFAULT ]
+              Reset
             </button>
           </div>
         </section>
 
-        <!-- System Config Section -->
-        <section class="card config-section" style="margin-top: 1.5rem">
+        <!-- Marquee Text -->
+        <section class="card control-section">
           <div class="card-header">
-            <h2>SYSTEM_CONFIG</h2>
-          </div>
-          <div class="action-row">
-            <button
-              class="btn btn-secondary"
-              id="toggleHeadersBtn"
-              onclick="toggleHeaders()"
-            >
-              [ HEADERS: ON ]
-            </button>
-          </div>
-        </section>
-
-        <!-- Image Upload Section -->
-        <section class="card control-section" style="margin-top: 1.5rem">
-          <div class="card-header">
-            <h2>MEDIA_UPLOAD</h2>
+            <h2>Marquee / Scrolling Text</h2>
           </div>
           <div class="input-group">
-            <label for="imageUpload">SOURCE_FILE [ PNG / JPG / GIF ]</label>
+            <label for="marqueeText">Scrolling Message</label>
+            <input
+              type="text"
+              id="marqueeText"
+              placeholder="This text will scroll across the display..."
+              maxlength="100"
+            />
+          </div>
+          <div class="options-grid">
+            <div class="option-group">
+              <label>Direction</label>
+              <div class="button-toggle">
+                <button
+                  class="toggle-btn active"
+                  id="dirLeft"
+                  onclick="setDirection('left')"
+                >
+                  ← Left
+                </button>
+                <button
+                  class="toggle-btn"
+                  id="dirRight"
+                  onclick="setDirection('right')"
+                >
+                  Right →
+                </button>
+              </div>
+            </div>
+            <div class="option-group">
+              <label>Size</label>
+              <div class="button-toggle">
+                <button
+                  class="toggle-btn"
+                  data-size="1"
+                  onclick="setMarqueeSize(1)"
+                >
+                  1x
+                </button>
+                <button
+                  class="toggle-btn active"
+                  data-size="2"
+                  onclick="setMarqueeSize(2)"
+                >
+                  2x
+                </button>
+                <button
+                  class="toggle-btn"
+                  data-size="3"
+                  onclick="setMarqueeSize(3)"
+                >
+                  3x
+                </button>
+              </div>
+            </div>
+            <div class="option-group">
+              <label>Speed: <span id="marqueeSpeedVal">3</span>px/frame</label>
+              <input
+                type="range"
+                id="marqueeSpeed"
+                min="1"
+                max="8"
+                value="3"
+                oninput="document.getElementById('marqueeSpeedVal').textContent=this.value"
+              />
+            </div>
+          </div>
+          <div class="action-row">
+            <button class="btn btn-primary" onclick="sendMarquee()">
+              Start Marquee
+            </button>
+          </div>
+        </section>
+
+        <!-- Media Upload -->
+        <section class="card control-section">
+          <div class="card-header">
+            <h2>Media Upload</h2>
+          </div>
+          <div class="input-group">
+            <label for="imageUpload">Image / GIF (Auto-animates)</label>
             <input type="file" id="imageUpload" accept="image/*" />
           </div>
           <div class="action-row">
             <button class="btn btn-primary" onclick="processAndUploadImage()">
-              [ UPLOAD_TO_VRAM ]
+              Upload
             </button>
+          </div>
+        </section>
+
+        <!-- Settings -->
+        <section class="card config-section">
+          <div class="card-header">
+            <h2>Settings</h2>
+          </div>
+          <div class="settings-grid">
+            <div class="setting-item">
+              <span>Show Headers</span>
+              <button
+                class="toggle-switch"
+                id="headersToggle"
+                onclick="toggleHeaders()"
+              >
+                <span class="toggle-indicator"></span>
+              </button>
+            </div>
+            <div class="setting-item city-setting">
+              <span>Weather City</span>
+              <select id="citySelect" onchange="changeCity()">
+                <optgroup label="India">
+                  <option value="22.57,88.36,Kolkata" selected>Kolkata</option>
+                  <option value="28.61,77.21,New Delhi">New Delhi</option>
+                  <option value="19.08,72.88,Mumbai">Mumbai</option>
+                  <option value="13.08,80.27,Chennai">Chennai</option>
+                  <option value="12.97,77.59,Bangalore">Bangalore</option>
+                  <option value="17.39,78.49,Hyderabad">Hyderabad</option>
+                  <option value="23.02,72.57,Ahmedabad">Ahmedabad</option>
+                  <option value="26.85,80.95,Lucknow">Lucknow</option>
+                  <option value="18.52,73.86,Pune">Pune</option>
+                </optgroup>
+                <optgroup label="World">
+                  <option value="40.71,-74.01,New York">New York</option>
+                  <option value="51.51,-0.13,London">London</option>
+                  <option value="35.68,139.69,Tokyo">Tokyo</option>
+                  <option value="48.86,2.35,Paris">Paris</option>
+                  <option value="1.35,103.82,Singapore">Singapore</option>
+                  <option value="25.20,55.27,Dubai">Dubai</option>
+                  <option value="-33.87,151.21,Sydney">Sydney</option>
+                  <option value="55.76,37.62,Moscow">Moscow</option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="setting-item weather-display" id="weatherDisplay">
+              <span class="weather-info">Loading weather...</span>
+            </div>
           </div>
         </section>
       </main>
     </div>
+
     <script src="js/app.js"></script>
   </body>
 </html>
