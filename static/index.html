@@ -213,7 +213,6 @@
           </div>
         </section>
 
-        <!-- Settings -->
         <section class="card config-section">
           <div class="card-header">
             <h2>Settings</h2>
@@ -228,6 +227,21 @@
               >
                 <span class="toggle-indicator"></span>
               </button>
+            </div>
+            <div class="setting-item esp-refresh-setting">
+              <span>ESP Refresh Rate</span>
+              <div class="slider-inline">
+                <input
+                  type="range"
+                  id="espRefreshSlider"
+                  min="500"
+                  max="10000"
+                  step="500"
+                  value="3000"
+                  oninput="updateEspRefresh(this.value)"
+                />
+                <span id="espRefreshValue">3.0s</span>
+              </div>
             </div>
             <div class="setting-item city-setting">
               <span>Weather City</span>

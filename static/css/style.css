@@ -658,6 +658,36 @@ input[type="file"]::file-selector-button {
   background: #000;
 }
 
+/* ESP Refresh Slider */
+.esp-refresh-setting {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.slider-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 140px;
+}
+
+.slider-inline input[type="range"] {
+  flex: 1;
+  min-width: 80px;
+}
+
+.slider-inline span {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent-primary) !important;
+  background: rgba(0, 212, 255, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  min-width: 40px;
+  text-align: center;
+}
+
 /* City Select */
 .city-setting {
   flex-wrap: wrap;

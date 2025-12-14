@@ -15,6 +15,7 @@ ctx.scale(scale, scale);
 let autoPlayEnabled = true;
 let autoPlayInterval = null;
 let frameSpeed = 200;
+let espRefreshDuration = 3000;
 let settings = {};
 let marqueeDirection = "left";
 let marqueeSize = 2;
@@ -112,8 +113,13 @@ function loadSettings() {
       settings = data;
       autoPlayEnabled = data.autoPlay;
       frameSpeed = data.frameDuration || 200;
+      espRefreshDuration = data.espRefreshDuration || 3000;
       document.getElementById("speedSlider").value = frameSpeed;
       document.getElementById("speedValue").textContent = `${frameSpeed}ms`;
+      document.getElementById("espRefreshSlider").value = espRefreshDuration;
+      document.getElementById("espRefreshValue").textContent = `${(
+        espRefreshDuration / 1000
+      ).toFixed(1)}s`;
       updateAutoPlayButton();
       updateHeadersToggle(data.showHeaders);
     })
@@ -326,6 +332,20 @@ function toggleHeaders() {
       loadCurrent();
     })
     .catch(() => {});
+}
+
+function updateEspRefresh(value) {
+  espRefreshDuration = parseInt(value);
+  document.getElementById("espRefreshValue").textContent = `${(
+    espRefreshDuration / 1000
+  ).toFixed(1)}s`;
+
+  // Save to server
+  fetch("/api/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ espRefreshDuration: espRefreshDuration }),
+  }).catch(() => {});
 }
 
 function updateHeadersToggle(isOn) {

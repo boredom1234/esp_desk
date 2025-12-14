@@ -39,11 +39,12 @@ type Frame struct {
 }
 
 type Settings struct {
-	AutoPlay      bool `json:"autoPlay"`
-	FrameDuration int  `json:"frameDuration"`
-	ShowHeaders   bool `json:"showHeaders"`
-	FrameCount    int  `json:"frameCount"`
-	CurrentIndex  int  `json:"currentIndex"`
+	AutoPlay           bool `json:"autoPlay"`
+	FrameDuration      int  `json:"frameDuration"`
+	EspRefreshDuration int  `json:"espRefreshDuration"`
+	ShowHeaders        bool `json:"showHeaders"`
+	FrameCount         int  `json:"frameCount"`
+	CurrentIndex       int  `json:"currentIndex"`
 }
 
 type WeatherResponse struct {
@@ -70,14 +71,15 @@ type WeatherData struct {
 // ==========================================
 
 var (
-	frames        []Frame
-	index         int
-	mutex         sync.Mutex
-	startTime     time.Time
-	isCustomMode  bool = false
-	showHeaders   bool = true
-	autoPlay      bool = true
-	frameDuration int  = 200
+	frames             []Frame
+	index              int
+	mutex              sync.Mutex
+	startTime          time.Time
+	isCustomMode       bool = false
+	showHeaders        bool = true
+	autoPlay           bool = true
+	frameDuration      int  = 200
+	espRefreshDuration int  = 3000 // Duration ESP32 waits before fetching next frame (ms)
 
 	// Weather state
 	currentCity string  = "Kolkata"
@@ -105,8 +107,12 @@ func currentFrame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Create a copy of the frame with ESP refresh duration
+	frame := frames[index]
+	frame.Duration = espRefreshDuration
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(frames[index])
+	json.NewEncoder(w).Encode(frame)
 }
 
 func nextFrame(w http.ResponseWriter, r *http.Request) {
@@ -118,8 +124,13 @@ func nextFrame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	index = (index + 1) % len(frames)
+
+	// Create a copy of the frame with ESP refresh duration
+	frame := frames[index]
+	frame.Duration = espRefreshDuration
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(frames[index])
+	json.NewEncoder(w).Encode(frame)
 }
 
 func handleFrames(w http.ResponseWriter, r *http.Request) {
@@ -149,11 +160,12 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		mutex.Lock()
 		settings := Settings{
-			AutoPlay:      autoPlay,
-			FrameDuration: frameDuration,
-			ShowHeaders:   showHeaders,
-			FrameCount:    len(frames),
-			CurrentIndex:  index,
+			AutoPlay:           autoPlay,
+			FrameDuration:      frameDuration,
+			EspRefreshDuration: espRefreshDuration,
+			ShowHeaders:        showHeaders,
+			FrameCount:         len(frames),
+			CurrentIndex:       index,
 		}
 		mutex.Unlock()
 		json.NewEncoder(w).Encode(settings)
@@ -162,9 +174,10 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		var req struct {
-			AutoPlay      *bool `json:"autoPlay,omitempty"`
-			FrameDuration *int  `json:"frameDuration,omitempty"`
-			ShowHeaders   *bool `json:"showHeaders,omitempty"`
+			AutoPlay           *bool `json:"autoPlay,omitempty"`
+			FrameDuration      *int  `json:"frameDuration,omitempty"`
+			EspRefreshDuration *int  `json:"espRefreshDuration,omitempty"`
+			ShowHeaders        *bool `json:"showHeaders,omitempty"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -184,15 +197,25 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 				frameDuration = 5000
 			}
 		}
+		if req.EspRefreshDuration != nil {
+			espRefreshDuration = *req.EspRefreshDuration
+			if espRefreshDuration < 500 {
+				espRefreshDuration = 500
+			}
+			if espRefreshDuration > 30000 {
+				espRefreshDuration = 30000
+			}
+		}
 		if req.ShowHeaders != nil {
 			showHeaders = *req.ShowHeaders
 		}
 		settings := Settings{
-			AutoPlay:      autoPlay,
-			FrameDuration: frameDuration,
-			ShowHeaders:   showHeaders,
-			FrameCount:    len(frames),
-			CurrentIndex:  index,
+			AutoPlay:           autoPlay,
+			FrameDuration:      frameDuration,
+			EspRefreshDuration: espRefreshDuration,
+			ShowHeaders:        showHeaders,
+			FrameCount:         len(frames),
+			CurrentIndex:       index,
 		}
 		mutex.Unlock()
 
@@ -461,6 +484,7 @@ func handleReset(w http.ResponseWriter, r *http.Request) {
 	showHeaders = true
 	autoPlay = true
 	frameDuration = 200
+	espRefreshDuration = 3000
 	currentCity = "Kolkata"
 	cityLat = 22.57
 	cityLng = 88.36
