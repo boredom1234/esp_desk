@@ -9,6 +9,7 @@ import (
 	_ "image/png"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 )
@@ -713,8 +714,12 @@ func main() {
 	http.HandleFunc("/api/settings/headers-state", loggingMiddleware(handleGetHeadersState))
 	http.HandleFunc("/api/weather", loggingMiddleware(handleWeather))
 
-	log.Println("ESP Desk Backend v4 running on :3000")
-	log.Fatal(http.ListenAndServe(":3000", nil))
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3000"
+	}
+	log.Printf("ESP Desk Backend v4 running on :%s", port)
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
 // ==========================================
