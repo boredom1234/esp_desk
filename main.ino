@@ -18,6 +18,9 @@ const char* FRAME_NEXT_URL    = "https://vqxh0hd3-3000.inc1.devtunnels.ms/frame/
 #define OLED_RESET    -1
 #define OLED_ADDRESS  0x3C
 
+// ===== STATUS LED =====
+#define LED_PIN 2  // Built-in LED on most ESP32 boards (GPIO 2)
+
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // ===== FRAME STRUCT =====
@@ -103,12 +106,16 @@ void drawFrame(JsonDocument& doc) {
 
 // ===== FUNCTION: FETCH FRAME =====
 int fetchFrame(const char* url) {
+  // Turn LED ON - fetching data
+  digitalWrite(LED_PIN, HIGH);
+  
   HTTPClient http;
   http.begin(url);
   int code = http.GET();
 
   if (code != 200) {
     http.end();
+    digitalWrite(LED_PIN, LOW);  // Turn LED OFF
     return 1000;
   }
 
@@ -118,6 +125,9 @@ int fetchFrame(const char* url) {
   http.end();
 
   drawFrame(doc);
+  
+  // Turn LED OFF - fetch complete
+  digitalWrite(LED_PIN, LOW);
 
   return doc["duration"] | 3000;
 }
@@ -125,6 +135,10 @@ int fetchFrame(const char* url) {
 void setup() {
   Serial.begin(115200);
   Wire.begin();
+  
+  // Status LED init
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
 
   // OLED init
   if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDRESS)) {

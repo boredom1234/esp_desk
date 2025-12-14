@@ -433,6 +433,182 @@ input[type="file"]::file-selector-button {
 }
 
 /* ============================================
+   DROP ZONE
+   ============================================ */
+.drop-zone {
+  position: relative;
+  padding: 2rem 1.5rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 2px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 1rem;
+  outline: none;
+}
+
+.drop-zone::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.drop-zone:hover,
+.drop-zone:focus {
+  border-color: var(--accent-primary);
+  background: rgba(0, 212, 255, 0.05);
+}
+
+.drop-zone:hover::before,
+.drop-zone:focus::before {
+  opacity: 0.1;
+}
+
+/* Drag over state */
+.drop-zone.drag-over {
+  border-color: transparent;
+  background: rgba(0, 212, 255, 0.1);
+  transform: scale(1.02);
+}
+
+.drop-zone.drag-over::before {
+  opacity: 0.2;
+}
+
+.drop-zone.drag-over .drop-zone-icon {
+  transform: scale(1.2);
+  filter: drop-shadow(0 0 12px var(--accent-primary));
+}
+
+/* Uploading state */
+.drop-zone.uploading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.drop-zone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.drop-zone-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+  transition: all 0.3s;
+  filter: grayscale(0.3);
+}
+
+.drop-zone:hover .drop-zone-icon {
+  filter: none;
+}
+
+.drop-zone-text {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.drop-zone-text strong {
+  color: var(--accent-primary);
+}
+
+.drop-zone-hint {
+  margin: 0;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+/* Upload Preview */
+.upload-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(0, 212, 255, 0.08);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: var(--radius-sm);
+  margin-bottom: 1rem;
+}
+
+.upload-preview img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #000;
+  image-rendering: pixelated;
+}
+
+.preview-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.preview-info span {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-clear {
+  background: rgba(255, 51, 102, 0.2);
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  color: var(--accent-danger);
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-clear:hover {
+  background: var(--accent-danger);
+  color: #000;
+}
+
+/* Upload status badge states */
+#uploadStatus.uploading {
+  background: rgba(255, 170, 0, 0.15);
+  border-color: rgba(255, 170, 0, 0.3);
+  color: var(--accent-warning);
+  animation: pulse-status 1s ease-in-out infinite;
+}
+
+#uploadStatus.success {
+  background: rgba(0, 255, 163, 0.15);
+  border-color: rgba(0, 255, 163, 0.3);
+  color: var(--accent-success);
+}
+
+#uploadStatus.error {
+  background: rgba(255, 51, 102, 0.15);
+  border-color: rgba(255, 51, 102, 0.3);
+  color: var(--accent-danger);
+}
+
+@keyframes pulse-status {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ============================================
    STYLE SELECTOR
    ============================================ */
 .style-selector {
@@ -602,6 +778,26 @@ input[type="file"]::file-selector-button {
   color: #000;
   border: none;
   font-weight: 700;
+}
+
+/* Refresh Pulse - visual indicator when new data arrives */
+#mode-badge.refresh-pulse {
+  animation: refresh-pulse 0.3s ease-out;
+}
+
+@keyframes refresh-pulse {
+  0% { 
+    box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.4);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 12px 4px rgba(0, 212, 255, 0.3);
+    transform: scale(1.05);
+  }
+  100% { 
+    box-shadow: 0 0 0 0 rgba(0, 212, 255, 0);
+    transform: scale(1);
+  }
 }
 
 /* ============================================

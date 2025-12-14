@@ -201,10 +201,28 @@
         <section class="card control-section">
           <div class="card-header">
             <h2>Media Upload</h2>
+            <span class="badge" id="uploadStatus">Ready</span>
           </div>
-          <div class="input-group">
-            <label for="imageUpload">Image / GIF (Auto-animates)</label>
-            <input type="file" id="imageUpload" accept="image/*" />
+          <div class="drop-zone" id="dropZone" tabindex="0">
+            <div class="drop-zone-content">
+              <div class="drop-zone-icon">📁</div>
+              <p class="drop-zone-text">
+                <strong>Drop image here</strong> or click to browse
+              </p>
+              <p class="drop-zone-hint">
+                Supports PNG, JPG, GIF • Paste with Ctrl+V
+              </p>
+            </div>
+            <input type="file" id="imageUpload" accept="image/*" hidden />
+          </div>
+          <div class="upload-preview" id="uploadPreview" style="display: none">
+            <img id="previewThumbnail" alt="Preview" />
+            <div class="preview-info">
+              <span id="previewFileName">filename.png</span>
+              <button class="btn-clear" onclick="clearUploadPreview()">
+                ✕
+              </button>
+            </div>
           </div>
           <div class="action-row">
             <button class="btn btn-primary" onclick="processAndUploadImage()">
