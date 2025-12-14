@@ -229,6 +229,25 @@
               Upload
             </button>
           </div>
+          <div class="gif-fps-control">
+            <label>GIF Playback: <span id="gifFpsValue">Original</span></label>
+            <div class="fps-slider-row">
+              <input
+                type="range"
+                id="gifFpsSlider"
+                min="0"
+                max="30"
+                value="0"
+                oninput="updateGifFps(this.value)"
+              />
+              <button class="btn btn-small" onclick="resetGifFps()">
+                Reset
+              </button>
+            </div>
+            <small class="fps-hint"
+              >0 = Use original timing, 5-30 = Override FPS</small
+            >
+          </div>
         </section>
 
         <section class="card config-section">
@@ -289,6 +308,68 @@
             </div>
             <div class="setting-item weather-display" id="weatherDisplay">
               <span class="weather-info">Loading weather...</span>
+            </div>
+            <div class="setting-item display-cycle-setting">
+              <div class="display-cycle-header">
+                <span>Display Cycle</span>
+                <small>Drag to reorder • Add custom items</small>
+              </div>
+              <div class="display-cycle-list" id="displayCycleList">
+                <!-- Items will be dynamically generated -->
+              </div>
+              <div class="cycle-add-controls">
+                <select id="addItemType">
+                  <option value="time">🕐 Time Widget</option>
+                  <option value="weather">🌤 Weather Widget</option>
+                  <option value="uptime">⏱ Uptime Widget</option>
+                  <option value="text">💬 Custom Text</option>
+                  <option value="image">🖼 Saved Image</option>
+                </select>
+                <button class="btn btn-small btn-add" onclick="addCycleItem()">
+                  + Add
+                </button>
+              </div>
+              <div
+                class="text-item-config"
+                id="textItemConfig"
+                style="display: none"
+              >
+                <input
+                  type="text"
+                  id="newItemText"
+                  placeholder="Enter text message..."
+                  maxlength="30"
+                />
+                <div class="text-style-options">
+                  <button
+                    class="style-mini-btn active"
+                    data-style="normal"
+                    onclick="setNewItemStyle('normal')"
+                  >
+                    Normal
+                  </button>
+                  <button
+                    class="style-mini-btn"
+                    data-style="centered"
+                    onclick="setNewItemStyle('centered')"
+                  >
+                    Center
+                  </button>
+                  <button
+                    class="style-mini-btn"
+                    data-style="framed"
+                    onclick="setNewItemStyle('framed')"
+                  >
+                    Frame
+                  </button>
+                </div>
+                <button
+                  class="btn btn-primary btn-small"
+                  onclick="confirmAddText()"
+                >
+                  Add Text
+                </button>
+              </div>
             </div>
           </div>
         </section>

@@ -11,6 +11,7 @@ const char* password = "";
 // ===== BACKEND =====
 const char* FRAME_CURRENT_URL = "https://vqxh0hd3-3000.inc1.devtunnels.ms/frame/current";
 const char* FRAME_NEXT_URL    = "https://vqxh0hd3-3000.inc1.devtunnels.ms/frame/next";
+const char* GIF_FULL_URL      = "https://vqxh0hd3-3000.inc1.devtunnels.ms/api/gif/full";
 
 // ===== OLED =====
 #define SCREEN_WIDTH 128
@@ -23,12 +24,26 @@ const char* FRAME_NEXT_URL    = "https://vqxh0hd3-3000.inc1.devtunnels.ms/frame/
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-// ===== FRAME STRUCT =====
-struct Frame {
-  int duration;
-};
+// ===== GIF LOCAL PLAYBACK =====
+// Each frame is stored as bitmap data (1024 bytes for 128x64 1-bit)
+#define MAX_GIF_FRAMES 50       // Limit to ~50KB of RAM for bitmaps
+#define BYTES_PER_FRAME 1024    // 128x64 / 8 = 1024 bytes per frame
 
-// ===== FUNCTION: DRAW FRAME =====
+uint8_t gifFrames[MAX_GIF_FRAMES][BYTES_PER_FRAME];
+int gifDurations[MAX_GIF_FRAMES];
+int gifFrameCount = 0;
+bool isGifMode = false;
+unsigned long lastGifCheck = 0;
+const unsigned long GIF_CHECK_INTERVAL = 5000;  // Check for new GIF every 5 seconds
+
+// ===== FUNCTION: DRAW BITMAP FROM BUFFER =====
+void drawBitmapFromBuffer(const uint8_t* bitmap) {
+  display.clearDisplay();
+  display.drawBitmap(0, 0, bitmap, 128, 64, SSD1306_WHITE);
+  display.display();
+}
+
+// ===== FUNCTION: DRAW FRAME FROM JSON =====
 void drawFrame(JsonDocument& doc) {
   if (doc["clear"] == true) {
     display.clearDisplay();
@@ -104,9 +119,112 @@ void drawFrame(JsonDocument& doc) {
   display.display();
 }
 
-// ===== FUNCTION: FETCH FRAME =====
+// ===== FUNCTION: FETCH FULL GIF =====
+// Downloads all GIF frames at once and stores them in RAM for local playback
+bool fetchFullGif() {
+  digitalWrite(LED_PIN, HIGH);
+  
+  HTTPClient http;
+  http.begin(GIF_FULL_URL);
+  http.setTimeout(30000);  // 30 second timeout for large GIFs
+  int code = http.GET();
+
+  if (code != 200) {
+    http.end();
+    digitalWrite(LED_PIN, LOW);
+    Serial.printf("GIF fetch failed with code: %d\n", code);
+    return false;
+  }
+
+  // Use large buffer for full GIF response
+  // This will be freed after parsing
+  String payload = http.getString();
+  http.end();
+  
+  // Parse JSON - need large buffer for all frames
+  DynamicJsonDocument doc(65536);  // 64KB JSON buffer
+  DeserializationError error = deserializeJson(doc, payload);
+  
+  if (error) {
+    Serial.printf("JSON parse error: %s\n", error.c_str());
+    digitalWrite(LED_PIN, LOW);
+    return false;
+  }
+
+  bool gifMode = doc["isGifMode"] | false;
+  int frameCount = doc["frameCount"] | 0;
+
+  if (!gifMode || frameCount == 0) {
+    Serial.println("Not in GIF mode or no frames");
+    digitalWrite(LED_PIN, LOW);
+    isGifMode = false;
+    return false;
+  }
+
+  // Limit frames to our buffer size
+  if (frameCount > MAX_GIF_FRAMES) {
+    frameCount = MAX_GIF_FRAMES;
+    Serial.printf("Limiting to %d frames\n", MAX_GIF_FRAMES);
+  }
+
+  // Extract frames
+  JsonArray framesArray = doc["frames"].as<JsonArray>();
+  gifFrameCount = 0;
+
+  for (JsonObject frame : framesArray) {
+    if (gifFrameCount >= MAX_GIF_FRAMES) break;
+
+    // Get duration
+    gifDurations[gifFrameCount] = frame["duration"] | 100;
+
+    // Get bitmap from first element
+    JsonArray elements = frame["elements"].as<JsonArray>();
+    if (elements.size() > 0) {
+      JsonObject el = elements[0];
+      if (strcmp(el["type"], "bitmap") == 0) {
+        JsonArray bitmap = el["bitmap"].as<JsonArray>();
+        int len = bitmap.size();
+        if (len > 0 && len <= BYTES_PER_FRAME) {
+          for (int i = 0; i < len; i++) {
+            gifFrames[gifFrameCount][i] = (uint8_t)bitmap[i].as<int>();
+          }
+          // Zero out remaining bytes if bitmap is smaller
+          for (int i = len; i < BYTES_PER_FRAME; i++) {
+            gifFrames[gifFrameCount][i] = 0;
+          }
+          gifFrameCount++;
+        }
+      }
+    }
+  }
+
+  Serial.printf("Loaded %d GIF frames for local playback\n", gifFrameCount);
+  digitalWrite(LED_PIN, LOW);
+  
+  isGifMode = (gifFrameCount > 0);
+  return isGifMode;
+}
+
+// ===== FUNCTION: PLAY GIF LOCALLY =====
+// Plays all stored GIF frames without any network calls
+void playGifLocally() {
+  for (int i = 0; i < gifFrameCount; i++) {
+    // Check WiFi status but don't interrupt playback
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("WiFi lost during GIF playback");
+      return;
+    }
+    
+    // Draw frame from buffer
+    drawBitmapFromBuffer(gifFrames[i]);
+    
+    // Wait for frame duration
+    delay(gifDurations[i]);
+  }
+}
+
+// ===== FUNCTION: FETCH SINGLE FRAME (LEGACY/FALLBACK) =====
 int fetchFrame(const char* url) {
-  // Turn LED ON - fetching data
   digitalWrite(LED_PIN, HIGH);
   
   HTTPClient http;
@@ -115,21 +233,41 @@ int fetchFrame(const char* url) {
 
   if (code != 200) {
     http.end();
-    digitalWrite(LED_PIN, LOW);  // Turn LED OFF
+    digitalWrite(LED_PIN, LOW);
     return 1000;
   }
 
-  // Increased buffer size to 8192 for large GIF animations
+  // Increased buffer size to 8192 for large animations
   StaticJsonDocument<8192> doc;
   deserializeJson(doc, http.getString());
   http.end();
 
   drawFrame(doc);
   
-  // Turn LED OFF - fetch complete
   digitalWrite(LED_PIN, LOW);
 
   return doc["duration"] | 3000;
+}
+
+// ===== FUNCTION: CHECK GIF MODE =====
+// Periodically check if server has a new GIF to download
+void checkForGifUpdate() {
+  if (millis() - lastGifCheck < GIF_CHECK_INTERVAL) {
+    return;
+  }
+  lastGifCheck = millis();
+  
+  // Try to fetch full GIF - if not in GIF mode, server returns isGifMode=false
+  bool wasGifMode = isGifMode;
+  bool newGifAvailable = fetchFullGif();
+  
+  if (newGifAvailable) {
+    Serial.println("New GIF loaded, switching to local playback");
+  } else if (wasGifMode && !newGifAvailable) {
+    Serial.println("Exited GIF mode, switching to polling");
+    isGifMode = false;
+    gifFrameCount = 0;
+  }
 }
 
 void setup() {
@@ -142,17 +280,47 @@ void setup() {
 
   // OLED init
   if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDRESS)) {
+    Serial.println("SSD1306 allocation failed");
     while (true);
   }
 
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(20, 28);
+  display.print("Connecting WiFi...");
+  display.display();
+
   // WiFi
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
+  int retries = 0;
+  while (WiFi.status() != WL_CONNECTED && retries < 40) {
     delay(500);
+    retries++;
+  }
+  
+  if (WiFi.status() != WL_CONNECTED) {
+    display.clearDisplay();
+    display.setCursor(20, 28);
+    display.print("WiFi Failed!");
+    display.display();
+    while (true);
   }
 
-  // Show first frame immediately
-  fetchFrame(FRAME_CURRENT_URL);
+  Serial.println("WiFi connected");
+  Serial.print("IP: ");
+  Serial.println(WiFi.localIP());
+
+  // Try to fetch full GIF first
+  if (fetchFullGif()) {
+    Serial.println("GIF mode active - local playback enabled");
+  } else {
+    // Fallback to polling mode
+    Serial.println("No GIF active - using polling mode");
+    fetchFrame(FRAME_CURRENT_URL);
+  }
+  
+  lastGifCheck = millis();
 }
 
 void loop() {
@@ -167,13 +335,23 @@ void loop() {
       retries++;
     }
     if (WiFi.status() != WL_CONNECTED) {
-      delay(5000); // Wait before retry
+      delay(5000);
       return;
     }
     Serial.println("WiFi reconnected");
   }
 
-  // Only fetch next frame
-  int duration = fetchFrame(FRAME_NEXT_URL);
-  delay(duration);
+  // Check for GIF updates periodically (every 5 seconds)
+  checkForGifUpdate();
+
+  if (isGifMode && gifFrameCount > 0) {
+    // ===== LOCAL GIF PLAYBACK =====
+    // Play all frames from RAM without API calls
+    playGifLocally();
+  } else {
+    // ===== LEGACY POLLING MODE =====
+    // Fetch next frame from server
+    int duration = fetchFrame(FRAME_NEXT_URL);
+    delay(duration);
+  }
 }

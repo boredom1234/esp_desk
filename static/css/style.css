@@ -947,6 +947,282 @@ input[type="file"]::file-selector-button {
 }
 
 /* ============================================
+   GIF FPS CONTROL
+   ============================================ */
+.gif-fps-control {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(123, 97, 255, 0.08);
+  border: 1px solid rgba(123, 97, 255, 0.2);
+  border-radius: var(--radius-md);
+}
+
+.gif-fps-control label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.gif-fps-control label span {
+  color: var(--accent-secondary);
+  font-weight: 600;
+}
+
+.fps-slider-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.fps-slider-row input[type="range"] {
+  flex: 1;
+}
+
+.fps-hint {
+  display: block;
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.btn-small {
+  padding: 0.4rem 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-family: var(--font-main);
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-small:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--text-primary);
+}
+
+/* ============================================
+   DISPLAY CYCLE CUSTOMIZER
+   ============================================ */
+.display-cycle-setting {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  padding: 1rem !important;
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px solid rgba(0, 212, 255, 0.15);
+}
+
+.display-cycle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.display-cycle-header span {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.display-cycle-header small {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+}
+
+.display-cycle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cycle-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  cursor: grab;
+  transition: all 0.2s;
+}
+
+.cycle-item:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.cycle-item.dragging {
+  opacity: 0.5;
+  border-color: var(--accent-primary);
+  cursor: grabbing;
+}
+
+.cycle-handle {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: grab;
+  user-select: none;
+  letter-spacing: -2px;
+}
+
+.cycle-label {
+  flex: 1;
+  font-size: 0.75rem;
+  color: var(--text-primary);
+}
+
+/* Custom checkbox styling */
+.cycle-checkbox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.cycle-checkbox input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.cycle-checkbox .checkmark {
+  width: 18px;
+  height: 18px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.cycle-checkbox input:checked + .checkmark {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  border-color: transparent;
+}
+
+.cycle-checkbox .checkmark::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.65rem;
+  color: #000;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.cycle-checkbox input:checked + .checkmark::after {
+  opacity: 1;
+}
+
+/* Delete button */
+.cycle-delete-btn {
+  width: 22px;
+  height: 22px;
+  background: rgba(255, 51, 102, 0.15);
+  border: none;
+  border-radius: 4px;
+  color: var(--accent-danger);
+  font-size: 0.65rem;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.cycle-item:hover .cycle-delete-btn {
+  opacity: 1;
+}
+
+.cycle-delete-btn:hover {
+  background: var(--accent-danger);
+  color: #000;
+}
+
+/* Add controls */
+.cycle-add-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.cycle-add-controls select {
+  flex: 1;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.btn-add {
+  background: linear-gradient(135deg, var(--accent-success), #00cc88) !important;
+  color: #000 !important;
+  font-weight: 600;
+}
+
+/* Text item configuration panel */
+.text-item-config {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(123, 97, 255, 0.1);
+  border: 1px solid rgba(123, 97, 255, 0.25);
+  border-radius: var(--radius-sm);
+}
+
+.text-item-config input[type="text"] {
+  width: 100%;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.text-style-options {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.style-mini-btn {
+  flex: 1;
+  padding: 0.35rem 0.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 0.6rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.style-mini-btn:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.style-mini-btn.active {
+  background: var(--accent-secondary);
+  border-color: var(--accent-secondary);
+  color: #000;
+}
+
+/* ============================================
    SCROLLBAR
    ============================================ */
 ::-webkit-scrollbar {

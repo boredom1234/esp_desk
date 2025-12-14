@@ -39,12 +39,30 @@ type Frame struct {
 }
 
 type Settings struct {
-	AutoPlay           bool `json:"autoPlay"`
-	FrameDuration      int  `json:"frameDuration"`
-	EspRefreshDuration int  `json:"espRefreshDuration"`
-	ShowHeaders        bool `json:"showHeaders"`
-	FrameCount         int  `json:"frameCount"`
-	CurrentIndex       int  `json:"currentIndex"`
+	AutoPlay           bool        `json:"autoPlay"`
+	FrameDuration      int         `json:"frameDuration"`
+	EspRefreshDuration int         `json:"espRefreshDuration"`
+	GifFps             int         `json:"gifFps"`
+	ShowHeaders        bool        `json:"showHeaders"`
+	FrameCount         int         `json:"frameCount"`
+	CurrentIndex       int         `json:"currentIndex"`
+	CycleItems         []CycleItem `json:"cycleItems"`
+}
+
+// CycleItem represents a single item in the display cycle
+// Type can be: "time", "weather", "uptime", "text", "image"
+type CycleItem struct {
+	ID       string `json:"id"`                 // Unique ID for the item
+	Type     string `json:"type"`               // "time", "weather", "uptime", "text", "image"
+	Label    string `json:"label"`              // Display label for UI
+	Text     string `json:"text,omitempty"`     // For text type: the message
+	Style    string `json:"style,omitempty"`    // For text: "normal", "centered", "framed"
+	Size     int    `json:"size,omitempty"`     // For text: font size
+	Duration int    `json:"duration,omitempty"` // Display duration in ms (0 = use default)
+	Bitmap   []int  `json:"bitmap,omitempty"`   // For image: bitmap data
+	Width    int    `json:"width,omitempty"`    // For image: width
+	Height   int    `json:"height,omitempty"`   // For image: height
+	Enabled  bool   `json:"enabled"`            // Whether this item is active
 }
 
 type WeatherResponse struct {
@@ -76,10 +94,20 @@ var (
 	mutex              sync.Mutex
 	startTime          time.Time
 	isCustomMode       bool = false
+	isGifMode          bool = false // True when playing multi-frame GIF animation
 	showHeaders        bool = true
 	autoPlay           bool = true
 	frameDuration      int  = 200
 	espRefreshDuration int  = 3000 // Duration ESP32 waits before fetching next frame (ms)
+	gifFps             int  = 0    // 0 = use original timing, 5-30 = override FPS
+
+	// Display cycle items - flexible list of what to display
+	cycleItems = []CycleItem{
+		{ID: "time-1", Type: "time", Label: "🕐 Time", Enabled: true, Duration: 3000},
+		{ID: "weather-1", Type: "weather", Label: "🌤 Weather", Enabled: true, Duration: 3000},
+		{ID: "uptime-1", Type: "uptime", Label: "⏱ Uptime", Enabled: true, Duration: 3000},
+	}
+	cycleItemCounter = 3 // For generating unique IDs
 
 	// Weather state
 	currentCity string  = "Kolkata"
@@ -163,9 +191,11 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			AutoPlay:           autoPlay,
 			FrameDuration:      frameDuration,
 			EspRefreshDuration: espRefreshDuration,
+			GifFps:             gifFps,
 			ShowHeaders:        showHeaders,
 			FrameCount:         len(frames),
 			CurrentIndex:       index,
+			CycleItems:         cycleItems,
 		}
 		mutex.Unlock()
 		json.NewEncoder(w).Encode(settings)
@@ -174,10 +204,12 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		var req struct {
-			AutoPlay           *bool `json:"autoPlay,omitempty"`
-			FrameDuration      *int  `json:"frameDuration,omitempty"`
-			EspRefreshDuration *int  `json:"espRefreshDuration,omitempty"`
-			ShowHeaders        *bool `json:"showHeaders,omitempty"`
+			AutoPlay           *bool       `json:"autoPlay,omitempty"`
+			FrameDuration      *int        `json:"frameDuration,omitempty"`
+			EspRefreshDuration *int        `json:"espRefreshDuration,omitempty"`
+			GifFps             *int        `json:"gifFps,omitempty"`
+			ShowHeaders        *bool       `json:"showHeaders,omitempty"`
+			CycleItems         []CycleItem `json:"cycleItems,omitempty"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -206,16 +238,31 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 				espRefreshDuration = 30000
 			}
 		}
+		if req.GifFps != nil {
+			gifFps = *req.GifFps
+			if gifFps < 0 {
+				gifFps = 0
+			}
+			if gifFps > 30 {
+				gifFps = 30
+			}
+		}
 		if req.ShowHeaders != nil {
 			showHeaders = *req.ShowHeaders
+		}
+		if req.CycleItems != nil {
+			// Replace entire cycle items list
+			cycleItems = req.CycleItems
 		}
 		settings := Settings{
 			AutoPlay:           autoPlay,
 			FrameDuration:      frameDuration,
 			EspRefreshDuration: espRefreshDuration,
+			GifFps:             gifFps,
 			ShowHeaders:        showHeaders,
 			FrameCount:         len(frames),
 			CurrentIndex:       index,
+			CycleItems:         cycleItems,
 		}
 		mutex.Unlock()
 
@@ -481,10 +528,18 @@ func handleReset(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	// Reset all state to defaults
 	isCustomMode = false
+	isGifMode = false
 	showHeaders = true
 	autoPlay = true
 	frameDuration = 200
 	espRefreshDuration = 3000
+	gifFps = 0
+	cycleItems = []CycleItem{
+		{ID: "time-1", Type: "time", Label: "🕐 Time", Enabled: true, Duration: 3000},
+		{ID: "weather-1", Type: "weather", Label: "🌤 Weather", Enabled: true, Duration: 3000},
+		{ID: "uptime-1", Type: "uptime", Label: "⏱ Uptime", Enabled: true, Duration: 3000},
+	}
+	cycleItemCounter = 3
 	currentCity = "Kolkata"
 	cityLat = 22.57
 	cityLng = 88.36
@@ -647,7 +702,10 @@ func updateLoop() {
 			currentTime := time.Now().Format("15:04:05")
 			uptime := time.Since(startTime).Round(time.Second).String()
 
-			// More attractive frame layouts
+			// Build frame map for each type
+			frameMap := make(map[string]Frame)
+
+			// Time frame
 			timeElements := []Element{
 				{Type: "text", X: 20, Y: 22, Size: 2, Value: currentTime},
 			}
@@ -659,7 +717,9 @@ func updateLoop() {
 				timeElements = append(timeElements, Element{Type: "line", X: 0, Y: 52, Width: 128, Height: 1})
 				timeElements = append(timeElements, Element{Type: "text", X: 45, Y: 55, Size: 1, Value: "IST"})
 			}
+			frameMap["time"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: timeElements}
 
+			// Weather frame
 			weatherElements := []Element{
 				{Type: "text", X: 30, Y: 18, Size: 2, Value: weatherData.Temperature},
 			}
@@ -672,7 +732,9 @@ func updateLoop() {
 				weatherElements = append(weatherElements, Element{Type: "line", X: 0, Y: 52, Width: 128, Height: 1})
 				weatherElements = append(weatherElements, Element{Type: "text", X: 40, Y: 55, Size: 1, Value: weatherData.City})
 			}
+			frameMap["weather"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: weatherElements}
 
+			// Uptime frame
 			uptimeElements := []Element{
 				{Type: "text", X: 10, Y: 28, Size: 1, Value: uptime},
 			}
@@ -682,16 +744,165 @@ func updateLoop() {
 					{Type: "line", X: 0, Y: 12, Width: 128, Height: 1},
 				}, uptimeElements...)
 			}
+			frameMap["uptime"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: uptimeElements}
 
-			frames = []Frame{
-				{Version: 1, Duration: 3000, Clear: true, Elements: timeElements},
-				{Version: 1, Duration: 3000, Clear: true, Elements: weatherElements},
-				{Version: 1, Duration: 3000, Clear: true, Elements: uptimeElements},
+			// Build frames array based on cycleItems
+			frames = []Frame{}
+			for _, item := range cycleItems {
+				if !item.Enabled {
+					continue
+				}
+
+				duration := item.Duration
+				if duration <= 0 {
+					duration = 3000 // Default duration
+				}
+
+				switch item.Type {
+				case "time":
+					frame := frameMap["time"]
+					frame.Duration = duration
+					frames = append(frames, frame)
+
+				case "weather":
+					frame := frameMap["weather"]
+					frame.Duration = duration
+					frames = append(frames, frame)
+
+				case "uptime":
+					frame := frameMap["uptime"]
+					frame.Duration = duration
+					frames = append(frames, frame)
+
+				case "text":
+					// Custom text message
+					var elements []Element
+					textSize := item.Size
+					if textSize <= 0 {
+						textSize = 2
+					}
+
+					switch item.Style {
+					case "centered":
+						charWidth := textSize * 6
+						textWidth := len(item.Text) * charWidth
+						x := (128 - textWidth) / 2
+						if x < 0 {
+							x = 0
+						}
+						elements = []Element{
+							{Type: "text", X: x, Y: 28, Size: textSize, Value: item.Text},
+						}
+					case "framed":
+						elements = []Element{
+							{Type: "line", X: 0, Y: 0, Width: 128, Height: 1},
+							{Type: "line", X: 0, Y: 63, Width: 128, Height: 1},
+							{Type: "line", X: 0, Y: 0, Width: 1, Height: 64},
+							{Type: "line", X: 127, Y: 0, Width: 1, Height: 64},
+							{Type: "text", X: 8, Y: 28, Size: textSize, Value: item.Text},
+						}
+					default: // "normal"
+						elements = []Element{
+							{Type: "text", X: 4, Y: 28, Size: textSize, Value: item.Text},
+						}
+					}
+
+					if showHeaders && item.Label != "" {
+						elements = append([]Element{
+							{Type: "text", X: 32, Y: 2, Size: 1, Value: "= MESSAGE ="},
+							{Type: "line", X: 0, Y: 12, Width: 128, Height: 1},
+						}, elements...)
+					}
+
+					frames = append(frames, Frame{Version: 1, Duration: duration, Clear: true, Elements: elements})
+
+				case "image":
+					// Custom image
+					if len(item.Bitmap) > 0 {
+						elements := []Element{
+							{Type: "bitmap", X: 0, Y: 0, Width: item.Width, Height: item.Height, Bitmap: item.Bitmap},
+						}
+						frames = append(frames, Frame{Version: 1, Duration: duration, Clear: true, Elements: elements})
+					}
+				}
+			}
+
+			// Fallback: if no frames, show at least time
+			if len(frames) == 0 {
+				frames = append(frames, frameMap["time"])
 			}
 		}
 
 		mutex.Unlock()
 	}
+}
+
+// ==========================================
+// GIF FULL DOWNLOAD FOR ESP32 LOCAL PLAYBACK
+// ==========================================
+
+// GifFullResponse contains all frames for local ESP32 playback
+type GifFullResponse struct {
+	IsGifMode  bool    `json:"isGifMode"`
+	FrameCount int     `json:"frameCount"`
+	GifFps     int     `json:"gifFps"`
+	Frames     []Frame `json:"frames"`
+}
+
+// handleGifFull returns all GIF frames at once for ESP32 to store and play locally
+// This eliminates per-frame API calls during animation playback
+func handleGifFull(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	w.Header().Set("Content-Type", "application/json")
+
+	// If not in GIF mode or no frames, return empty response
+	if !isGifMode || len(frames) == 0 {
+		json.NewEncoder(w).Encode(GifFullResponse{
+			IsGifMode:  false,
+			FrameCount: len(frames),
+			GifFps:     gifFps,
+			Frames:     nil,
+		})
+		return
+	}
+
+	// Limit frames to prevent memory issues on ESP32 (max ~80 frames)
+	maxFrames := 80
+	framesToSend := make([]Frame, 0, maxFrames)
+
+	// Calculate frame duration based on FPS override
+	fpsOverrideDuration := 0
+	if gifFps > 0 {
+		fpsOverrideDuration = 1000 / gifFps // Convert FPS to ms per frame
+	}
+
+	for i, frame := range frames {
+		if i >= maxFrames {
+			log.Printf("Warning: Limiting GIF to %d frames for ESP32 memory", maxFrames)
+			break
+		}
+
+		// Apply FPS override if set
+		frameCopy := frame
+		if fpsOverrideDuration > 0 {
+			frameCopy.Duration = fpsOverrideDuration
+		}
+		framesToSend = append(framesToSend, frameCopy)
+	}
+
+	json.NewEncoder(w).Encode(GifFullResponse{
+		IsGifMode:  true,
+		FrameCount: len(framesToSend),
+		GifFps:     gifFps,
+		Frames:     framesToSend,
+	})
 }
 
 // ==========================================
@@ -737,6 +948,7 @@ func main() {
 	http.HandleFunc("/api/settings/toggle-headers", loggingMiddleware(handleToggleHeaders))
 	http.HandleFunc("/api/settings/headers-state", loggingMiddleware(handleGetHeadersState))
 	http.HandleFunc("/api/weather", loggingMiddleware(handleWeather))
+	http.HandleFunc("/api/gif/full", loggingMiddleware(handleGifFull))
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -786,6 +998,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		}
 
 		frames = []Frame{}
+		isGifMode = true // Multi-frame GIF - enable local playback mode
 
 		for i, srcImg := range g.Image {
 			if i >= 100 { // Limit frames
@@ -816,6 +1029,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		isGifMode = false // Single image - use polling mode
 		bitmap := processImageToBitmap(img, 128, 64)
 		frames = []Frame{
 			{
