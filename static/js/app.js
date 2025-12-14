@@ -179,11 +179,25 @@ function sendMarquee() {
 
 function resetSystem() {
   fetch("/api/reset", { method: "POST" })
+    .then((res) => res.json())
     .then(() => {
+      // Clear all inputs
       document.getElementById("customText").value = "";
       document.getElementById("marqueeText").value = "";
+      document.getElementById("imageUpload").value = "";
+
+      // Reset city selector to default
+      document.getElementById("citySelect").value = "22.57,88.36,Kolkata";
+
+      // Reload all state
       loadSettings();
       loadCurrent();
+      loadWeather();
+
+      // Stop auto-play
+      stopAutoPlay();
+
+      console.log("System reset to defaults");
     })
     .catch((err) => console.error(err));
 }

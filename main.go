@@ -434,7 +434,7 @@ func handleCustom(w http.ResponseWriter, r *http.Request) {
 	} else {
 		elements = []Element{}
 		if showHeaders {
-			elements = append(elements, Element{Type: "text", X: 0, Y: 0, Size: 1, Value: "◆ MESSAGE"})
+			elements = append(elements, Element{Type: "text", X: 0, Y: 0, Size: 1, Value: "> MESSAGE"})
 		}
 		elements = append(elements, el)
 	}
@@ -455,10 +455,22 @@ func handleReset(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mutex.Lock()
+	// Reset all state to defaults
 	isCustomMode = false
+	showHeaders = true
+	autoPlay = true
+	frameDuration = 200
+	currentCity = "Kolkata"
+	cityLat = 22.57
+	cityLng = 88.36
+	index = 0
 	mutex.Unlock()
 
-	w.WriteHeader(http.StatusOK)
+	// Refresh weather for default city
+	go fetchWeather()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "reset_complete"})
 }
 
 func getWeatherIcon(code int, isDay bool) string {
@@ -543,10 +555,10 @@ func fetchWeather() {
 	isDay := w.CurrentWeather.IsDay == 1
 	weatherData = WeatherData{
 		City:        currentCity,
-		Temperature: fmt.Sprintf("%.1f°C", w.CurrentWeather.Temperature),
+		Temperature: fmt.Sprintf("%.1fC", w.CurrentWeather.Temperature),
 		Condition:   getWeatherCondition(w.CurrentWeather.WeatherCode),
 		Icon:        getWeatherIcon(w.CurrentWeather.WeatherCode, isDay),
-		Windspeed:   fmt.Sprintf("%.1f km/h", w.CurrentWeather.Windspeed),
+		Windspeed:   fmt.Sprintf("%.0f km/h", w.CurrentWeather.Windspeed),
 		IsDay:       isDay,
 	}
 }
@@ -616,7 +628,7 @@ func updateLoop() {
 			}
 			if showHeaders {
 				timeElements = append([]Element{
-					{Type: "text", X: 32, Y: 2, Size: 1, Value: "◆ TIME ◆"},
+					{Type: "text", X: 40, Y: 2, Size: 1, Value: "= TIME ="},
 					{Type: "line", X: 0, Y: 12, Width: 128, Height: 1},
 				}, timeElements...)
 				timeElements = append(timeElements, Element{Type: "line", X: 0, Y: 52, Width: 128, Height: 1})
@@ -624,16 +636,16 @@ func updateLoop() {
 			}
 
 			weatherElements := []Element{
-				{Type: "text", X: 20, Y: 24, Size: 2, Value: weatherData.Temperature},
+				{Type: "text", X: 30, Y: 18, Size: 2, Value: weatherData.Temperature},
 			}
 			if showHeaders {
 				weatherElements = append([]Element{
-					{Type: "text", X: 24, Y: 2, Size: 1, Value: "◆ WEATHER ◆"},
+					{Type: "text", X: 28, Y: 2, Size: 1, Value: "= WEATHER ="},
 					{Type: "line", X: 0, Y: 12, Width: 128, Height: 1},
 				}, weatherElements...)
-				weatherElements = append(weatherElements, Element{Type: "text", X: 70, Y: 26, Size: 1, Value: weatherData.Condition})
+				weatherElements = append(weatherElements, Element{Type: "text", X: 25, Y: 38, Size: 1, Value: weatherData.Condition})
 				weatherElements = append(weatherElements, Element{Type: "line", X: 0, Y: 52, Width: 128, Height: 1})
-				weatherElements = append(weatherElements, Element{Type: "text", X: 30, Y: 55, Size: 1, Value: weatherData.City})
+				weatherElements = append(weatherElements, Element{Type: "text", X: 40, Y: 55, Size: 1, Value: weatherData.City})
 			}
 
 			uptimeElements := []Element{
@@ -641,7 +653,7 @@ func updateLoop() {
 			}
 			if showHeaders {
 				uptimeElements = append([]Element{
-					{Type: "text", X: 24, Y: 2, Size: 1, Value: "◆ UPTIME ◆"},
+					{Type: "text", X: 32, Y: 2, Size: 1, Value: "= UPTIME ="},
 					{Type: "line", X: 0, Y: 12, Width: 128, Height: 1},
 				}, uptimeElements...)
 			}
