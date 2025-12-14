@@ -11,15 +11,14 @@
     />
   </head>
   <body>
-    <div class="background-glow"></div>
     <div class="container">
       <header class="header">
         <div class="logo">
-          <span class="icon">🖥️</span>
-          <h1>ESP Desk</h1>
+          <span class="icon">💠</span>
+          <h1>ESP Desk_OS</h1>
         </div>
         <div class="status-pill status-online">
-          <span class="dot"></span> SYSTEM ONLINE
+          <span class="dot"></span> ONLINE
         </div>
       </header>
 
@@ -27,15 +26,15 @@
         <!-- Preview Section -->
         <section class="card preview-section">
           <div class="card-header">
-            <h2>Live Preview</h2>
-            <span class="badge">128x64</span>
+            <h2>VISUAL FEED</h2>
+            <span class="badge">128x64 px</span>
           </div>
           <div class="canvas-wrapper">
             <canvas id="preview" width="512" height="256"></canvas>
           </div>
           <div class="card-actions">
             <button class="btn btn-secondary" onclick="nextFrame()">
-              Skip Frame ⏭
+              NEXT_FRAME >>
             </button>
           </div>
         </section>
@@ -43,24 +42,56 @@
         <!-- Control Section -->
         <section class="card control-section">
           <div class="card-header">
-            <h2>Custom Message</h2>
-            <span class="badge" id="mode-badge">Auto Mode</span>
+            <h2>COMMAND_LINE</h2>
+            <span class="badge" id="mode-badge">AUTO_SEQ</span>
           </div>
           <div class="input-group">
-            <label for="customText">Enter your message:</label>
+            <label for="customText">INPUT_MESSAGE_DATA:</label>
             <textarea
               id="customText"
-              placeholder="Type something cool..."
+              placeholder="> ENTER TEXT STREAM..."
               rows="3"
               maxlength="50"
             ></textarea>
           </div>
           <div class="action-row">
             <button class="btn btn-primary" onclick="sendCustom()">
-              🚀 Display Now
+              [ EXECUTE ]
             </button>
             <button class="btn btn-danger" onclick="resetSystem()">
-              🔄 Reset Logic
+              [ RESTORE_DEFAULT ]
+            </button>
+          </div>
+        </section>
+
+        <!-- System Config Section -->
+        <section class="card config-section" style="margin-top: 1.5rem">
+          <div class="card-header">
+            <h2>SYSTEM_CONFIG</h2>
+          </div>
+          <div class="action-row">
+            <button
+              class="btn btn-secondary"
+              id="toggleHeadersBtn"
+              onclick="toggleHeaders()"
+            >
+              [ HEADERS: ON ]
+            </button>
+          </div>
+        </section>
+
+        <!-- Image Upload Section -->
+        <section class="card control-section" style="margin-top: 1.5rem">
+          <div class="card-header">
+            <h2>MEDIA_UPLOAD</h2>
+          </div>
+          <div class="input-group">
+            <label for="imageUpload">SOURCE_FILE [ PNG / JPG / GIF ]</label>
+            <input type="file" id="imageUpload" accept="image/*" />
+          </div>
+          <div class="action-row">
+            <button class="btn btn-primary" onclick="processAndUploadImage()">
+              [ UPLOAD_TO_VRAM ]
             </button>
           </div>
         </section>

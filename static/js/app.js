@@ -6,14 +6,14 @@ ctx.imageSmoothingEnabled = false;
 ctx.scale(scale, scale);
 
 function drawFrame(frame) {
-  ctx.fillStyle = "#000";
+  ctx.fillStyle = "#050505";
   ctx.fillRect(0, 0, 128, 64);
 
   if (!frame || !frame.elements) return;
 
   frame.elements.forEach((el) => {
     if (el.type === "text") {
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = "#00f3ff";
       let x = el.x || 0;
       let y = el.y || 0;
       let size = el.size || 1;
@@ -30,6 +30,27 @@ function drawFrame(frame) {
 
       ctx.textBaseline = "top";
       ctx.fillText(value, x, y);
+    } else if (el.type === "bitmap") {
+      const x = el.x || 0;
+      const y = el.y || 0;
+      const w = el.width || 0;
+      const h = el.height || 0;
+      const data = el.bitmap || [];
+
+      ctx.fillStyle = "#00f3ff";
+      // Bytes per row = ceil(width / 8)
+      const bytesPerRow = Math.ceil(w / 8);
+
+      for (let r = 0; r < h; r++) {
+        for (let c = 0; c < w; c++) {
+          const byteIndex = r * bytesPerRow + Math.floor(c / 8);
+          const byte = data[byteIndex];
+          // Check bit (MSB first)
+          if (byte & (0x80 >> c % 8)) {
+            ctx.fillRect(x + c, y + r, 1, 1);
+          }
+        }
+      }
     }
   });
 
@@ -41,10 +62,10 @@ function drawFrame(frame) {
 function updateModeUI(isCustom) {
   const badge = document.getElementById("mode-badge");
   if (isCustom) {
-    badge.textContent = "● MANUAL OVERRIDE";
+    badge.textContent = "● MANUAL_OVERRIDE";
     badge.classList.add("custom-active");
   } else {
-    badge.textContent = "AUTO MODE";
+    badge.textContent = "AUTO_SEQ";
     badge.classList.remove("custom-active");
   }
 }
@@ -92,6 +113,7 @@ loadCurrent();
 setInterval(loadCurrent, 1000);
 
 // Allow Enter key to submit
+// Allow Enter key to submit
 document
   .getElementById("customText")
   .addEventListener("keypress", function (e) {
@@ -99,3 +121,46 @@ document
       sendCustom();
     }
   });
+
+function processAndUploadImage() {
+  const fileInput = document.getElementById("imageUpload");
+  if (!fileInput.files || !fileInput.files[0]) {
+    alert("Please select an image or GIF first!");
+    return;
+  }
+
+  const file = fileInput.files[0];
+  const formData = new FormData();
+  formData.append("file", file);
+
+  fetch("/api/upload", {
+    method: "POST",
+    body: formData,
+  })
+    .then((res) => {
+      if (!res.ok) throw new Error("Upload failed");
+      loadCurrent();
+    })
+    .catch((err) => {
+      alert("Error uploading file");
+    });
+}
+
+function toggleHeaders() {
+  fetch("/api/settings/toggle-headers", { method: "POST" })
+    .then((res) => res.json())
+    .then((data) => {
+      const btn = document.getElementById("toggleHeadersBtn");
+      if (data.headersVisible) {
+        btn.textContent = "[ HEADERS: ON ]";
+        btn.classList.remove("btn-danger");
+        btn.classList.add("btn-secondary");
+      } else {
+        btn.textContent = "[ HEADERS: OFF ]";
+        btn.classList.remove("btn-secondary");
+        btn.classList.add("btn-danger");
+      }
+      loadCurrent(); // Refresh preview
+    })
+    .catch((err) => console.error(err));
+}

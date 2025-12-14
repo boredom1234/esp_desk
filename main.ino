@@ -47,6 +47,25 @@ void drawFrame(JsonDocument& doc) {
       display.setCursor(x, y);
       display.print(value);
     }
+    else if (strcmp(type, "bitmap") == 0) {
+      int x = el["x"] | 0;
+      int y = el["y"] | 0;
+      int w = el["width"] | 0;
+      int h = el["height"] | 0;
+      
+      // Copy data from JSON array to byte buffer
+      JsonArray data = el["bitmap"];
+      int len = data.size();
+      
+      // Safety check: max 1KB buffer for bitmaps
+      if (len > 0 && len <= 1024) {
+        uint8_t bmp[1024]; 
+        for(int i=0; i<len; i++) {
+          bmp[i] = (uint8_t)data[i].as<int>();
+        }
+        display.drawBitmap(x, y, bmp, w, h, SSD1306_WHITE);
+      }
+    }
   }
 
   display.display();
@@ -63,7 +82,8 @@ int fetchFrame(const char* url) {
     return 1000;
   }
 
-  StaticJsonDocument<1024> doc;
+  // Increased buffer size to 4096 to handle larger JSON with bitmaps
+  StaticJsonDocument<4096> doc;
   deserializeJson(doc, http.getString());
   http.end();
 
