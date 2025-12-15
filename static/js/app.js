@@ -27,6 +27,45 @@ let authToken = null; // Session token for authentication
 let authRequired = false; // Whether authentication is enabled on server
 
 // ==========================================
+// XSS SANITIZATION UTILITIES
+// ==========================================
+
+/**
+ * Escapes HTML entities to prevent XSS attacks
+ * @param {string} str - The string to escape
+ * @returns {string} - The escaped string safe for HTML insertion
+ */
+function escapeHtml(str) {
+  if (str === null || str === undefined) return "";
+  const div = document.createElement("div");
+  div.textContent = String(str);
+  return div.innerHTML;
+}
+
+/**
+ * Creates a text node safely (immune to XSS)
+ * @param {string} text - The text content
+ * @returns {Text} - A safe text node
+ */
+function safeText(text) {
+  return document.createTextNode(String(text || ""));
+}
+
+/**
+ * Creates an element with safe text content
+ * @param {string} tag - HTML tag name
+ * @param {string} text - Text content
+ * @param {string} className - Optional CSS class
+ * @returns {HTMLElement}
+ */
+function safeElement(tag, text, className) {
+  const el = document.createElement(tag);
+  if (className) el.className = className;
+  el.textContent = String(text || "");
+  return el;
+}
+
+// ==========================================
 // RENDERING
 // ==========================================
 function drawFrame(frame) {
@@ -556,13 +595,20 @@ function loadWeather() {
     .then((data) => {
       const display = document.getElementById("weatherDisplay");
       if (display && data.city) {
-        display.innerHTML = `
-          <span class="weather-icon">${data.icon || "🌡"}</span>
-          <span class="weather-info">${data.temperature} · ${
-          data.condition
-        }</span>
-          <span class="weather-wind">${data.windspeed}</span>
-        `;
+        // XSS-safe rendering using DOM manipulation
+        display.innerHTML = "";
+
+        const iconSpan = safeElement("span", data.icon || "🌡", "weather-icon");
+        const infoSpan = safeElement(
+          "span",
+          `${data.temperature} · ${data.condition}`,
+          "weather-info"
+        );
+        const windSpan = safeElement("span", data.windspeed, "weather-wind");
+
+        display.appendChild(iconSpan);
+        display.appendChild(infoSpan);
+        display.appendChild(windSpan);
       }
     })
     .catch(() => {});
@@ -586,13 +632,20 @@ function changeCity() {
     .then((data) => {
       const display = document.getElementById("weatherDisplay");
       if (display) {
-        display.innerHTML = `
-          <span class="weather-icon">${data.icon || "🌡"}</span>
-          <span class="weather-info">${data.temperature} · ${
-          data.condition
-        }</span>
-          <span class="weather-wind">${data.windspeed}</span>
-        `;
+        // XSS-safe rendering using DOM manipulation
+        display.innerHTML = "";
+
+        const iconSpan = safeElement("span", data.icon || "🌡", "weather-icon");
+        const infoSpan = safeElement(
+          "span",
+          `${data.temperature} · ${data.condition}`,
+          "weather-info"
+        );
+        const windSpan = safeElement("span", data.windspeed, "weather-wind");
+
+        display.appendChild(iconSpan);
+        display.appendChild(infoSpan);
+        display.appendChild(windSpan);
       }
     })
     .catch(() => {});
@@ -720,19 +773,46 @@ function renderCycleItems(items) {
     const extraInfo =
       item.type === "text" ? ` "${truncate(item.text, 15)}"` : "";
 
-    div.innerHTML = `
-      <span class="cycle-handle">⋮⋮</span>
-      <label class="cycle-checkbox">
-        <input type="checkbox" ${
-          item.enabled ? "checked" : ""
-        } onchange="toggleCycleItem('${item.id}')" />
-        <span class="checkmark"></span>
-      </label>
-      <span class="cycle-label">${typeIcon} ${labelText}${extraInfo}</span>
-      <button class="cycle-delete-btn" onclick="deleteCycleItem('${
-        item.id
-      }')" title="Remove">✕</button>
-    `;
+    // XSS-safe rendering using DOM manipulation instead of innerHTML
+    // Handle element
+    const handleSpan = document.createElement("span");
+    handleSpan.className = "cycle-handle";
+    handleSpan.textContent = "⋮⋮";
+
+    // Checkbox label
+    const checkboxLabel = document.createElement("label");
+    checkboxLabel.className = "cycle-checkbox";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = item.enabled;
+    // Use escaped ID to prevent injection in event handler
+    const safeId = escapeHtml(item.id);
+    checkbox.addEventListener("change", () => toggleCycleItem(item.id));
+
+    const checkmark = document.createElement("span");
+    checkmark.className = "checkmark";
+
+    checkboxLabel.appendChild(checkbox);
+    checkboxLabel.appendChild(checkmark);
+
+    // Label span - use textContent for safety
+    const labelSpan = document.createElement("span");
+    labelSpan.className = "cycle-label";
+    labelSpan.textContent = `${typeIcon} ${labelText}${extraInfo}`;
+
+    // Delete button
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "cycle-delete-btn";
+    deleteBtn.title = "Remove";
+    deleteBtn.textContent = "✕";
+    deleteBtn.addEventListener("click", () => deleteCycleItem(item.id));
+
+    // Assemble the element
+    div.appendChild(handleSpan);
+    div.appendChild(checkboxLabel);
+    div.appendChild(labelSpan);
+    div.appendChild(deleteBtn);
 
     list.appendChild(div);
   });
