@@ -22,6 +22,7 @@ let marqueeDirection = "left";
 let marqueeSize = 2;
 let textStyle = "normal";
 let lastFrameHash = null; // Track frame changes for smart refresh
+let lastUploadedImage = null; // { bitmap, width, height } for saving to cycle
 
 // ==========================================
 // RENDERING
@@ -259,6 +260,20 @@ function uploadFile(file) {
         startAutoPlay();
       } else {
         loadCurrent();
+      }
+
+      // Store bitmap if available (non-GIF images) for saving to cycle
+      if (data.bitmap) {
+        lastUploadedImage = {
+          bitmap: data.bitmap,
+          width: data.width,
+          height: data.height,
+        };
+        document.getElementById("saveToCycleBtn").style.display =
+          "inline-block";
+      } else {
+        lastUploadedImage = null;
+        document.getElementById("saveToCycleBtn").style.display = "none";
       }
     })
     .catch(() => {
@@ -777,6 +792,13 @@ function addCycleItem() {
     return;
   }
 
+  if (type === "image") {
+    alert(
+      "Upload an image first, then use the '💾 Save to Cycle' button that appears after upload."
+    );
+    return;
+  }
+
   // Generate unique ID
   cycleItemIdCounter++;
   const id = `${type}-${Date.now()}-${cycleItemIdCounter}`;
@@ -932,4 +954,40 @@ function getDragAfterElement(container, y) {
 // Legacy function - now redirects
 function updateDisplayCycle() {
   saveCycleItems();
+}
+
+// ==========================================
+// SAVE IMAGE TO CYCLE
+// ==========================================
+
+function saveImageToCycle() {
+  if (!lastUploadedImage) {
+    alert("No image available to save! Upload an image first.");
+    return;
+  }
+
+  cycleItemIdCounter++;
+  const id = `image-${Date.now()}-${cycleItemIdCounter}`;
+
+  const newItem = {
+    id: id,
+    type: "image",
+    label: "🖼 Image",
+    bitmap: lastUploadedImage.bitmap,
+    width: lastUploadedImage.width,
+    height: lastUploadedImage.height,
+    enabled: true,
+    duration: 3000,
+  };
+
+  cycleItems.push(newItem);
+  saveCycleItems();
+  renderCycleItems(cycleItems);
+
+  // Hide button after saving
+  document.getElementById("saveToCycleBtn").style.display = "none";
+  lastUploadedImage = null;
+
+  // Show feedback
+  setUploadStatus("success", "Saved to cycle!");
 }

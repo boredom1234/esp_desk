@@ -1046,10 +1046,22 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	frameCount := len(frames)
 	log.Printf("Uploaded %s. Generated %d frames.", header.Filename, frameCount)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+
+	response := map[string]interface{}{
 		"frameCount": frameCount,
 		"autoPlay":   autoPlay,
-	})
+	}
+
+	// Include bitmap data for single images (not GIF) so frontend can save to display cycle
+	if format != "gif" && frameCount == 1 {
+		el := frames[0].Elements[0]
+		response["bitmap"] = el.Bitmap
+		response["width"] = el.Width
+		response["height"] = el.Height
+		log.Printf("Including bitmap data for save-to-cycle: %dx%d, %d bytes", el.Width, el.Height, len(el.Bitmap))
+	}
+
+	json.NewEncoder(w).Encode(response)
 }
 
 // ==========================================
