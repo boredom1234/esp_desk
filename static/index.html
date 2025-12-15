@@ -14,16 +14,53 @@
     />
   </head>
   <body>
-    <div class="container">
+    <!-- Login Modal -->
+    <div class="login-overlay" id="loginOverlay">
+      <div class="login-card">
+        <div class="login-header">
+          <span class="login-icon">◇</span>
+          <h2>ESP DESK_OS</h2>
+        </div>
+        <p class="login-subtitle">Enter password to access dashboard</p>
+        <form id="loginForm" onsubmit="handleLogin(event)">
+          <div class="login-input-group">
+            <input
+              type="password"
+              id="loginPassword"
+              placeholder="Password"
+              autocomplete="current-password"
+              required
+            />
+          </div>
+          <div class="login-error" id="loginError"></div>
+          <button type="submit" class="btn btn-primary login-btn" id="loginBtn">
+            Access Dashboard
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="container" id="mainContainer">
       <!-- Header -->
       <header class="header">
         <div class="logo">
           <span class="icon">◇</span>
           <h1>ESP DESK_OS</h1>
         </div>
-        <div class="status-pill">
-          <span class="dot"></span>
-          <span id="systemStatus">ONLINE</span>
+        <div class="header-right">
+          <div class="status-pill">
+            <span class="dot"></span>
+            <span id="systemStatus">ONLINE</span>
+          </div>
+          <button
+            class="btn-logout"
+            id="logoutBtn"
+            onclick="handleLogout()"
+            title="Logout"
+            style="display: none"
+          >
+            ⏻
+          </button>
         </div>
       </header>
 

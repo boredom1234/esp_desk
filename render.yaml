@@ -8,3 +8,5 @@ services:
     envVars:
       - key: PORT
         value: 3000
+      - key: DASHBOARD_PASSWORD
+        sync: false # Set manually in Render dashboard for security

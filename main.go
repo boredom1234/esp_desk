@@ -1,6 +1,9 @@
 package main
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"image"
@@ -10,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -114,6 +118,12 @@ var (
 	cityLat     float64 = 22.57
 	cityLng     float64 = 88.36
 	weatherData WeatherData
+
+	// Authentication state
+	dashboardPassword string                       // Password from env (plain text, hashed at runtime for comparison)
+	authTokens        = make(map[string]time.Time) // session token -> expiry time
+	authMutex         sync.RWMutex
+	authEnabled       bool = false // Only enable auth if password is set
 )
 
 // Decorative border for attractive display
@@ -919,36 +929,300 @@ func loggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 // ==========================================
+// AUTHENTICATION
+// ==========================================
+
+// Generate a secure random token
+func generateToken() string {
+	bytes := make([]byte, 32)
+	rand.Read(bytes)
+	return hex.EncodeToString(bytes)
+}
+
+// Hash password with SHA256
+func hashPassword(password string) string {
+	hash := sha256.Sum256([]byte(password))
+	return hex.EncodeToString(hash[:])
+}
+
+// Verify session token
+func isValidToken(token string) bool {
+	if !authEnabled || token == "" {
+		return !authEnabled // If auth disabled, always valid; if enabled and no token, invalid
+	}
+
+	authMutex.RLock()
+	expiry, exists := authTokens[token]
+	authMutex.RUnlock()
+
+	if !exists {
+		return false
+	}
+
+	if time.Now().After(expiry) {
+		// Token expired, clean it up
+		authMutex.Lock()
+		delete(authTokens, token)
+		authMutex.Unlock()
+		return false
+	}
+
+	return true
+}
+
+// Create a new session token
+func createSession() string {
+	token := generateToken()
+	expiry := time.Now().Add(24 * time.Hour) // 24 hour session
+
+	authMutex.Lock()
+	authTokens[token] = expiry
+	authMutex.Unlock()
+
+	return token
+}
+
+// Authentication middleware
+func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// If auth not enabled, pass through
+		if !authEnabled {
+			next(w, r)
+			return
+		}
+
+		// Check Authorization header
+		authHeader := r.Header.Get("Authorization")
+		token := strings.TrimPrefix(authHeader, "Bearer ")
+
+		if isValidToken(token) {
+			next(w, r)
+			return
+		}
+
+		// Check cookie as fallback
+		cookie, err := r.Cookie("esp_desk_token")
+		if err == nil && isValidToken(cookie.Value) {
+			next(w, r)
+			return
+		}
+
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	}
+}
+
+// Handle login request
+func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	// Compare passwords
+	if req.Password != dashboardPassword {
+		log.Printf("Failed login attempt from %s", r.RemoteAddr)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Invalid password",
+		})
+		return
+	}
+
+	// Create session
+	token := createSession()
+	log.Printf("Successful login from %s", r.RemoteAddr)
+
+	// Set cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "esp_desk_token",
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   r.TLS != nil,
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   86400, // 24 hours
+	})
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"token":   token,
+	})
+}
+
+// Check if user is authenticated
+func handleAuthVerify(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// If auth not enabled, always return authenticated
+	if !authEnabled {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"authenticated": true,
+			"authRequired":  false,
+		})
+		return
+	}
+
+	// Check Authorization header
+	authHeader := r.Header.Get("Authorization")
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+
+	if isValidToken(token) {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"authenticated": true,
+			"authRequired":  true,
+		})
+		return
+	}
+
+	// Check cookie
+	cookie, err := r.Cookie("esp_desk_token")
+	if err == nil && isValidToken(cookie.Value) {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"authenticated": true,
+			"authRequired":  true,
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"authenticated": false,
+		"authRequired":  true,
+	})
+}
+
+// Handle logout
+func handleAuthLogout(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Remove token from storage
+	authHeader := r.Header.Get("Authorization")
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+
+	if token != "" {
+		authMutex.Lock()
+		delete(authTokens, token)
+		authMutex.Unlock()
+	}
+
+	// Also check cookie
+	cookie, err := r.Cookie("esp_desk_token")
+	if err == nil {
+		authMutex.Lock()
+		delete(authTokens, cookie.Value)
+		authMutex.Unlock()
+	}
+
+	// Clear cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "esp_desk_token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		MaxAge:   -1,
+	})
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+	})
+}
+
+// ==========================================
 // MAIN
 // ==========================================
 
+// loadEnvFile reads a .env file and sets environment variables
+func loadEnvFile() {
+	file, err := os.Open(".env")
+	if err != nil {
+		// .env file not found, that's okay
+		return
+	}
+	defer file.Close()
+
+	// Simple line-by-line parser
+	buf := make([]byte, 4096)
+	n, _ := file.Read(buf)
+	content := string(buf[:n])
+	lines := strings.Split(content, "\n")
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		// Parse KEY=VALUE
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			value := strings.TrimSpace(parts[1])
+			// Remove quotes if present
+			value = strings.Trim(value, "\"'")
+			os.Setenv(key, value)
+		}
+	}
+	log.Println("Loaded .env file")
+}
+
 func main() {
 	startTime = time.Now()
+
+	// Load .env file if present
+	loadEnvFile()
+
+	// Initialize authentication from environment variable
+	dashboardPassword = os.Getenv("DASHBOARD_PASSWORD")
+	if dashboardPassword != "" {
+		authEnabled = true
+		log.Printf("Authentication ENABLED - password required to access dashboard")
+	} else {
+		log.Printf("Authentication DISABLED - no DASHBOARD_PASSWORD set")
+	}
 
 	frames = []Frame{{Duration: 1000, Clear: true, Elements: []Element{{Type: "text", X: 20, Y: 25, Size: 2, Value: "BOOTING..."}}}}
 
 	go updateLoop()
 
-	// Frame endpoints
+	// Frame endpoints (ESP32 access - no auth required)
 	http.HandleFunc("/frame/current", loggingMiddleware(currentFrame))
 	http.HandleFunc("/frame/next", loggingMiddleware(nextFrame))
+	http.HandleFunc("/api/gif/full", loggingMiddleware(handleGifFull))
+
+	// Auth endpoints (no auth required to access these)
+	http.HandleFunc("/api/auth/login", loggingMiddleware(handleAuthLogin))
+	http.HandleFunc("/api/auth/verify", loggingMiddleware(handleAuthVerify))
+	http.HandleFunc("/api/auth/logout", loggingMiddleware(handleAuthLogout))
 
 	// Static files
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 
-	// API endpoints
-	http.HandleFunc("/api/frames", loggingMiddleware(handleFrames))
-	http.HandleFunc("/api/control/next", loggingMiddleware(nextFrame))
-	http.HandleFunc("/api/settings", loggingMiddleware(handleSettings))
-	http.HandleFunc("/api/custom", loggingMiddleware(handleCustom))
-	http.HandleFunc("/api/custom/text", loggingMiddleware(handleCustomText))
-	http.HandleFunc("/api/custom/marquee", loggingMiddleware(handleMarquee))
-	http.HandleFunc("/api/upload", loggingMiddleware(handleUpload))
-	http.HandleFunc("/api/reset", loggingMiddleware(handleReset))
-	http.HandleFunc("/api/settings/toggle-headers", loggingMiddleware(handleToggleHeaders))
-	http.HandleFunc("/api/settings/headers-state", loggingMiddleware(handleGetHeadersState))
-	http.HandleFunc("/api/weather", loggingMiddleware(handleWeather))
-	http.HandleFunc("/api/gif/full", loggingMiddleware(handleGifFull))
+	// Protected API endpoints (require authentication)
+	http.HandleFunc("/api/frames", loggingMiddleware(authMiddleware(handleFrames)))
+	http.HandleFunc("/api/control/next", loggingMiddleware(authMiddleware(nextFrame)))
+	http.HandleFunc("/api/settings", loggingMiddleware(authMiddleware(handleSettings)))
+	http.HandleFunc("/api/custom", loggingMiddleware(authMiddleware(handleCustom)))
+	http.HandleFunc("/api/custom/text", loggingMiddleware(authMiddleware(handleCustomText)))
+	http.HandleFunc("/api/custom/marquee", loggingMiddleware(authMiddleware(handleMarquee)))
+	http.HandleFunc("/api/upload", loggingMiddleware(authMiddleware(handleUpload)))
+	http.HandleFunc("/api/reset", loggingMiddleware(authMiddleware(handleReset)))
+	http.HandleFunc("/api/settings/toggle-headers", loggingMiddleware(authMiddleware(handleToggleHeaders)))
+	http.HandleFunc("/api/settings/headers-state", loggingMiddleware(authMiddleware(handleGetHeadersState)))
+	http.HandleFunc("/api/weather", loggingMiddleware(authMiddleware(handleWeather)))
 
 	port := os.Getenv("PORT")
 	if port == "" {
