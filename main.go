@@ -171,6 +171,27 @@ func nextFrame(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(frame)
 }
 
+func prevFrame(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	if len(frames) == 0 {
+		return
+	}
+
+	index = index - 1
+	if index < 0 {
+		index = len(frames) - 1
+	}
+
+	// Create a copy of the frame with ESP refresh duration
+	frame := frames[index]
+	frame.Duration = espRefreshDuration
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(frame)
+}
+
 func handleFrames(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
@@ -1214,6 +1235,7 @@ func main() {
 	// Protected API endpoints (require authentication)
 	http.HandleFunc("/api/frames", loggingMiddleware(authMiddleware(handleFrames)))
 	http.HandleFunc("/api/control/next", loggingMiddleware(authMiddleware(nextFrame)))
+	http.HandleFunc("/api/control/prev", loggingMiddleware(authMiddleware(prevFrame)))
 	http.HandleFunc("/api/settings", loggingMiddleware(authMiddleware(handleSettings)))
 	http.HandleFunc("/api/custom", loggingMiddleware(authMiddleware(handleCustom)))
 	http.HandleFunc("/api/custom/text", loggingMiddleware(authMiddleware(handleCustomText)))

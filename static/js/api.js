@@ -37,6 +37,16 @@ function loadSettings() {
     .catch(() => {});
 }
 
+function prevFrame() {
+  fetch("/api/control/prev", { method: "POST" })
+    .then((res) => res.json())
+    .then((frame) => {
+      drawFrame(frame);
+      loadSettings();
+    })
+    .catch(() => {});
+}
+
 function nextFrame() {
   fetch("/api/control/next", { method: "POST" })
     .then((res) => res.json())

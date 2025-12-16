@@ -5,14 +5,20 @@
 let cycleItems = [];
 let newItemStyle = "normal";
 let cycleItemIdCounter = 0;
+let pendingSaveCount = 0;
+let lastSaveTimestamp = 0;
 
 // Render cycle items from server data
-function renderCycleItems(items) {
-  cycleItems = items || [];
+function renderCycleItems(items, updateLocalState = true) {
+  // Only update local state if explicitly requested (from server load)
+  if (updateLocalState) {
+    cycleItems = items || [];
+  }
+  const itemsToRender = updateLocalState ? cycleItems : items;
   const list = document.getElementById("displayCycleList");
   list.innerHTML = "";
 
-  cycleItems.forEach((item, index) => {
+  itemsToRender.forEach((item, index) => {
     const div = document.createElement("div");
     div.className = "cycle-item";
     div.dataset.id = item.id;
@@ -92,6 +98,13 @@ function toggleCycleItem(id) {
   const item = cycleItems.find((i) => i.id === id);
   if (item) {
     item.enabled = !item.enabled;
+    // Update the checkbox visually immediately (without re-render)
+    const checkbox = document.querySelector(
+      `.cycle-item[data-id="${CSS.escape(id)}"] input[type="checkbox"]`
+    );
+    if (checkbox) {
+      checkbox.checked = item.enabled;
+    }
     saveCycleItems();
   }
 }
@@ -197,18 +210,40 @@ function confirmAddText() {
 
 // Save cycle items to server
 function saveCycleItems() {
+  pendingSaveCount++;
+  console.log("Saving cycle items, pending:", pendingSaveCount);
+
   fetch("/api/settings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ cycleItems: cycleItems }),
   })
-    .then(() => console.log("Cycle items saved:", cycleItems.length))
-    .catch((err) => console.error("Save failed:", err));
+    .then((res) => res.json())
+    .then((data) => {
+      // We rely on our local optimistic update.
+      // Only if the server modified the structure effectively would we need to update.
+      // But we update timestamp to block polling for a short grace period.
+      lastSaveTimestamp = Date.now();
+      console.log("Cycle items saved successfully");
+    })
+    .catch((err) => {
+      console.error("Save failed:", err);
+    })
+    .finally(() => {
+      pendingSaveCount--;
+      if (pendingSaveCount < 0) pendingSaveCount = 0;
+    });
 }
 
 // Update from loadSettings
 function updateDisplayCycleUI(items) {
-  renderCycleItems(items);
+  // Don't overwrite local state if we're in the middle of saving
+  // Also add a 2-second grace period after last save to ensure we don't fetch stale data
+  if (pendingSaveCount > 0 || Date.now() - lastSaveTimestamp < 2000) {
+    // console.log("Skipping UI update - save in progress or recent");
+    return;
+  }
+  renderCycleItems(items, true);
 }
 
 // Initialize drag and drop for display cycle items
