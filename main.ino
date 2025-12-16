@@ -341,15 +341,19 @@ void loop() {
     Serial.println("WiFi reconnected");
   }
 
-  // Check for GIF updates periodically (every 5 seconds)
-  checkForGifUpdate();
-
   if (isGifMode && gifFrameCount > 0) {
     // ===== LOCAL GIF PLAYBACK =====
     // Play all frames from RAM without API calls
     playGifLocally();
+    
+    // Only check for GIF updates AFTER a complete playback cycle
+    // This prevents blocking HTTP calls from interrupting smooth animation
+    checkForGifUpdate();
   } else {
     // ===== LEGACY POLLING MODE =====
+    // Check for GIF updates periodically when not in GIF mode
+    checkForGifUpdate();
+    
     // Fetch next frame from server
     int duration = fetchFrame(FRAME_NEXT_URL);
     delay(duration);
