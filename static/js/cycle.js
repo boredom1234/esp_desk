@@ -256,8 +256,8 @@ function saveCycleItems() {
 // Update from loadSettings
 function updateDisplayCycleUI(items) {
   // Don't overwrite local state if we're in the middle of saving
-  // Also add a 2-second grace period after last save to ensure we don't fetch stale data
-  if (pendingSaveCount > 0 || Date.now() - lastSaveTimestamp < 2000) {
+  // Also add a 5-second grace period after last save to ensure we don't fetch stale data
+  if (pendingSaveCount > 0 || Date.now() - lastSaveTimestamp < 5000) {
     // console.log("Skipping UI update - save in progress or recent");
     return;
   }
@@ -313,6 +313,22 @@ function initDisplayCycleDragDrop() {
       } else {
         newList.insertBefore(draggedItem, afterElement);
       }
+    }
+  });
+
+  // Re-bind checkbox and delete button event listeners after cloning
+  // (cloneNode(true) copies the DOM but not event listeners)
+  newList.querySelectorAll(".cycle-item").forEach((item) => {
+    const itemId = item.dataset.id;
+    const checkbox = item.querySelector('input[type="checkbox"]');
+    const deleteBtn = item.querySelector(".cycle-delete-btn");
+
+    if (checkbox) {
+      checkbox.addEventListener("mousedown", (e) => e.stopPropagation());
+      checkbox.addEventListener("change", () => toggleCycleItem(itemId));
+    }
+    if (deleteBtn) {
+      deleteBtn.addEventListener("click", () => deleteCycleItem(itemId));
     }
   });
 }

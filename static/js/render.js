@@ -73,13 +73,16 @@ function drawFrame(frame) {
     }
   });
 
-  updateModeUI(settings.frameCount > 1);
+  updateModeUI(settings && settings.frameCount > 1);
 }
 
 function updateModeUI(isCustom) {
   const badge = document.getElementById("mode-badge");
-  if (isCustom && settings.frameCount > 1) {
-    badge.textContent = `ANIM (${settings.frameCount})`;
+  const frameCount = (settings && settings.frameCount) || 1;
+  const currentIndex = (settings && settings.currentIndex) || 0;
+
+  if (isCustom && frameCount > 1) {
+    badge.textContent = `ANIM (${frameCount})`;
     badge.classList.add("custom-active");
   } else if (isCustom) {
     badge.textContent = "CUSTOM";
@@ -91,7 +94,5 @@ function updateModeUI(isCustom) {
 
   // Update frame badge
   const frameBadge = document.getElementById("frameBadge");
-  frameBadge.textContent = `Frame ${(settings.currentIndex || 0) + 1}/${
-    settings.frameCount || 1
-  }`;
+  frameBadge.textContent = `Frame ${currentIndex + 1}/${frameCount}`;
 }

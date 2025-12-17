@@ -38,33 +38,47 @@ let marqueeSize = 2;
 let textStyle = "normal";
 let lastFrameHash = null; // Track frame changes for smart refresh
 let lastUploadedImage = null; // { bitmap, width, height } for saving to cycle
-let authToken = null; // Session token for authentication
-let authRequired = false; // Whether authentication is enabled on server
+// Note: authToken and authRequired are defined in auth.js
 
 // ==========================================
 // INITIALIZATION
 // ==========================================
-loadSettings();
-loadCurrent();
-loadWeather();
+// Note: API calls are deferred until auth is verified via initAfterAuth()
 initDragAndDrop();
 initClipboardPaste();
 initCharCounters();
+
+// Called by auth.js after authentication is verified
+function initAfterAuth() {
+  loadSettings();
+  loadCurrent();
+  loadWeather();
+
+  // Start polling only after auth verified
+  startPolling();
+}
 
 // ==========================================
 // POLLING & AUTO-REFRESH
 // ==========================================
 
-// Live refresh - always poll for the latest frame data
-// This ensures the Visual Feed stays updated without manual refresh
-setInterval(() => {
-  // Always load the current frame to detect backend changes
-  loadCurrentWithChangeDetection();
-  loadSettings();
-}, 1500);
+let pollingInterval = null;
+let weatherInterval = null;
 
-// Update weather every minute
-setInterval(loadWeather, 60000);
+function startPolling() {
+  // Live refresh - always poll for the latest frame data
+  // This ensures the Visual Feed stays updated without manual refresh
+  if (pollingInterval) clearInterval(pollingInterval);
+  pollingInterval = setInterval(() => {
+    // Always load the current frame to detect backend changes
+    loadCurrentWithChangeDetection();
+    loadSettings();
+  }, 1500);
+
+  // Update weather every minute
+  if (weatherInterval) clearInterval(weatherInterval);
+  weatherInterval = setInterval(loadWeather, 60000);
+}
 
 // Smart frame loading that detects if content has changed
 function loadCurrentWithChangeDetection() {
@@ -149,5 +163,5 @@ function resetGifFps() {
 // ==========================================
 // AUTHENTICATION INIT
 // ==========================================
-// Initialize auth check on page load
+// Initialize auth check on page load - this will call initAfterAuth() when ready
 checkAuth();

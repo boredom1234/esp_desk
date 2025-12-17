@@ -2,6 +2,13 @@
 // ESP DESK_OS - Authentication
 // ==========================================
 
+// Storage key for auth token
+const AUTH_TOKEN_KEY = "esp_desk_auth_token";
+
+// Restore token from localStorage on load
+let authToken = localStorage.getItem(AUTH_TOKEN_KEY);
+let authRequired = false; // Global flag to indicate if auth is enabled on the server
+
 // Check authentication status on page load
 async function checkAuth() {
   try {
@@ -15,18 +22,24 @@ async function checkAuth() {
     if (!data.authRequired) {
       // Auth not enabled on server, show dashboard directly
       showDashboard();
+      initAfterAuth(); // Initialize app after auth verified
       return;
     }
 
     if (data.authenticated) {
       showDashboard();
+      initAfterAuth(); // Initialize app after auth verified
     } else {
+      // Token invalid, clear it
+      authToken = null;
+      localStorage.removeItem(AUTH_TOKEN_KEY);
       showLogin();
     }
   } catch (err) {
     console.error("Auth check failed:", err);
     // On error, try to show dashboard (might work if no auth)
     showDashboard();
+    initAfterAuth();
   }
 }
 
@@ -75,10 +88,9 @@ async function handleLogin(event) {
 
     if (data.success) {
       authToken = data.token;
+      localStorage.setItem(AUTH_TOKEN_KEY, authToken); // Persist token
       showDashboard();
-      // Reload settings after login
-      loadSettings();
-      loadWeather();
+      initAfterAuth(); // Initialize app after login
     } else {
       errorDiv.textContent = data.error || "Invalid password";
       errorDiv.style.display = "block";
@@ -107,6 +119,7 @@ async function handleLogout() {
   }
 
   authToken = null;
+  localStorage.removeItem(AUTH_TOKEN_KEY); // Clear persisted token
   showLogin();
 }
 

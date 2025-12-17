@@ -124,6 +124,9 @@ var (
 	authTokens        = make(map[string]time.Time) // session token -> expiry time
 	authMutex         sync.RWMutex
 	authEnabled       bool = false // Only enable auth if password is set
+
+	// Timezone for display (IST = UTC+5:30)
+	istLocation *time.Location
 )
 
 // Decorative border for attractive display
@@ -751,7 +754,7 @@ func handleReset(w http.ResponseWriter, r *http.Request) {
 		{ID: "uptime-1", Type: "uptime", Label: "⏱ Uptime", Enabled: true, Duration: 3000},
 	}
 	cycleItemCounter = 3
-	currentCity = "Bangalore"
+	currentCity = "Kolkata"
 	cityLat = 22.57
 	cityLng = 88.36
 	index = 0
@@ -829,7 +832,14 @@ func getWeatherCondition(code int) string {
 }
 
 func fetchWeather() {
-	url := fmt.Sprintf("https://api.open-meteo.com/v1/forecast?latitude=%.2f&longitude=%.2f&current_weather=true", cityLat, cityLng)
+	// Read coordinates with mutex to avoid race conditions
+	mutex.Lock()
+	lat := cityLat
+	lng := cityLng
+	city := currentCity
+	mutex.Unlock()
+
+	url := fmt.Sprintf("https://api.open-meteo.com/v1/forecast?latitude=%.2f&longitude=%.2f&current_weather=true", lat, lng)
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Println("Error fetching weather:", err)
@@ -844,14 +854,19 @@ func fetchWeather() {
 	}
 
 	isDay := w.CurrentWeather.IsDay == 1
-	weatherData = WeatherData{
-		City:        currentCity,
+	newData := WeatherData{
+		City:        city,
 		Temperature: fmt.Sprintf("%.1fC", w.CurrentWeather.Temperature),
 		Condition:   getWeatherCondition(w.CurrentWeather.WeatherCode),
 		Icon:        getWeatherIcon(w.CurrentWeather.WeatherCode, isDay),
 		Windspeed:   fmt.Sprintf("%.0f km/h", w.CurrentWeather.Windspeed),
 		IsDay:       isDay,
 	}
+
+	// Write weather data with mutex protection
+	mutex.Lock()
+	weatherData = newData
+	mutex.Unlock()
 }
 
 func handleWeather(w http.ResponseWriter, r *http.Request) {
@@ -910,7 +925,12 @@ func updateLoop() {
 		mutex.Lock()
 
 		if !isCustomMode {
-			currentTime := time.Now().Format("15:04:05")
+			// Use IST timezone for time display
+			now := time.Now()
+			if istLocation != nil {
+				now = now.In(istLocation)
+			}
+			currentTime := now.Format("15:04:05")
 			uptime := time.Since(startTime).Round(time.Second).String()
 
 			// Build frame map for each type
@@ -1084,8 +1104,8 @@ func handleGifFull(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Limit frames to prevent memory issues on ESP32 (max ~80 frames)
-	maxFrames := 80
+	// Limit frames to match ESP32 MAX_GIF_FRAMES (50 frames max)
+	maxFrames := 50
 	framesToSend := make([]Frame, 0, maxFrames)
 
 	// Calculate frame duration based on FPS override
@@ -1395,6 +1415,17 @@ func main() {
 		log.Printf("Authentication DISABLED - no DASHBOARD_PASSWORD set")
 	}
 
+	// Initialize IST timezone for time display
+	var err error
+	istLocation, err = time.LoadLocation("Asia/Kolkata")
+	if err != nil {
+		// Fallback: create fixed timezone offset for IST (UTC+5:30)
+		istLocation = time.FixedZone("IST", 5*60*60+30*60)
+		log.Printf("Using fixed IST offset (timezone data not available)")
+	} else {
+		log.Printf("Loaded Asia/Kolkata timezone for IST")
+	}
+
 	frames = []Frame{{Duration: 1000, Clear: true, Elements: []Element{{Type: "text", X: 20, Y: 25, Size: 2, Value: "BOOTING..."}}}}
 
 	go updateLoop()
@@ -1476,14 +1507,49 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		frames = []Frame{}
 		isGifMode = true // Multi-frame GIF - enable local playback mode
 
-		for i, srcImg := range g.Image {
-			if i >= 100 { // Limit frames
-				break
-			}
+		totalFrames := len(g.Image)
+		const maxFrames = 50 // ESP32 MAX_GIF_FRAMES limit
 
+		// Calculate which frames to sample if we exceed the limit
+		var frameIndices []int
+		if totalFrames <= maxFrames {
+			// Use all frames
+			for i := 0; i < totalFrames; i++ {
+				frameIndices = append(frameIndices, i)
+			}
+			log.Printf("GIF has %d frames, using all", totalFrames)
+		} else {
+			// Sample frames evenly to fit within limit
+			step := float64(totalFrames) / float64(maxFrames)
+			for i := 0; i < maxFrames; i++ {
+				frameIdx := int(float64(i) * step)
+				if frameIdx >= totalFrames {
+					frameIdx = totalFrames - 1
+				}
+				frameIndices = append(frameIndices, frameIdx)
+			}
+			log.Printf("GIF has %d frames, sampling down to %d frames (step: %.2f)", totalFrames, maxFrames, step)
+		}
+
+		// Calculate total original duration for timing adjustment
+		totalOriginalDuration := 0
+		for _, delay := range g.Delay {
+			totalOriginalDuration += delay * 10
+		}
+
+		// Process selected frames
+		for _, frameIdx := range frameIndices {
+			srcImg := g.Image[frameIdx]
 			bitmap := processImageToBitmap(srcImg, 128, 64)
 
-			duration := g.Delay[i] * 10
+			var duration int
+			if totalFrames > maxFrames {
+				// Distribute total animation time evenly across sampled frames
+				duration = totalOriginalDuration / len(frameIndices)
+			} else {
+				duration = g.Delay[frameIdx] * 10
+			}
+
 			if duration < 50 {
 				duration = 50
 			}

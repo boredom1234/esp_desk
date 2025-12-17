@@ -209,9 +209,10 @@ bool fetchFullGif() {
 // Plays all stored GIF frames without any network calls
 void playGifLocally() {
   for (int i = 0; i < gifFrameCount; i++) {
-    // Check WiFi status but don't interrupt playback
+    // Check WiFi status - if lost, exit GIF playback to attempt reconnection
     if (WiFi.status() != WL_CONNECTED) {
-      Serial.println("WiFi lost during GIF playback");
+      Serial.println("WiFi lost during GIF playback, exiting for reconnection");
+      isGifMode = false; // Force exit GIF mode so main loop handles reconnection
       return;
     }
     
@@ -234,13 +235,20 @@ int fetchFrame(const char* url) {
   if (code != 200) {
     http.end();
     digitalWrite(LED_PIN, LOW);
+    Serial.printf("fetchFrame failed with HTTP code: %d\n", code);
     return 1000;
   }
 
   // Increased buffer size to 8192 for large animations
   StaticJsonDocument<8192> doc;
-  deserializeJson(doc, http.getString());
+  DeserializationError error = deserializeJson(doc, http.getString());
   http.end();
+  
+  if (error) {
+    Serial.printf("JSON parse error in fetchFrame: %s\n", error.c_str());
+    digitalWrite(LED_PIN, LOW);
+    return 1000;
+  }
 
   drawFrame(doc);
   
@@ -266,15 +274,16 @@ void checkForGifUpdate() {
   } else if (wasGifMode && !newGifAvailable) {
     Serial.println("Exited GIF/Marquee mode, switching to polling");
     
-    // ===== MEMORY CLEANUP =====
-    // Zero out frame buffers to free memory
+    // ===== BUFFER CLEANUP =====
+    // Zero out frame buffers - note: memory is statically allocated,
+    // so this just clears the data but doesn't reduce RAM usage
     for (int i = 0; i < gifFrameCount; i++) {
       memset(gifFrames[i], 0, BYTES_PER_FRAME);
     }
     
     isGifMode = false;
     gifFrameCount = 0;
-    Serial.println("Memory cleanup complete");
+    Serial.println("Buffer cleanup complete");
   }
 }
 
@@ -288,8 +297,9 @@ void setup() {
 
   // OLED init
   if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDRESS)) {
-    Serial.println("SSD1306 allocation failed");
-    while (true);
+    Serial.println("SSD1306 allocation failed - restarting in 5 seconds");
+    delay(5000);
+    ESP.restart();
   }
 
   display.clearDisplay();
@@ -309,10 +319,13 @@ void setup() {
   
   if (WiFi.status() != WL_CONNECTED) {
     display.clearDisplay();
-    display.setCursor(20, 28);
+    display.setCursor(10, 24);
     display.print("WiFi Failed!");
+    display.setCursor(10, 36);
+    display.print("Restarting...");
     display.display();
-    while (true);
+    delay(3000);
+    ESP.restart();
   }
 
   Serial.println("WiFi connected");
