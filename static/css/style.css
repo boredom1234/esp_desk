@@ -1656,3 +1656,112 @@ input[type="file"]::file-selector-button {
   color: var(--accent-primary);
   font-weight: 600;
 }
+
+/* ============================================
+   WEATHER & AQI DISPLAY
+   ============================================ */
+
+.weather-display {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-sm);
+}
+
+.weather-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.weather-row-secondary {
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.weather-row-pm {
+  padding-top: 0.25rem;
+}
+
+.weather-icon {
+  font-size: 1.25rem;
+}
+
+.weather-info {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.weather-wind {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.weather-aqi {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.aqi-badge {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.5px;
+}
+
+.aqi-level {
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+}
+
+/* AQI Color Classes - US EPA Scale */
+.aqi-good {
+  background: rgba(0, 228, 0, 0.2);
+  border: 1px solid rgba(0, 228, 0, 0.4);
+  color: #00e400;
+}
+
+.aqi-moderate {
+  background: rgba(255, 255, 0, 0.15);
+  border: 1px solid rgba(255, 255, 0, 0.4);
+  color: #ffff00;
+}
+
+.aqi-sensitive {
+  background: rgba(255, 126, 0, 0.2);
+  border: 1px solid rgba(255, 126, 0, 0.4);
+  color: #ff7e00;
+}
+
+.aqi-unhealthy {
+  background: rgba(255, 0, 0, 0.2);
+  border: 1px solid rgba(255, 0, 0, 0.4);
+  color: #ff0000;
+}
+
+.aqi-very-unhealthy {
+  background: rgba(143, 63, 151, 0.25);
+  border: 1px solid rgba(143, 63, 151, 0.5);
+  color: #8f3f97;
+}
+
+.aqi-hazardous {
+  background: rgba(126, 0, 35, 0.3);
+  border: 1px solid rgba(126, 0, 35, 0.5);
+  color: #7e0023;
+}
+
+.weather-pm {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}

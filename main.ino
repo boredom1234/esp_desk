@@ -121,7 +121,8 @@ void drawFrame(JsonDocument& doc) {
 
 // ===== FUNCTION: FETCH FULL GIF =====
 // Downloads all GIF frames at once and stores them in RAM for local playback
-bool fetchFullGif() {
+// Returns: 1 = GIF loaded successfully, 0 = no GIF available (server says isGifMode=false), -1 = network/parse error
+int fetchFullGifWithStatus() {
   digitalWrite(LED_PIN, HIGH);
   
   HTTPClient http;
@@ -133,7 +134,7 @@ bool fetchFullGif() {
     http.end();
     digitalWrite(LED_PIN, LOW);
     Serial.printf("GIF fetch failed with code: %d\n", code);
-    return false;
+    return -1;  // Network error - don't change GIF mode state
   }
 
   // Use large buffer for full GIF response
@@ -148,17 +149,18 @@ bool fetchFullGif() {
   if (error) {
     Serial.printf("JSON parse error: %s\n", error.c_str());
     digitalWrite(LED_PIN, LOW);
-    return false;
+    return -1;  // Parse error - don't change GIF mode state
   }
 
   bool gifMode = doc["isGifMode"] | false;
   int frameCount = doc["frameCount"] | 0;
 
   if (!gifMode || frameCount == 0) {
-    Serial.println("Not in GIF mode or no frames");
+    Serial.println("Server says: Not in GIF mode or no frames");
     digitalWrite(LED_PIN, LOW);
     isGifMode = false;
-    return false;
+    gifFrameCount = 0;
+    return 0;  // Server explicitly says no GIF mode
   }
 
   // Limit frames to our buffer size
@@ -202,7 +204,12 @@ bool fetchFullGif() {
   digitalWrite(LED_PIN, LOW);
   
   isGifMode = (gifFrameCount > 0);
-  return isGifMode;
+  return isGifMode ? 1 : 0;
+}
+
+// Wrapper for backward compatibility
+bool fetchFullGif() {
+  return fetchFullGifWithStatus() == 1;
 }
 
 // ===== FUNCTION: PLAY GIF LOCALLY =====
@@ -265,25 +272,38 @@ void checkForGifUpdate() {
   }
   lastGifCheck = millis();
   
-  // Try to fetch full GIF - if not in GIF mode, server returns isGifMode=false
   bool wasGifMode = isGifMode;
-  bool newGifAvailable = fetchFullGif();
+  int previousFrameCount = gifFrameCount;
   
-  if (newGifAvailable) {
-    Serial.println("New GIF/Marquee loaded, switching to local playback");
-  } else if (wasGifMode && !newGifAvailable) {
-    Serial.println("Exited GIF/Marquee mode, switching to polling");
-    
-    // ===== BUFFER CLEANUP =====
-    // Zero out frame buffers - note: memory is statically allocated,
-    // so this just clears the data but doesn't reduce RAM usage
-    for (int i = 0; i < gifFrameCount; i++) {
-      memset(gifFrames[i], 0, BYTES_PER_FRAME);
+  // Try to fetch full GIF - returns: 1=success, 0=no GIF on server, -1=error
+  int result = fetchFullGifWithStatus();
+  
+  if (result == 1) {
+    // New GIF loaded successfully
+    if (!wasGifMode || gifFrameCount != previousFrameCount) {
+      Serial.println("New GIF/Marquee loaded, switching to local playback");
     }
-    
-    isGifMode = false;
-    gifFrameCount = 0;
-    Serial.println("Buffer cleanup complete");
+  } else if (result == 0) {
+    // Server explicitly says no GIF mode
+    if (wasGifMode) {
+      Serial.println("Exited GIF/Marquee mode, switching to polling");
+      
+      // ===== BUFFER CLEANUP =====
+      // Zero out frame buffers - note: memory is statically allocated,
+      // so this just clears the data but doesn't reduce RAM usage
+      for (int i = 0; i < previousFrameCount; i++) {
+        memset(gifFrames[i], 0, BYTES_PER_FRAME);
+      }
+      
+      // isGifMode and gifFrameCount already set to false/0 by fetchFullGifWithStatus
+      Serial.println("Buffer cleanup complete");
+    }
+  } else {
+    // result == -1: Network or parsing error
+    // IMPORTANT: Keep current GIF mode state - don't interrupt playback due to transient errors
+    if (wasGifMode) {
+      Serial.println("GIF update check failed (network/parse error), continuing local playback");
+    }
   }
 }
 

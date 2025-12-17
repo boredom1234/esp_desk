@@ -79,6 +79,18 @@ type WeatherResponse struct {
 	} `json:"current_weather"`
 }
 
+// AirQualityResponse from Open-Meteo Air Quality API
+type AirQualityResponse struct {
+	Current struct {
+		PM25            float64 `json:"pm2_5"`
+		PM10            float64 `json:"pm10"`
+		EuropeanAQI     int     `json:"european_aqi"`
+		USAQI           int     `json:"us_aqi"`
+		EuropeanAQIPM25 int     `json:"european_aqi_pm2_5"`
+		EuropeanAQIPM10 int     `json:"european_aqi_pm10"`
+	} `json:"current"`
+}
+
 type WeatherData struct {
 	City        string `json:"city"`
 	Temperature string `json:"temperature"`
@@ -86,6 +98,10 @@ type WeatherData struct {
 	Icon        string `json:"icon"`
 	Windspeed   string `json:"windspeed"`
 	IsDay       bool   `json:"isDay"`
+	AQI         int    `json:"aqi"`      // US AQI (0-500 scale)
+	AQILevel    string `json:"aqiLevel"` // "Good", "Moderate", "Unhealthy", etc.
+	PM25        string `json:"pm25"`     // PM2.5 concentration
+	PM10        string `json:"pm10"`     // PM10 concentration
 }
 
 // ==========================================
@@ -831,6 +847,24 @@ func getWeatherCondition(code int) string {
 	}
 }
 
+// getAQILevel returns a human-readable AQI level based on US AQI scale
+func getAQILevel(aqi int) string {
+	switch {
+	case aqi <= 50:
+		return "Good"
+	case aqi <= 100:
+		return "Moderate"
+	case aqi <= 150:
+		return "Unhealthy (SG)"
+	case aqi <= 200:
+		return "Unhealthy"
+	case aqi <= 300:
+		return "Very Unhealthy"
+	default:
+		return "Hazardous"
+	}
+}
+
 func fetchWeather() {
 	// Read coordinates with mutex to avoid race conditions
 	mutex.Lock()
@@ -839,16 +873,17 @@ func fetchWeather() {
 	city := currentCity
 	mutex.Unlock()
 
-	url := fmt.Sprintf("https://api.open-meteo.com/v1/forecast?latitude=%.2f&longitude=%.2f&current_weather=true", lat, lng)
-	resp, err := http.Get(url)
+	// Fetch weather data from Open-Meteo
+	weatherURL := fmt.Sprintf("https://api.open-meteo.com/v1/forecast?latitude=%.2f&longitude=%.2f&current_weather=true", lat, lng)
+	weatherResp, err := http.Get(weatherURL)
 	if err != nil {
 		log.Println("Error fetching weather:", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer weatherResp.Body.Close()
 
 	var w WeatherResponse
-	if err := json.NewDecoder(resp.Body).Decode(&w); err != nil {
+	if err := json.NewDecoder(weatherResp.Body).Decode(&w); err != nil {
 		log.Println("Error decoding weather:", err)
 		return
 	}
@@ -861,6 +896,29 @@ func fetchWeather() {
 		Icon:        getWeatherIcon(w.CurrentWeather.WeatherCode, isDay),
 		Windspeed:   fmt.Sprintf("%.0f km/h", w.CurrentWeather.Windspeed),
 		IsDay:       isDay,
+		AQI:         0,
+		AQILevel:    "N/A",
+		PM25:        "N/A",
+		PM10:        "N/A",
+	}
+
+	// Fetch air quality data from Open-Meteo Air Quality API
+	aqiURL := fmt.Sprintf("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=%.2f&longitude=%.2f&current=pm2_5,pm10,european_aqi,us_aqi,european_aqi_pm2_5,european_aqi_pm10", lat, lng)
+	aqiResp, err := http.Get(aqiURL)
+	if err != nil {
+		log.Println("Error fetching AQI (continuing with weather only):", err)
+	} else {
+		defer aqiResp.Body.Close()
+		var aq AirQualityResponse
+		if err := json.NewDecoder(aqiResp.Body).Decode(&aq); err != nil {
+			log.Println("Error decoding AQI:", err)
+		} else {
+			newData.AQI = aq.Current.USAQI
+			newData.AQILevel = getAQILevel(aq.Current.USAQI)
+			newData.PM25 = fmt.Sprintf("%.1f", aq.Current.PM25)
+			newData.PM10 = fmt.Sprintf("%.1f", aq.Current.PM10)
+			log.Printf("AQI fetched: US AQI=%d, PM2.5=%.1f, PM10=%.1f", aq.Current.USAQI, aq.Current.PM25, aq.Current.PM10)
+		}
 	}
 
 	// Write weather data with mutex protection
@@ -914,7 +972,7 @@ func handleWeather(w http.ResponseWriter, r *http.Request) {
 func updateLoop() {
 	go func() {
 		fetchWeather()
-		ticker := time.NewTicker(15 * time.Minute)
+		ticker := time.NewTicker(10 * time.Minute)
 		for range ticker.C {
 			fetchWeather()
 		}
@@ -950,18 +1008,37 @@ func updateLoop() {
 			}
 			frameMap["time"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: timeElements}
 
-			// Weather frame
+			// Weather frame - now includes AQI
+			// Build compact AQI display (just number, fits OLED width)
+			aqiDisplay := ""
+			if weatherData.AQI > 0 {
+				aqiDisplay = fmt.Sprintf("AQI:%d", weatherData.AQI)
+			}
+
 			weatherElements := []Element{
-				{Type: "text", X: 30, Y: 18, Size: 2, Value: weatherData.Temperature},
+				{Type: "text", X: 25, Y: 20, Size: 2, Value: weatherData.Temperature},
 			}
 			if showHeaders {
 				weatherElements = append([]Element{
 					{Type: "text", X: 28, Y: 2, Size: 1, Value: "= WEATHER ="},
 					{Type: "line", X: 0, Y: 12, Width: 128, Height: 1},
 				}, weatherElements...)
-				weatherElements = append(weatherElements, Element{Type: "text", X: 25, Y: 38, Size: 1, Value: weatherData.Condition})
-				weatherElements = append(weatherElements, Element{Type: "line", X: 0, Y: 52, Width: 128, Height: 1})
-				weatherElements = append(weatherElements, Element{Type: "text", X: 40, Y: 55, Size: 1, Value: weatherData.City})
+				// Condition and AQI on same line if both fit
+				if aqiDisplay != "" {
+					// Show condition + AQI side by side
+					weatherElements = append(weatherElements, Element{Type: "text", X: 5, Y: 42, Size: 1, Value: weatherData.Condition})
+					weatherElements = append(weatherElements, Element{Type: "text", X: 75, Y: 42, Size: 1, Value: aqiDisplay})
+				} else {
+					weatherElements = append(weatherElements, Element{Type: "text", X: 25, Y: 42, Size: 1, Value: weatherData.Condition})
+				}
+				weatherElements = append(weatherElements, Element{Type: "line", X: 0, Y: 53, Width: 128, Height: 1})
+				weatherElements = append(weatherElements, Element{Type: "text", X: 40, Y: 56, Size: 1, Value: weatherData.City})
+			} else {
+				// Without headers, show compact info
+				weatherElements = append(weatherElements, Element{Type: "text", X: 20, Y: 42, Size: 1, Value: weatherData.Condition})
+				if aqiDisplay != "" {
+					weatherElements = append(weatherElements, Element{Type: "text", X: 20, Y: 52, Size: 1, Value: aqiDisplay})
+				}
 			}
 			frameMap["weather"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: weatherElements}
 
