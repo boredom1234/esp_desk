@@ -49,6 +49,7 @@ loadCurrent();
 loadWeather();
 initDragAndDrop();
 initClipboardPaste();
+initCharCounters();
 
 // ==========================================
 // POLLING & AUTO-REFRESH

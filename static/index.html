@@ -121,6 +121,13 @@
               rows="2"
               maxlength="50"
             ></textarea>
+            <div class="char-counter" id="customTextCounter">
+              0/10 chars per line
+            </div>
+            <small class="input-hint">
+              💡 Display shows max 10 characters per line. Extra characters wrap
+              to next line.
+            </small>
           </div>
           <div class="style-selector">
             <button
@@ -168,6 +175,13 @@
               placeholder="This text will scroll across the display..."
               maxlength="100"
             />
+            <div class="char-counter" id="marqueeTextCounter">
+              0/10 chars per line
+            </div>
+            <small class="input-hint">
+              💡 Scrolling helps display longer text, but each visible frame
+              shows ~10 chars
+            </small>
           </div>
           <div class="options-grid">
             <div class="option-group">
@@ -239,6 +253,13 @@
           <div class="card-header">
             <h2>Media Upload</h2>
             <span class="badge" id="uploadStatus">Ready</span>
+          </div>
+          <div class="info-alert">
+            <span class="info-icon">ℹ️</span>
+            <div class="info-text">
+              <strong>GIF Playback:</strong> Animations may briefly pause every
+              30 seconds while checking for updates. This is normal behavior.
+            </div>
           </div>
           <div class="drop-zone" id="dropZone" tabindex="0">
             <div class="drop-zone-content">
@@ -431,6 +452,7 @@
     <script src="js/weather.js"></script>
     <script src="js/cycle.js"></script>
     <script src="js/auth.js"></script>
+    <script src="js/texthelper.js"></script>
     <script src="js/app.js"></script>
   </body>
 </html>

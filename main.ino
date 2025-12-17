@@ -34,7 +34,7 @@ int gifDurations[MAX_GIF_FRAMES];
 int gifFrameCount = 0;
 bool isGifMode = false;
 unsigned long lastGifCheck = 0;
-const unsigned long GIF_CHECK_INTERVAL = 5000;  // Check for new GIF every 5 seconds
+const unsigned long GIF_CHECK_INTERVAL = 30000;  // Check for new GIF every 30 seconds
 
 // ===== FUNCTION: DRAW BITMAP FROM BUFFER =====
 void drawBitmapFromBuffer(const uint8_t* bitmap) {
@@ -262,11 +262,19 @@ void checkForGifUpdate() {
   bool newGifAvailable = fetchFullGif();
   
   if (newGifAvailable) {
-    Serial.println("New GIF loaded, switching to local playback");
+    Serial.println("New GIF/Marquee loaded, switching to local playback");
   } else if (wasGifMode && !newGifAvailable) {
-    Serial.println("Exited GIF mode, switching to polling");
+    Serial.println("Exited GIF/Marquee mode, switching to polling");
+    
+    // ===== MEMORY CLEANUP =====
+    // Zero out frame buffers to free memory
+    for (int i = 0; i < gifFrameCount; i++) {
+      memset(gifFrames[i], 0, BYTES_PER_FRAME);
+    }
+    
     isGifMode = false;
     gifFrameCount = 0;
+    Serial.println("Memory cleanup complete");
   }
 }
 
@@ -311,12 +319,12 @@ void setup() {
   Serial.print("IP: ");
   Serial.println(WiFi.localIP());
 
-  // Try to fetch full GIF first
+  // Try to fetch full GIF/Marquee first
   if (fetchFullGif()) {
-    Serial.println("GIF mode active - local playback enabled");
+    Serial.println("Animation mode active - local playback enabled");
   } else {
     // Fallback to polling mode
-    Serial.println("No GIF active - using polling mode");
+    Serial.println("No animation active - using polling mode");
     fetchFrame(FRAME_CURRENT_URL);
   }
   
@@ -342,11 +350,11 @@ void loop() {
   }
 
   if (isGifMode && gifFrameCount > 0) {
-    // ===== LOCAL GIF PLAYBACK =====
+    // ===== LOCAL ANIMATION PLAYBACK (GIF/MARQUEE) =====
     // Play all frames from RAM without API calls
     playGifLocally();
     
-    // Only check for GIF updates AFTER a complete playback cycle
+    // Only check for updates AFTER a complete playback cycle
     // This prevents blocking HTTP calls from interrupting smooth animation
     checkForGifUpdate();
   } else {

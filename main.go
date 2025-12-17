@@ -479,6 +479,7 @@ func handleMarquee(w http.ResponseWriter, r *http.Request) {
 
 	mutex.Lock()
 	isCustomMode = true
+	isGifMode = true // Treat marquee as GIF for local ESP32 playback
 	frames = marqueeFrames
 	index = 0
 	mutex.Unlock()
@@ -487,6 +488,7 @@ func handleMarquee(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success":    true,
 		"frameCount": len(marqueeFrames),
+		"message":    "Marquee frames ready for local playback",
 	})
 }
 
@@ -571,7 +573,7 @@ func handleReset(w http.ResponseWriter, r *http.Request) {
 		{ID: "uptime-1", Type: "uptime", Label: "⏱ Uptime", Enabled: true, Duration: 3000},
 	}
 	cycleItemCounter = 3
-	currentCity = "Kolkata"
+	currentCity = "Bangalore"
 	cityLat = 22.57
 	cityLng = 88.36
 	index = 0

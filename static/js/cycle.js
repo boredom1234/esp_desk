@@ -45,7 +45,16 @@ function renderCycleItems(items, updateLocalState = true) {
     checkbox.checked = item.enabled;
     // Use escaped ID to prevent injection in event handler
     const safeId = escapeHtml(item.id);
-    checkbox.addEventListener("change", () => toggleCycleItem(item.id));
+
+    // Prevent drag interference
+    checkbox.addEventListener("mousedown", (e) => {
+      e.stopPropagation();
+    });
+
+    checkbox.addEventListener("change", (e) => {
+      console.log("Checkbox change event fired for:", item.id);
+      toggleCycleItem(item.id);
+    });
 
     const checkmark = document.createElement("span");
     checkmark.className = "checkmark";
@@ -95,9 +104,12 @@ function truncate(str, len) {
 
 // Toggle item enabled state
 function toggleCycleItem(id) {
+  console.log("toggleCycleItem called for:", id);
   const item = cycleItems.find((i) => i.id === id);
   if (item) {
+    console.log("Item found, current enabled:", item.enabled);
     item.enabled = !item.enabled;
+    console.log("Item toggled, new enabled:", item.enabled);
     // Update the checkbox visually immediately (without re-render)
     const checkbox = document.querySelector(
       `.cycle-item[data-id="${CSS.escape(id)}"] input[type="checkbox"]`
@@ -106,6 +118,8 @@ function toggleCycleItem(id) {
       checkbox.checked = item.enabled;
     }
     saveCycleItems();
+  } else {
+    console.error("Item not found with id:", id);
   }
 }
 
@@ -211,27 +225,31 @@ function confirmAddText() {
 // Save cycle items to server
 function saveCycleItems() {
   pendingSaveCount++;
-  console.log("Saving cycle items, pending:", pendingSaveCount);
+  console.log("=== SAVING CYCLE ITEMS ===");
+  console.log("Pending saves:", pendingSaveCount);
+  console.log("Items to save:", cycleItems);
 
   fetch("/api/settings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ cycleItems: cycleItems }),
   })
-    .then((res) => res.json())
+    .then((res) => {
+      console.log("Save response status:", res.status);
+      return res.json();
+    })
     .then((data) => {
-      // We rely on our local optimistic update.
-      // Only if the server modified the structure effectively would we need to update.
-      // But we update timestamp to block polling for a short grace period.
       lastSaveTimestamp = Date.now();
-      console.log("Cycle items saved successfully");
+      console.log("✓ Cycle items saved successfully");
+      console.log("Server response:", data);
     })
     .catch((err) => {
-      console.error("Save failed:", err);
+      console.error("❌ Save failed:", err);
     })
     .finally(() => {
       pendingSaveCount--;
       if (pendingSaveCount < 0) pendingSaveCount = 0;
+      console.log("Save complete, pending now:", pendingSaveCount);
     });
 }
 
