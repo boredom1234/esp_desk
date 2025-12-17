@@ -99,7 +99,7 @@ function sendMarquee() {
     .then((data) => {
       console.log(`Marquee started: ${data.frameCount} frames`);
       loadSettings();
-      startAutoPlay();
+      // Removed startAutoPlay() - let ESP32 handle playback via GIF mode
     })
     .catch((err) => console.error(err));
 }
