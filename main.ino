@@ -144,25 +144,22 @@ int fetchFullGifWithStatus() {
   // Get response size for memory planning
   int contentLength = http.getSize();
   Serial.printf("GIF response size: %d bytes\n", contentLength);
-  
+
   // Get WiFi client for streaming
   WiFiClient* stream = http.getStreamPtr();
   
   // Calculate JSON buffer size
-  // If Content-Length is unknown (-1, chunked encoding), use default size
-  // Otherwise, allocate based on content length plus some headroom
   size_t jsonBufferSize;
   if (contentLength <= 0) {
-    // Unknown size (chunked encoding) - use reasonable default for 20 frames
-    // Each frame ~4KB in JSON, so 20 frames = ~80KB, plus overhead = ~96KB
-    jsonBufferSize = 98304;  // 96KB default
-    Serial.println("Using default buffer size (chunked transfer encoding)");
-  } else if (contentLength > 100000) {
-    Serial.printf("WARNING: Response too large (%d bytes), may cause memory issues\n", contentLength);
-    jsonBufferSize = 131072;  // 128KB max - try anyway
+    // Should not happen now that server sets Content-Length
+    Serial.println("WARNING: Unknown content length, using default 96KB buffer");
+    jsonBufferSize = 98304; 
   } else {
-    jsonBufferSize = (size_t)contentLength + 2048;  // Content + some headroom
+    // Allocate exactly what we need plus a small safety margin
+    // Cap at 120KB to leave some room for other system tasks
+    jsonBufferSize = min((size_t)contentLength + 1024, (size_t)122880);
   }
+  
   Serial.printf("Allocating JSON buffer: %d bytes\n", jsonBufferSize);
   
   // Try to allocate dynamic JSON document

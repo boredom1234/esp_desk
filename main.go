@@ -1313,12 +1313,28 @@ func handleGifFull(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("📡 ESP32 check: isGifMode=true (%d frames sent for local playback)", len(framesToSend))
 
-	json.NewEncoder(w).Encode(GifFullResponse{
+	resp := GifFullResponse{
 		IsGifMode:  true,
 		FrameCount: len(framesToSend),
 		GifFps:     gifFps,
 		Frames:     framesToSend,
-	})
+	}
+
+	// Buffer the JSON to calculate precise length
+	// This avoids chunked transfer encoding which confuses ESP32 streaming parser
+	jsonData, err := json.Marshal(resp)
+	if err != nil {
+		log.Printf("Error marshaling GIF JSON: %v", err)
+		http.Error(w, "JSON marshal error", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("📡 Sending GIF payload: %d bytes", len(jsonData))
+
+	// Explicitly set Content-Length so ESP32 knows exactly how much to read
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(jsonData)))
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonData)
 }
 
 // ==========================================
