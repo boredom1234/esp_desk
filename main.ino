@@ -26,7 +26,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // ===== GIF LOCAL PLAYBACK =====
 // Each frame is stored as bitmap data (1024 bytes for 128x64 1-bit)
-#define MAX_GIF_FRAMES 50       // Limit to ~50KB of RAM for bitmaps
+#define MAX_GIF_FRAMES 20       // Limit to ~20KB of RAM for bitmaps (was 50, reduced for memory safety)
 #define BYTES_PER_FRAME 1024    // 128x64 / 8 = 1024 bytes per frame
 
 uint8_t gifFrames[MAX_GIF_FRAMES][BYTES_PER_FRAME];
@@ -128,6 +128,10 @@ int fetchFullGifWithStatus() {
   HTTPClient http;
   http.begin(GIF_FULL_URL);
   http.setTimeout(30000);  // 30 second timeout for large GIFs
+  
+  // Add header to request limited frames for ESP32 memory constraints
+  http.addHeader("X-ESP32-Max-Frames", String(MAX_GIF_FRAMES));
+  
   int code = http.GET();
 
   if (code != 200) {
@@ -137,31 +141,57 @@ int fetchFullGifWithStatus() {
     return -1;  // Network error - don't change GIF mode state
   }
 
-  // Use large buffer for full GIF response
-  // This will be freed after parsing
-  String payload = http.getString();
-  http.end();
+  // Get response size for memory planning
+  int contentLength = http.getSize();
+  Serial.printf("GIF response size: %d bytes\n", contentLength);
   
-  // Parse JSON - need large buffer for all frames
-  DynamicJsonDocument doc(65536);  // 64KB JSON buffer
-  DeserializationError error = deserializeJson(doc, payload);
+  // Check if response is too large (more than 80KB is risky)
+  if (contentLength > 80000) {
+    Serial.printf("WARNING: Response too large (%d bytes), may cause memory issues\n", contentLength);
+  }
+
+  // Get WiFi client for streaming
+  WiFiClient* stream = http.getStreamPtr();
+  
+  // Use streaming JSON parser - much more memory efficient
+  // We parse directly from the HTTP stream without storing the full response
+  // Allocate based on expected content, but cap at reasonable size
+  size_t jsonBufferSize = min((size_t)contentLength + 1024, (size_t)131072);  // Max 128KB
+  
+  // Try to allocate dynamic JSON document
+  DynamicJsonDocument* doc = new (std::nothrow) DynamicJsonDocument(jsonBufferSize);
+  if (doc == nullptr) {
+    Serial.println("ERROR: Failed to allocate JSON buffer - out of memory");
+    http.end();
+    digitalWrite(LED_PIN, LOW);
+    return -1;
+  }
+  
+  // Parse JSON directly from stream (memory efficient)
+  DeserializationError error = deserializeJson(*doc, *stream);
+  http.end();
   
   if (error) {
     Serial.printf("JSON parse error: %s\n", error.c_str());
+    Serial.printf("JSON buffer size was: %d bytes\n", jsonBufferSize);
+    delete doc;
     digitalWrite(LED_PIN, LOW);
     return -1;  // Parse error - don't change GIF mode state
   }
 
-  bool gifMode = doc["isGifMode"] | false;
-  int frameCount = doc["frameCount"] | 0;
+  bool gifMode = (*doc)["isGifMode"] | false;
+  int frameCount = (*doc)["frameCount"] | 0;
 
   if (!gifMode || frameCount == 0) {
     Serial.println("Server says: Not in GIF mode or no frames");
+    delete doc;
     digitalWrite(LED_PIN, LOW);
     isGifMode = false;
     gifFrameCount = 0;
     return 0;  // Server explicitly says no GIF mode
   }
+
+  Serial.printf("Server sent %d frames, processing...\n", frameCount);
 
   // Limit frames to our buffer size
   if (frameCount > MAX_GIF_FRAMES) {
@@ -170,7 +200,7 @@ int fetchFullGifWithStatus() {
   }
 
   // Extract frames
-  JsonArray framesArray = doc["frames"].as<JsonArray>();
+  JsonArray framesArray = (*doc)["frames"].as<JsonArray>();
   gifFrameCount = 0;
 
   for (JsonObject frame : framesArray) {
@@ -199,6 +229,9 @@ int fetchFullGifWithStatus() {
       }
     }
   }
+
+  // Clean up JSON document
+  delete doc;
 
   Serial.printf("Loaded %d GIF frames for local playback\n", gifFrameCount);
   digitalWrite(LED_PIN, LOW);

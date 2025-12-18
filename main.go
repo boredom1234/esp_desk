@@ -1287,8 +1287,8 @@ func handleGifFull(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Limit frames to match ESP32 MAX_GIF_FRAMES (50 frames max)
-	maxFrames := 50
+	// Limit frames to match ESP32 MAX_GIF_FRAMES (20 frames max for memory safety)
+	maxFrames := 20
 	framesToSend := make([]Frame, 0, maxFrames)
 
 	// Calculate frame duration based on FPS override
@@ -1988,7 +1988,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		isGifMode = true // Multi-frame GIF - enable local playback mode
 
 		totalFrames := len(g.Image)
-		const maxFrames = 50 // ESP32 MAX_GIF_FRAMES limit
+		const maxFrames = 20 // ESP32 MAX_GIF_FRAMES limit (reduced for memory safety)
 
 		// Calculate which frames to sample if we exceed the limit
 		var frameIndices []int
