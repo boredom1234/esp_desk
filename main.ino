@@ -145,18 +145,25 @@ int fetchFullGifWithStatus() {
   int contentLength = http.getSize();
   Serial.printf("GIF response size: %d bytes\n", contentLength);
   
-  // Check if response is too large (more than 80KB is risky)
-  if (contentLength > 80000) {
-    Serial.printf("WARNING: Response too large (%d bytes), may cause memory issues\n", contentLength);
-  }
-
   // Get WiFi client for streaming
   WiFiClient* stream = http.getStreamPtr();
   
-  // Use streaming JSON parser - much more memory efficient
-  // We parse directly from the HTTP stream without storing the full response
-  // Allocate based on expected content, but cap at reasonable size
-  size_t jsonBufferSize = min((size_t)contentLength + 1024, (size_t)131072);  // Max 128KB
+  // Calculate JSON buffer size
+  // If Content-Length is unknown (-1, chunked encoding), use default size
+  // Otherwise, allocate based on content length plus some headroom
+  size_t jsonBufferSize;
+  if (contentLength <= 0) {
+    // Unknown size (chunked encoding) - use reasonable default for 20 frames
+    // Each frame ~4KB in JSON, so 20 frames = ~80KB, plus overhead = ~96KB
+    jsonBufferSize = 98304;  // 96KB default
+    Serial.println("Using default buffer size (chunked transfer encoding)");
+  } else if (contentLength > 100000) {
+    Serial.printf("WARNING: Response too large (%d bytes), may cause memory issues\n", contentLength);
+    jsonBufferSize = 131072;  // 128KB max - try anyway
+  } else {
+    jsonBufferSize = (size_t)contentLength + 2048;  // Content + some headroom
+  }
+  Serial.printf("Allocating JSON buffer: %d bytes\n", jsonBufferSize);
   
   // Try to allocate dynamic JSON document
   DynamicJsonDocument* doc = new (std::nothrow) DynamicJsonDocument(jsonBufferSize);
