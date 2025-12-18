@@ -202,7 +202,16 @@ func currentFrame(w http.ResponseWriter, r *http.Request) {
 	frame.Duration = espRefreshDuration
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(frame)
+
+	// Include isGifMode hint so ESP32 can detect mode change immediately
+	response := map[string]interface{}{
+		"version":   frame.Version,
+		"duration":  frame.Duration,
+		"clear":     frame.Clear,
+		"elements":  frame.Elements,
+		"isGifMode": isGifMode, // Hint for ESP32 to fetch /api/gif/full immediately
+	}
+	json.NewEncoder(w).Encode(response)
 }
 
 func nextFrame(w http.ResponseWriter, r *http.Request) {
@@ -220,7 +229,16 @@ func nextFrame(w http.ResponseWriter, r *http.Request) {
 	frame.Duration = espRefreshDuration
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(frame)
+
+	// Include isGifMode hint so ESP32 can detect mode change immediately
+	response := map[string]interface{}{
+		"version":   frame.Version,
+		"duration":  frame.Duration,
+		"clear":     frame.Clear,
+		"elements":  frame.Elements,
+		"isGifMode": isGifMode, // Hint for ESP32 to fetch /api/gif/full immediately
+	}
+	json.NewEncoder(w).Encode(response)
 }
 
 func prevFrame(w http.ResponseWriter, r *http.Request) {
@@ -300,8 +318,10 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 		}
 
 		mutex.Lock()
+		var changes []string
 		if req.AutoPlay != nil {
 			autoPlay = *req.AutoPlay
+			changes = append(changes, fmt.Sprintf("autoPlay=%v", autoPlay))
 		}
 		if req.FrameDuration != nil {
 			frameDuration = *req.FrameDuration
@@ -311,6 +331,7 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			if frameDuration > 5000 {
 				frameDuration = 5000
 			}
+			changes = append(changes, fmt.Sprintf("frameDuration=%dms", frameDuration))
 		}
 		if req.EspRefreshDuration != nil {
 			espRefreshDuration = *req.EspRefreshDuration
@@ -320,6 +341,7 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			if espRefreshDuration > 30000 {
 				espRefreshDuration = 30000
 			}
+			changes = append(changes, fmt.Sprintf("espRefreshDuration=%dms", espRefreshDuration))
 		}
 		if req.GifFps != nil {
 			gifFps = *req.GifFps
@@ -329,13 +351,16 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			if gifFps > 30 {
 				gifFps = 30
 			}
+			changes = append(changes, fmt.Sprintf("gifFps=%d", gifFps))
 		}
 		if req.ShowHeaders != nil {
 			showHeaders = *req.ShowHeaders
+			changes = append(changes, fmt.Sprintf("showHeaders=%v", showHeaders))
 		}
 		if req.CycleItems != nil {
 			// Replace entire cycle items list
 			cycleItems = req.CycleItems
+			changes = append(changes, fmt.Sprintf("cycleItems=%d items", len(cycleItems)))
 		}
 		settings := Settings{
 			AutoPlay:           autoPlay,
@@ -352,6 +377,11 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 		// Persist settings (Issue 2)
 		go saveConfig()
 
+		// Log what was updated
+		if len(changes) > 0 {
+			log.Printf("⚙️  Settings updated: %s", strings.Join(changes, ", "))
+		}
+
 		json.NewEncoder(w).Encode(settings)
 		return
 	}
@@ -367,6 +397,8 @@ func handleToggleHeaders(w http.ResponseWriter, r *http.Request) {
 	showHeaders = !showHeaders
 	currentState := showHeaders
 	mutex.Unlock()
+
+	log.Printf("👁️  Headers visibility toggled: showHeaders=%v", currentState)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"headersVisible": currentState})
@@ -654,7 +686,7 @@ func handleCustomText(w http.ResponseWriter, r *http.Request) {
 
 func handleMarquee(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -667,7 +699,7 @@ func handleMarquee(w http.ResponseWriter, r *http.Request) {
 		Loops     int    `json:"loops"`     // number of complete scrolls
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		jsonError(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -828,6 +860,8 @@ func handleReset(w http.ResponseWriter, r *http.Request) {
 
 	// Refresh weather for default city
 	go fetchWeather()
+
+	log.Printf("🔄 System reset to defaults: city=%s, timezone=%s", currentCity, timezoneName)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "reset_complete"})
@@ -1025,6 +1059,8 @@ func handleWeather(w http.ResponseWriter, r *http.Request) {
 		// Fetch weather for new location
 		fetchWeather()
 
+		log.Printf("🌤️  Weather city changed: %s (%.2f, %.2f)", req.City, req.Latitude, req.Longitude)
+
 		mutex.Lock()
 		data := weatherData
 		mutex.Unlock()
@@ -1062,6 +1098,8 @@ func updateLoop() {
 			frameMap := make(map[string]Frame)
 
 			// Time frame
+			// Get timezone abbreviation from current time in selected location
+			tzAbbrev, _ := now.Zone()
 			timeElements := []Element{
 				{Type: "text", X: 20, Y: 22, Size: 2, Value: currentTime},
 			}
@@ -1071,7 +1109,7 @@ func updateLoop() {
 					{Type: "line", X: 0, Y: 12, Width: 128, Height: 1},
 				}, timeElements...)
 				timeElements = append(timeElements, Element{Type: "line", X: 0, Y: 52, Width: 128, Height: 1})
-				timeElements = append(timeElements, Element{Type: "text", X: 45, Y: 55, Size: 1, Value: "IST"})
+				timeElements = append(timeElements, Element{Type: "text", X: 45, Y: 55, Size: 1, Value: tzAbbrev})
 			}
 			frameMap["time"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: timeElements}
 
@@ -1228,7 +1266,7 @@ type GifFullResponse struct {
 // This eliminates per-frame API calls during animation playback
 func handleGifFull(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -1239,6 +1277,7 @@ func handleGifFull(w http.ResponseWriter, r *http.Request) {
 
 	// If not in GIF mode or no frames, return empty response
 	if !isGifMode || len(frames) == 0 {
+		log.Printf("📡 ESP32 check: isGifMode=false (polling mode)")
 		json.NewEncoder(w).Encode(GifFullResponse{
 			IsGifMode:  false,
 			FrameCount: len(frames),
@@ -1271,6 +1310,8 @@ func handleGifFull(w http.ResponseWriter, r *http.Request) {
 		}
 		framesToSend = append(framesToSend, frameCopy)
 	}
+
+	log.Printf("📡 ESP32 check: isGifMode=true (%d frames sent for local playback)", len(framesToSend))
 
 	json.NewEncoder(w).Encode(GifFullResponse{
 		IsGifMode:  true,
@@ -1774,6 +1815,8 @@ func handleTimezone(w http.ResponseWriter, r *http.Request) {
 
 		saveConfig()
 
+		log.Printf("🌍 Timezone updated: %s", req.Timezone)
+
 		json.NewEncoder(w).Encode(map[string]string{"timezone": req.Timezone, "status": "updated"})
 		return
 	}
@@ -2023,7 +2066,11 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	frameCount := len(frames)
-	log.Printf("Uploaded %s. Generated %d frames.", header.Filename, frameCount)
+	if isGifMode {
+		log.Printf("🎬 GIF uploaded: %s (%d frames, local playback enabled)", header.Filename, frameCount)
+	} else {
+		log.Printf("🖼️  Image uploaded: %s (format=%s)", header.Filename, format)
+	}
 	w.Header().Set("Content-Type", "application/json")
 
 	response := map[string]interface{}{

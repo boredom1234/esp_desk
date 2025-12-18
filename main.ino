@@ -237,26 +237,61 @@ int fetchFrame(const char* url) {
   
   HTTPClient http;
   http.begin(url);
+  http.setTimeout(10000);  // 10 second timeout for single frames
   int code = http.GET();
 
   if (code != 200) {
     http.end();
     digitalWrite(LED_PIN, LOW);
     Serial.printf("fetchFrame failed with HTTP code: %d\n", code);
-    return 1000;
+    return 1000;  // Retry after 1 second
   }
 
   // Increased buffer size to 8192 for large animations
   StaticJsonDocument<8192> doc;
-  DeserializationError error = deserializeJson(doc, http.getString());
+  String payload = http.getString();
   http.end();
+  
+  DeserializationError error = deserializeJson(doc, payload);
   
   if (error) {
     Serial.printf("JSON parse error in fetchFrame: %s\n", error.c_str());
     digitalWrite(LED_PIN, LOW);
-    return 1000;
+    return 1000;  // Retry after 1 second
   }
 
+  // ===== CHECK FOR GIF MODE HINT =====
+  // Server indicates if GIF/Marquee mode is active via isGifMode field
+  // This allows immediate detection without waiting for 30s poll interval
+  bool serverGifMode = doc["isGifMode"] | false;
+  
+  if (serverGifMode) {
+    // Server says GIF mode is active
+    if (!isGifMode) {
+      // We're not in GIF mode yet - need to fetch full GIF
+      Serial.println(">>> Server signals GIF mode - fetching full GIF NOW");
+      digitalWrite(LED_PIN, LOW);
+      
+      int result = fetchFullGifWithStatus();
+      if (result == 1) {
+        // Successfully loaded GIF
+        Serial.println(">>> Switched to local GIF playback mode");
+        return 50;  // Minimal delay before GIF playback starts
+      } else if (result == 0) {
+        // Server changed its mind - no GIF after all
+        Serial.println(">>> Server returned no GIF data despite hint");
+        // Fall through to display the current frame
+      } else {
+        // Network error - try again next frame
+        Serial.println(">>> GIF fetch failed, will retry next frame");
+        return 500;  // Retry soon
+      }
+    }
+    // Already in GIF mode - shouldn't reach here normally
+    // (loop() should be using playGifLocally)
+  }
+
+  // Draw the frame normally (polling mode)
   drawFrame(doc);
   
   digitalWrite(LED_PIN, LOW);

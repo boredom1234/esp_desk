@@ -154,7 +154,8 @@ function sendMarquee() {
     .then((data) => {
       console.log(`Marquee started: ${data.frameCount} frames`);
       loadSettings();
-      // Removed startAutoPlay() - let ESP32 handle playback via GIF mode
+      // Start auto-play for frontend preview (matches GIF upload behavior)
+      startAutoPlay();
     })
     .catch((err) => {
       if (err.message !== "Unauthorized") {
