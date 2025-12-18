@@ -61,21 +61,15 @@ body::before {
   content: "";
   position: fixed;
   inset: 0;
-  background: radial-gradient(
-      ellipse 80% 50% at 50% -20%,
+  background: radial-gradient(ellipse 80% 50% at 50% -20%,
       rgba(0, 212, 255, 0.12),
-      transparent
-    ),
-    radial-gradient(
-      ellipse 60% 40% at 100% 100%,
+      transparent),
+    radial-gradient(ellipse 60% 40% at 100% 100%,
       rgba(123, 97, 255, 0.08),
-      transparent
-    ),
-    radial-gradient(
-      ellipse 40% 30% at 0% 80%,
+      transparent),
+    radial-gradient(ellipse 40% 30% at 0% 80%,
       rgba(0, 255, 163, 0.05),
-      transparent
-    );
+      transparent);
   pointer-events: none;
   z-index: -2;
 }
@@ -85,10 +79,8 @@ body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background-image: linear-gradient(
-      rgba(255, 255, 255, 0.015) 1px,
-      transparent 1px
-    ),
+  background-image: linear-gradient(rgba(255, 255, 255, 0.015) 1px,
+      transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
   background-size: 60px 60px;
   pointer-events: none;
@@ -132,10 +124,12 @@ body::after {
 }
 
 @keyframes pulse-glow {
+
   0%,
   100% {
     filter: drop-shadow(0 0 8px var(--accent-primary));
   }
+
   50% {
     filter: drop-shadow(0 0 20px var(--accent-primary));
   }
@@ -146,11 +140,9 @@ body::after {
   font-weight: 700;
   margin: 0;
   letter-spacing: -0.5px;
-  background: linear-gradient(
-    135deg,
-    var(--text-primary) 0%,
-    var(--text-secondary) 100%
-  );
+  background: linear-gradient(135deg,
+      var(--text-primary) 0%,
+      var(--text-secondary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -181,10 +173,12 @@ body::after {
 }
 
 @keyframes blink {
+
   0%,
   100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.4;
   }
@@ -228,11 +222,9 @@ body::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.03) 0%,
-    transparent 50%
-  );
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.03) 0%,
+      transparent 50%);
   pointer-events: none;
 }
 
@@ -301,11 +293,9 @@ body::after {
   content: "";
   position: absolute;
   inset: -2px;
-  background: linear-gradient(
-    135deg,
-    var(--accent-primary) 0%,
-    var(--accent-secondary) 100%
-  );
+  background: linear-gradient(135deg,
+      var(--accent-primary) 0%,
+      var(--accent-secondary) 100%);
   border-radius: inherit;
   z-index: -1;
   opacity: 0;
@@ -321,13 +311,11 @@ body::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 0, 0, 0.1) 2px,
-    rgba(0, 0, 0, 0.1) 4px
-  );
+  background: repeating-linear-gradient(0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.1) 2px,
+      rgba(0, 0, 0, 0.1) 4px);
   pointer-events: none;
   z-index: 2;
 }
@@ -378,11 +366,9 @@ input[type="range"]::-webkit-slider-thumb {
   appearance: none;
   width: 16px;
   height: 16px;
-  background: linear-gradient(
-    135deg,
-    var(--accent-primary),
-    var(--accent-secondary)
-  );
+  background: linear-gradient(135deg,
+      var(--accent-primary),
+      var(--accent-secondary));
   border-radius: 50%;
   cursor: pointer;
   box-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
@@ -391,11 +377,9 @@ input[type="range"]::-webkit-slider-thumb {
 input[type="range"]::-moz-range-thumb {
   width: 16px;
   height: 16px;
-  background: linear-gradient(
-    135deg,
-    var(--accent-primary),
-    var(--accent-secondary)
-  );
+  background: linear-gradient(135deg,
+      var(--accent-primary),
+      var(--accent-secondary));
   border-radius: 50%;
   cursor: pointer;
   border: none;
@@ -463,11 +447,9 @@ input[type="file"]:hover {
 }
 
 input[type="file"]::file-selector-button {
-  background: linear-gradient(
-    135deg,
-    var(--accent-primary),
-    var(--accent-secondary)
-  );
+  background: linear-gradient(135deg,
+      var(--accent-primary),
+      var(--accent-secondary));
   border: none;
   padding: 0.4rem 0.875rem;
   margin-right: 0.875rem;
@@ -500,11 +482,9 @@ input[type="file"]::file-selector-button {
   content: "";
   position: absolute;
   inset: -2px;
-  background: linear-gradient(
-    135deg,
-    var(--accent-primary),
-    var(--accent-secondary)
-  );
+  background: linear-gradient(135deg,
+      var(--accent-primary),
+      var(--accent-secondary));
   border-radius: inherit;
   z-index: -1;
   opacity: 0;
@@ -657,10 +637,12 @@ input[type="file"]::file-selector-button {
 }
 
 @keyframes pulse-status {
+
   0%,
   100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.6;
   }
@@ -697,11 +679,9 @@ input[type="file"]::file-selector-button {
 }
 
 .style-btn.active {
-  background: linear-gradient(
-    135deg,
-    var(--accent-primary),
-    var(--accent-secondary)
-  );
+  background: linear-gradient(135deg,
+      var(--accent-primary),
+      var(--accent-secondary));
   border-color: transparent;
   color: #000;
 }
@@ -792,11 +772,9 @@ input[type="file"]::file-selector-button {
 
 /* Primary Button */
 .btn-primary {
-  background: linear-gradient(
-    135deg,
-    var(--accent-primary),
-    var(--accent-secondary)
-  );
+  background: linear-gradient(135deg,
+      var(--accent-primary),
+      var(--accent-secondary));
   color: #000;
   box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2);
 }
@@ -840,11 +818,9 @@ input[type="file"]::file-selector-button {
    MODE BADGE
    ============================================ */
 #mode-badge.custom-active {
-  background: linear-gradient(
-    135deg,
-    var(--accent-primary),
-    var(--accent-secondary)
-  );
+  background: linear-gradient(135deg,
+      var(--accent-primary),
+      var(--accent-secondary));
   color: #000;
   border: none;
   font-weight: 700;
@@ -860,10 +836,12 @@ input[type="file"]::file-selector-button {
     box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.4);
     transform: scale(1);
   }
+
   50% {
     box-shadow: 0 0 12px 4px rgba(0, 212, 255, 0.3);
     transform: scale(1.05);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(0, 212, 255, 0);
     transform: scale(1);
@@ -991,11 +969,9 @@ input[type="file"]::file-selector-button {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: linear-gradient(
-    135deg,
-    rgba(0, 212, 255, 0.08),
-    rgba(123, 97, 255, 0.05)
-  ) !important;
+  background: linear-gradient(135deg,
+      rgba(0, 212, 255, 0.08),
+      rgba(123, 97, 255, 0.05)) !important;
   border: 1px solid rgba(0, 212, 255, 0.15);
   padding: 1rem !important;
 }
@@ -1018,6 +994,48 @@ input[type="file"]::file-selector-button {
   background: rgba(0, 0, 0, 0.3);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
+}
+
+/* ============================================
+   MAX FRAMES CONTROL
+   ============================================ */
+.max-frames-control {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(0, 212, 255, 0.08);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: var(--radius-md);
+}
+
+.max-frames-control label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.max-frames-control label span {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.max-frames-control .slider-row {
+  margin-bottom: 0.5rem;
+}
+
+.max-frames-control .slider-row input[type="range"] {
+  width: 100%;
+}
+
+.slider-hint {
+  display: block;
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  margin-top: 0.25rem;
 }
 
 /* ============================================
@@ -1182,12 +1200,10 @@ input[type="file"]::file-selector-button {
   transition: all 0.2s;
 }
 
-.cycle-checkbox input:checked + .checkmark {
-  background: linear-gradient(
-    135deg,
-    var(--accent-primary),
-    var(--accent-secondary)
-  );
+.cycle-checkbox input:checked+.checkmark {
+  background: linear-gradient(135deg,
+      var(--accent-primary),
+      var(--accent-secondary));
   border-color: transparent;
 }
 
@@ -1203,7 +1219,7 @@ input[type="file"]::file-selector-button {
   transition: opacity 0.2s;
 }
 
-.cycle-checkbox input:checked + .checkmark::after {
+.cycle-checkbox input:checked+.checkmark::after {
   opacity: 1;
 }
 
@@ -1252,11 +1268,9 @@ input[type="file"]::file-selector-button {
 }
 
 .btn-add {
-  background: linear-gradient(
-    135deg,
-    var(--accent-success),
-    #00cc88
-  ) !important;
+  background: linear-gradient(135deg,
+      var(--accent-success),
+      #00cc88) !important;
   color: #000 !important;
   font-weight: 600;
 }
@@ -1362,6 +1376,7 @@ input[type="file"]::file-selector-button {
     opacity: 0;
     transform: translateY(15px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1375,15 +1390,19 @@ input[type="file"]::file-selector-button {
 .card:nth-child(1) {
   animation-delay: 0.05s;
 }
+
 .card:nth-child(2) {
   animation-delay: 0.1s;
 }
+
 .card:nth-child(3) {
   animation-delay: 0.15s;
 }
+
 .card:nth-child(4) {
   animation-delay: 0.2s;
 }
+
 .card:nth-child(5) {
   animation-delay: 0.25s;
 }
@@ -1408,16 +1427,12 @@ input[type="file"]::file-selector-button {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(
-      ellipse 60% 40% at 50% 30%,
+  background: radial-gradient(ellipse 60% 40% at 50% 30%,
       rgba(0, 212, 255, 0.1),
-      transparent
-    ),
-    radial-gradient(
-      ellipse 40% 30% at 70% 70%,
+      transparent),
+    radial-gradient(ellipse 40% 30% at 70% 70%,
       rgba(123, 97, 255, 0.08),
-      transparent
-    );
+      transparent);
   pointer-events: none;
 }
 
@@ -1438,6 +1453,7 @@ input[type="file"]::file-selector-button {
     opacity: 0;
     transform: scale(0.95) translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -1462,11 +1478,9 @@ input[type="file"]::file-selector-button {
   font-size: 1.5rem;
   font-weight: 700;
   margin: 0;
-  background: linear-gradient(
-    135deg,
-    var(--text-primary) 0%,
-    var(--accent-primary) 100%
-  );
+  background: linear-gradient(135deg,
+      var(--text-primary) 0%,
+      var(--accent-primary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1593,10 +1607,12 @@ input[type="file"]::file-selector-button {
 }
 
 @keyframes pulse-warning {
+
   0%,
   100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.7;
   }
@@ -1632,6 +1648,7 @@ input[type="file"]::file-selector-button {
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

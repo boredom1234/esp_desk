@@ -15,6 +15,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -697,6 +698,7 @@ func handleMarquee(w http.ResponseWriter, r *http.Request) {
 		Speed     int    `json:"speed"`     // pixels per frame
 		Direction string `json:"direction"` // "left" or "right"
 		Loops     int    `json:"loops"`     // number of complete scrolls
+		MaxFrames int    `json:"maxFrames"` // max frames for ESP32 memory
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		jsonError(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
@@ -739,8 +741,14 @@ func handleMarquee(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Limit to 5 frames max for ESP32 memory (sample evenly)
-	const maxMarqueeFrames = 5
+	// Use user-specified max frames, with sensible bounds (2-20)
+	maxMarqueeFrames := req.MaxFrames
+	if maxMarqueeFrames < 2 {
+		maxMarqueeFrames = 5 // default
+	}
+	if maxMarqueeFrames > 20 {
+		maxMarqueeFrames = 20
+	}
 	var selectedPositions []int
 	totalPositions := len(allPositions)
 
@@ -2034,7 +2042,21 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		isGifMode = true // Multi-frame GIF - enable local playback mode
 
 		totalFrames := len(g.Image)
-		const maxFrames = 10 // ESP32 MAX_GIF_FRAMES limit (reduced for memory safety)
+
+		// Parse maxFrames from form data, with sensible bounds (2-20)
+		maxFrames := 10 // default
+		if maxFramesStr := r.FormValue("maxFrames"); maxFramesStr != "" {
+			if parsed, err := strconv.Atoi(maxFramesStr); err == nil {
+				maxFrames = parsed
+			}
+		}
+		if maxFrames < 2 {
+			maxFrames = 2
+		}
+		if maxFrames > 20 {
+			maxFrames = 20
+		}
+		log.Printf("GIF upload: using maxFrames=%d (user setting)", maxFrames)
 
 		// Calculate which frames to sample if we exceed the limit
 		var frameIndices []int

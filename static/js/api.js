@@ -137,6 +137,7 @@ function sendMarquee() {
   if (!text) return;
 
   const speed = parseInt(document.getElementById("marqueeSpeed").value);
+  const maxFrames = parseInt(document.getElementById("marqueeMaxFrames").value);
 
   // Issue 1: Use authFetch for protected endpoint
   authFetch("/api/custom/marquee", {
@@ -148,6 +149,7 @@ function sendMarquee() {
       size: marqueeSize,
       speed: speed,
       loops: 3,
+      maxFrames: maxFrames,
     }),
   })
     .then((res) => res.json())

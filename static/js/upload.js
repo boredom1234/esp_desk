@@ -12,6 +12,10 @@ function uploadFile(file) {
   const formData = new FormData();
   formData.append("file", file);
 
+  // Get max frames setting for GIFs
+  const maxFrames = parseInt(document.getElementById("gifMaxFramesSlider").value) || 10;
+  formData.append("maxFrames", maxFrames.toString());
+
   // Update UI
   setUploadStatus("uploading", "Uploading...");
   document.getElementById("dropZone").classList.add("uploading");
