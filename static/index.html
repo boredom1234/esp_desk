@@ -375,6 +375,42 @@
             <div class="setting-item weather-display" id="weatherDisplay">
               <span class="weather-info">Loading weather...</span>
             </div>
+            <div class="setting-item timezone-setting">
+              <span>Display Timezone</span>
+              <select id="timezoneSelect" onchange="updateTimezone()">
+                <optgroup label="Asia">
+                  <option value="Asia/Kolkata" selected>India (IST)</option>
+                  <option value="Asia/Tokyo">Japan (JST)</option>
+                  <option value="Asia/Shanghai">China (CST)</option>
+                  <option value="Asia/Singapore">Singapore (SGT)</option>
+                  <option value="Asia/Dubai">Dubai (GST)</option>
+                  <option value="Asia/Hong_Kong">Hong Kong (HKT)</option>
+                  <option value="Asia/Seoul">South Korea (KST)</option>
+                </optgroup>
+                <optgroup label="Europe">
+                  <option value="Europe/London">London (GMT/BST)</option>
+                  <option value="Europe/Paris">Paris (CET)</option>
+                  <option value="Europe/Berlin">Berlin (CET)</option>
+                  <option value="Europe/Moscow">Moscow (MSK)</option>
+                </optgroup>
+                <optgroup label="Americas">
+                  <option value="America/New_York">New York (EST/EDT)</option>
+                  <option value="America/Los_Angeles">
+                    Los Angeles (PST/PDT)
+                  </option>
+                  <option value="America/Chicago">Chicago (CST/CDT)</option>
+                  <option value="America/Toronto">Toronto (EST/EDT)</option>
+                  <option value="America/Sao_Paulo">São Paulo (BRT)</option>
+                </optgroup>
+                <optgroup label="Pacific">
+                  <option value="Australia/Sydney">Sydney (AEST)</option>
+                  <option value="Pacific/Auckland">Auckland (NZST)</option>
+                </optgroup>
+                <optgroup label="Other">
+                  <option value="UTC">UTC</option>
+                </optgroup>
+              </select>
+            </div>
             <div class="setting-item display-cycle-setting">
               <div class="display-cycle-header">
                 <span>Display Cycle</span>

@@ -43,8 +43,7 @@ function renderCycleItems(items, updateLocalState = true) {
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.checked = item.enabled;
-    // Use escaped ID to prevent injection in event handler
-    const safeId = escapeHtml(item.id);
+    // Issue 14: Removed unused safeId variable - DOM manipulation is already XSS-safe
 
     // Prevent drag interference
     checkbox.addEventListener("mousedown", (e) => {
@@ -229,7 +228,8 @@ function saveCycleItems() {
   console.log("Pending saves:", pendingSaveCount);
   console.log("Items to save:", cycleItems);
 
-  fetch("/api/settings", {
+  // Issue 1: Use authFetch for protected endpoint
+  authFetch("/api/settings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ cycleItems: cycleItems }),
@@ -244,7 +244,9 @@ function saveCycleItems() {
       console.log("Server response:", data);
     })
     .catch((err) => {
-      console.error("❌ Save failed:", err);
+      if (err.message !== "Unauthorized") {
+        console.error("❌ Save failed:", err);
+      }
     })
     .finally(() => {
       pendingSaveCount--;

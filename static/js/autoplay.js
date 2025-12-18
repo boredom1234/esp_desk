@@ -49,10 +49,14 @@ function updateSpeed(value) {
     startAutoPlay(); // Restart with new speed
   }
 
-  // Save to server
-  fetch("/api/settings", {
+  // Issue 1: Use authFetch for protected endpoint
+  authFetch("/api/settings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ frameDuration: frameSpeed }),
-  }).catch(() => {});
+  }).catch((err) => {
+    if (err.message !== "Unauthorized") {
+      console.error("updateSpeed error:", err);
+    }
+  });
 }

@@ -53,6 +53,7 @@ function initAfterAuth() {
   loadSettings();
   loadCurrent();
   loadWeather();
+  loadTimezone(); // Issue 13: Load timezone setting
 
   // Start polling only after auth verified
   startPolling();
@@ -63,17 +64,22 @@ function initAfterAuth() {
 // ==========================================
 
 let pollingInterval = null;
+let settingsPollingInterval = null;
 let weatherInterval = null;
 
 function startPolling() {
-  // Live refresh - always poll for the latest frame data
-  // This ensures the Visual Feed stays updated without manual refresh
+  // Issue 8: Separate frame polling from settings polling
+  // Frame polling: 1.5s (needs to be responsive)
   if (pollingInterval) clearInterval(pollingInterval);
   pollingInterval = setInterval(() => {
-    // Always load the current frame to detect backend changes
     loadCurrentWithChangeDetection();
-    loadSettings();
   }, 1500);
+
+  // Issue 8: Settings polling reduced to 10s (settings change infrequently)
+  if (settingsPollingInterval) clearInterval(settingsPollingInterval);
+  settingsPollingInterval = setInterval(() => {
+    loadSettings();
+  }, 10000);
 
   // Update weather every minute
   if (weatherInterval) clearInterval(weatherInterval);
@@ -83,8 +89,18 @@ function startPolling() {
 // Smart frame loading that detects if content has changed
 function loadCurrentWithChangeDetection() {
   fetch("/frame/current")
-    .then((res) => res.json())
+    .then((res) => {
+      if (!res.ok) {
+        if (res.status === 503) {
+          // Issue 12: Graceful handling
+          return null;
+        }
+        throw new Error(`HTTP ${res.status}`);
+      }
+      return res.json();
+    })
     .then((frame) => {
+      if (!frame) return;
       // Create a simple hash of the frame to detect changes
       const frameHash = JSON.stringify(frame);
       if (frameHash !== lastFrameHash) {
@@ -139,8 +155,8 @@ function updateGifFps(value) {
   gifFps = parseInt(value);
   updateGifFpsDisplay(gifFps);
 
-  // Save to server
-  fetch("/api/settings", {
+  // Issue 1: Use authFetch for protected endpoint
+  authFetch("/api/settings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ gifFps: gifFps }),
@@ -152,12 +168,53 @@ function resetGifFps() {
   document.getElementById("gifFpsSlider").value = 0;
   updateGifFpsDisplay(0);
 
-  // Save to server
-  fetch("/api/settings", {
+  // Issue 1: Use authFetch for protected endpoint
+  authFetch("/api/settings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ gifFps: 0 }),
   }).catch(() => {});
+}
+
+// ==========================================
+// TIMEZONE CONTROL (Issue 13)
+// ==========================================
+function loadTimezone() {
+  authFetch("/api/settings/timezone")
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.timezone) {
+        const select = document.getElementById("timezoneSelect");
+        if (select) {
+          select.value = data.timezone;
+        }
+      }
+    })
+    .catch(() => {});
+}
+
+function updateTimezone() {
+  const select = document.getElementById("timezoneSelect");
+  if (!select) return;
+
+  const timezone = select.value;
+
+  authFetch("/api/settings/timezone", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ timezone: timezone }),
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.status === "updated") {
+        console.log(`Timezone updated to ${data.timezone}`);
+      }
+    })
+    .catch((err) => {
+      if (err.message !== "Unauthorized") {
+        console.error("Failed to update timezone:", err);
+      }
+    });
 }
 
 // ==========================================

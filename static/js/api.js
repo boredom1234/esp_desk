@@ -1,16 +1,51 @@
 // ==========================================
 // ESP DESK_OS - API Calls
 // ==========================================
+// Issue 1: All protected API calls now use authFetch()
+// Issue 12: Graceful 503 handling for /frame/current
 
 function loadCurrent() {
+  // Note: /frame/current is NOT protected (ESP32 access) - uses regular fetch
   fetch("/frame/current")
-    .then((res) => res.json())
-    .then((frame) => drawFrame(frame))
-    .catch(() => {});
+    .then((res) => {
+      if (!res.ok) {
+        // Issue 12: Graceful 503 handling
+        if (res.status === 503) {
+          showNoFramesMessage();
+          return null;
+        }
+        throw new Error(`HTTP ${res.status}`);
+      }
+      return res.json();
+    })
+    .then((frame) => {
+      if (frame) {
+        hideNoFramesMessage();
+        drawFrame(frame);
+      }
+    })
+    .catch((err) => {
+      console.warn("Failed to load current frame:", err.message);
+      showNoFramesMessage();
+    });
+}
+
+// Helper for Issue 12: Show "no frames" message
+function showNoFramesMessage() {
+  const badge = document.getElementById("mode-badge");
+  if (badge) {
+    badge.textContent = "LOADING...";
+    badge.classList.remove("custom-active");
+  }
+}
+
+function hideNoFramesMessage() {
+  // Badge will be updated by drawFrame/updateModeUI
 }
 
 function loadSettings() {
-  fetch("/api/settings")
+  // Issue 1: Use authFetch for protected endpoint
+  authFetch("/api/settings")
     .then((res) => res.json())
     .then((data) => {
       settings = data;
@@ -34,34 +69,49 @@ function loadSettings() {
         updateDisplayCycleUI(data.cycleItems);
       }
     })
-    .catch(() => {});
+    .catch((err) => {
+      if (err.message !== "Unauthorized") {
+        console.warn("Failed to load settings:", err.message);
+      }
+    });
 }
 
 function prevFrame() {
-  fetch("/api/control/prev", { method: "POST" })
+  // Issue 1: Use authFetch for protected endpoint
+  authFetch("/api/control/prev", { method: "POST" })
     .then((res) => res.json())
     .then((frame) => {
       drawFrame(frame);
       loadSettings();
     })
-    .catch(() => {});
+    .catch((err) => {
+      if (err.message !== "Unauthorized") {
+        console.error("prevFrame error:", err);
+      }
+    });
 }
 
 function nextFrame() {
-  fetch("/api/control/next", { method: "POST" })
+  // Issue 1: Use authFetch for protected endpoint
+  authFetch("/api/control/next", { method: "POST" })
     .then((res) => res.json())
     .then((frame) => {
       drawFrame(frame);
       loadSettings();
     })
-    .catch(() => {});
+    .catch((err) => {
+      if (err.message !== "Unauthorized") {
+        console.error("nextFrame error:", err);
+      }
+    });
 }
 
 function sendCustomText() {
   const text = document.getElementById("customText").value;
   if (!text) return;
 
-  fetch("/api/custom/text", {
+  // Issue 1: Use authFetch for protected endpoint
+  authFetch("/api/custom/text", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -75,7 +125,11 @@ function sendCustomText() {
       loadSettings();
       loadCurrent();
     })
-    .catch((err) => console.error(err));
+    .catch((err) => {
+      if (err.message !== "Unauthorized") {
+        console.error(err);
+      }
+    });
 }
 
 function sendMarquee() {
@@ -84,7 +138,8 @@ function sendMarquee() {
 
   const speed = parseInt(document.getElementById("marqueeSpeed").value);
 
-  fetch("/api/custom/marquee", {
+  // Issue 1: Use authFetch for protected endpoint
+  authFetch("/api/custom/marquee", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -101,11 +156,16 @@ function sendMarquee() {
       loadSettings();
       // Removed startAutoPlay() - let ESP32 handle playback via GIF mode
     })
-    .catch((err) => console.error(err));
+    .catch((err) => {
+      if (err.message !== "Unauthorized") {
+        console.error(err);
+      }
+    });
 }
 
 function resetSystem() {
-  fetch("/api/reset", { method: "POST" })
+  // Issue 1: Use authFetch for protected endpoint
+  authFetch("/api/reset", { method: "POST" })
     .then((res) => res.json())
     .then(() => {
       // Clear all inputs
@@ -126,7 +186,11 @@ function resetSystem() {
 
       console.log("System reset to defaults");
     })
-    .catch((err) => console.error(err));
+    .catch((err) => {
+      if (err.message !== "Unauthorized") {
+        console.error(err);
+      }
+    });
 }
 
 function processAndUploadImage() {

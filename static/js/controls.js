@@ -1,6 +1,7 @@
 // ==========================================
 // ESP DESK_OS - UI Controls
 // ==========================================
+// Issue 1: All protected API calls now use authFetch()
 
 function selectStyle(style) {
   textStyle = style;
@@ -25,13 +26,18 @@ function setMarqueeSize(size) {
 }
 
 function toggleHeaders() {
-  fetch("/api/settings/toggle-headers", { method: "POST" })
+  // Issue 1: Use authFetch for protected endpoint
+  authFetch("/api/settings/toggle-headers", { method: "POST" })
     .then((res) => res.json())
     .then((data) => {
       updateHeadersToggle(data.headersVisible);
       loadCurrent();
     })
-    .catch(() => {});
+    .catch((err) => {
+      if (err.message !== "Unauthorized") {
+        console.error("toggleHeaders error:", err);
+      }
+    });
 }
 
 function updateEspRefresh(value) {
@@ -40,12 +46,16 @@ function updateEspRefresh(value) {
     espRefreshDuration / 1000
   ).toFixed(1)}s`;
 
-  // Save to server
-  fetch("/api/settings", {
+  // Issue 1: Use authFetch for protected endpoint
+  authFetch("/api/settings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ espRefreshDuration: espRefreshDuration }),
-  }).catch(() => {});
+  }).catch((err) => {
+    if (err.message !== "Unauthorized") {
+      console.error("updateEspRefresh error:", err);
+    }
+  });
 }
 
 function updateHeadersToggle(isOn) {

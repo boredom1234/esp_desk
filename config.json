@@ -1,0 +1,35 @@
+{
+  "showHeaders": true,
+  "autoPlay": true,
+  "frameDuration": 200,
+  "espRefreshDuration": 3000,
+  "gifFps": 0,
+  "cycleItems": [
+    {
+      "id": "time-1",
+      "type": "time",
+      "label": "🕐 Time",
+      "duration": 3000,
+      "enabled": true
+    },
+    {
+      "id": "weather-1",
+      "type": "weather",
+      "label": "🌤 Weather",
+      "duration": 3000,
+      "enabled": true
+    },
+    {
+      "id": "uptime-1",
+      "type": "uptime",
+      "label": "⏱ Uptime",
+      "duration": 3000,
+      "enabled": true
+    }
+  ],
+  "cycleItemCounter": 3,
+  "currentCity": "Kolkata",
+  "cityLat": 22.57,
+  "cityLng": 88.36,
+  "timezoneName": "Asia/Kolkata"
+}

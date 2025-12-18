@@ -70,7 +70,8 @@ function renderWeatherDisplay(data, display) {
 }
 
 function loadWeather() {
-  fetch("/api/weather")
+  // Issue 1: Use authFetch for protected endpoint
+  authFetch("/api/weather")
     .then((res) => res.json())
     .then((data) => {
       const display = document.getElementById("weatherDisplay");
@@ -78,7 +79,11 @@ function loadWeather() {
         renderWeatherDisplay(data, display);
       }
     })
-    .catch(() => {});
+    .catch((err) => {
+      if (err.message !== "Unauthorized") {
+        console.warn("loadWeather error:", err.message);
+      }
+    });
 }
 
 function changeCity() {
@@ -86,7 +91,8 @@ function changeCity() {
   const value = select.value;
   const [lat, lng, city] = value.split(",");
 
-  fetch("/api/weather", {
+  // Issue 1: Use authFetch for protected endpoint
+  authFetch("/api/weather", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -102,5 +108,9 @@ function changeCity() {
         renderWeatherDisplay(data, display);
       }
     })
-    .catch(() => {});
+    .catch((err) => {
+      if (err.message !== "Unauthorized") {
+        console.error("changeCity error:", err);
+      }
+    });
 }

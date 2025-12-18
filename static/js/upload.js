@@ -16,7 +16,8 @@ function uploadFile(file) {
   setUploadStatus("uploading", "Uploading...");
   document.getElementById("dropZone").classList.add("uploading");
 
-  fetch("/api/upload", {
+  // Issue 1: Use authFetch for protected endpoint
+  authFetch("/api/upload", {
     method: "POST",
     body: formData,
   })
@@ -49,8 +50,12 @@ function uploadFile(file) {
         document.getElementById("saveToCycleBtn").style.display = "none";
       }
     })
-    .catch(() => {
-      setUploadStatus("error", "Upload failed");
+    .catch((err) => {
+      if (err.message === "Unauthorized") {
+        setUploadStatus("error", "Login required");
+      } else {
+        setUploadStatus("error", "Upload failed");
+      }
     })
     .finally(() => {
       document.getElementById("dropZone").classList.remove("uploading");

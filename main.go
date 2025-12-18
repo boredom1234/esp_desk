@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"image/gif"
 	_ "image/jpeg"
 	_ "image/png"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -104,9 +106,32 @@ type WeatherData struct {
 	PM10        string `json:"pm10"`     // PM10 concentration
 }
 
+// PersistentConfig stores settings that survive server restarts (Issue 2)
+type PersistentConfig struct {
+	ShowHeaders        bool        `json:"showHeaders"`
+	AutoPlay           bool        `json:"autoPlay"`
+	FrameDuration      int         `json:"frameDuration"`
+	EspRefreshDuration int         `json:"espRefreshDuration"`
+	GifFps             int         `json:"gifFps"`
+	CycleItems         []CycleItem `json:"cycleItems"`
+	CycleItemCounter   int         `json:"cycleItemCounter"`
+	CurrentCity        string      `json:"currentCity"`
+	CityLat            float64     `json:"cityLat"`
+	CityLng            float64     `json:"cityLng"`
+	TimezoneName       string      `json:"timezoneName"` // Issue 13: configurable timezone
+}
+
+// LoginAttempt tracks rate limiting for auth (Issue 9)
+type LoginAttempt struct {
+	Count     int
+	LastReset time.Time
+}
+
 // ==========================================
 // GLOBAL STATE
 // ==========================================
+
+const configFile = "config.json"
 
 var (
 	frames             []Frame
@@ -136,13 +161,21 @@ var (
 	weatherData WeatherData
 
 	// Authentication state
-	dashboardPassword string                       // Password from env (plain text, hashed at runtime for comparison)
-	authTokens        = make(map[string]time.Time) // session token -> expiry time
-	authMutex         sync.RWMutex
-	authEnabled       bool = false // Only enable auth if password is set
+	dashboardPassword     string                       // Password from env (plain text)
+	dashboardPasswordHash string                       // Hashed password for secure comparison (Issue 5)
+	authTokens            = make(map[string]time.Time) // session token -> expiry time
+	authMutex             sync.RWMutex
+	authEnabled           bool = false // Only enable auth if password is set
 
-	// Timezone for display (IST = UTC+5:30)
-	istLocation *time.Location
+	// Rate limiting for login attempts (Issue 9)
+	loginAttempts      = make(map[string]*LoginAttempt)
+	loginAttemptsMutex sync.RWMutex
+	maxLoginAttempts   = 5               // Max attempts before lockout
+	loginLockoutTime   = 1 * time.Minute // Lockout duration
+
+	// Timezone for display (Issue 13: now configurable)
+	timezoneName    string = "Asia/Kolkata" // Default timezone
+	displayLocation *time.Location
 )
 
 // Decorative border for attractive display
@@ -262,7 +295,7 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			CycleItems         []CycleItem `json:"cycleItems,omitempty"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			jsonError(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -316,6 +349,9 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		mutex.Unlock()
 
+		// Persist settings (Issue 2)
+		go saveConfig()
+
 		json.NewEncoder(w).Encode(settings)
 		return
 	}
@@ -323,7 +359,7 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 
 func handleToggleHeaders(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -431,6 +467,20 @@ var font5x7 = map[rune][]byte{
 	')': {0x00, 0x41, 0x22, 0x1C, 0x00},
 	'/': {0x60, 0x10, 0x08, 0x04, 0x03},
 	'@': {0x3E, 0x41, 0x5D, 0x55, 0x1E},
+	// Additional special characters (Issue 15)
+	'%':  {0x23, 0x13, 0x08, 0x64, 0x62},
+	'+':  {0x08, 0x08, 0x3E, 0x08, 0x08},
+	'=':  {0x14, 0x14, 0x14, 0x14, 0x14},
+	'<':  {0x08, 0x14, 0x22, 0x41, 0x00},
+	'>':  {0x00, 0x41, 0x22, 0x14, 0x08},
+	'#':  {0x14, 0x7F, 0x14, 0x7F, 0x14},
+	'*':  {0x22, 0x14, 0x7F, 0x14, 0x22},
+	'&':  {0x36, 0x49, 0x55, 0x22, 0x50},
+	'[':  {0x00, 0x7F, 0x41, 0x41, 0x00},
+	']':  {0x00, 0x41, 0x41, 0x7F, 0x00},
+	';':  {0x00, 0x80, 0x56, 0x00, 0x00},
+	'\'': {0x00, 0x00, 0x07, 0x00, 0x00},
+	'"':  {0x00, 0x07, 0x00, 0x07, 0x00},
 }
 
 // renderTextToBitmap converts a text element to a bitmap for ESP32 local playback
@@ -945,7 +995,21 @@ func handleWeather(w http.ResponseWriter, r *http.Request) {
 			Longitude float64 `json:"longitude"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			jsonError(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// Validate coordinates (Issue 7)
+		if req.Latitude < -90 || req.Latitude > 90 {
+			jsonError(w, "Invalid latitude: must be between -90 and 90", http.StatusBadRequest)
+			return
+		}
+		if req.Longitude < -180 || req.Longitude > 180 {
+			jsonError(w, "Invalid longitude: must be between -180 and 180", http.StatusBadRequest)
+			return
+		}
+		if req.City == "" {
+			jsonError(w, "City name is required", http.StatusBadRequest)
 			return
 		}
 
@@ -954,6 +1018,9 @@ func handleWeather(w http.ResponseWriter, r *http.Request) {
 		cityLat = req.Latitude
 		cityLng = req.Longitude
 		mutex.Unlock()
+
+		// Persist settings (Issue 2)
+		go saveConfig()
 
 		// Fetch weather for new location
 		fetchWeather()
@@ -966,7 +1033,7 @@ func handleWeather(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
 func updateLoop() {
@@ -983,10 +1050,10 @@ func updateLoop() {
 		mutex.Lock()
 
 		if !isCustomMode {
-			// Use IST timezone for time display
+			// Use configurable timezone for time display
 			now := time.Now()
-			if istLocation != nil {
-				now = now.In(istLocation)
+			if displayLocation != nil {
+				now = now.In(displayLocation)
 			}
 			currentTime := now.Format("15:04:05")
 			uptime := time.Since(startTime).Round(time.Second).String()
@@ -1312,7 +1379,25 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 // Handle login request
 func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Get client IP for rate limiting (Issue 9)
+	clientIP := r.RemoteAddr
+	if forwardedFor := r.Header.Get("X-Forwarded-For"); forwardedFor != "" {
+		clientIP = strings.Split(forwardedFor, ",")[0]
+	}
+
+	// Check rate limit
+	if checkRateLimit(clientIP) {
+		log.Printf("Rate limited login attempt from %s", clientIP)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusTooManyRequests)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Too many login attempts. Please try again later.",
+		})
 		return
 	}
 
@@ -1320,13 +1405,15 @@ func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+		jsonError(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	// Compare passwords
-	if req.Password != dashboardPassword {
-		log.Printf("Failed login attempt from %s", r.RemoteAddr)
+	// Compare passwords using constant-time comparison (Issue 5)
+	submittedHash := hashPassword(req.Password)
+	if subtle.ConstantTimeCompare([]byte(submittedHash), []byte(dashboardPasswordHash)) != 1 {
+		recordFailedLogin(clientIP)
+		log.Printf("Failed login attempt from %s", clientIP)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -1336,9 +1423,12 @@ func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Clear rate limit on successful login
+	clearLoginAttempts(clientIP)
+
 	// Create session
 	token := createSession()
-	log.Printf("Successful login from %s", r.RemoteAddr)
+	log.Printf("Successful login from %s", clientIP)
 
 	// Set cookie
 	http.SetCookie(w, &http.Cookie{
@@ -1440,6 +1530,272 @@ func handleAuthLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 // ==========================================
+// PERSISTENCE (Issue 2)
+// ==========================================
+
+// loadConfig loads persistent settings from config.json
+func loadConfig() {
+	file, err := os.Open(configFile)
+	if err != nil {
+		// Config file doesn't exist yet, use defaults
+		log.Println("No config.json found, using defaults")
+		return
+	}
+	defer file.Close()
+
+	var config PersistentConfig
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&config); err != nil {
+		log.Printf("Error decoding config.json: %v, using defaults", err)
+		return
+	}
+
+	// Apply loaded settings
+	mutex.Lock()
+	showHeaders = config.ShowHeaders
+	autoPlay = config.AutoPlay
+	if config.FrameDuration >= 50 && config.FrameDuration <= 5000 {
+		frameDuration = config.FrameDuration
+	}
+	if config.EspRefreshDuration >= 500 && config.EspRefreshDuration <= 30000 {
+		espRefreshDuration = config.EspRefreshDuration
+	}
+	if config.GifFps >= 0 && config.GifFps <= 30 {
+		gifFps = config.GifFps
+	}
+	if len(config.CycleItems) > 0 {
+		cycleItems = config.CycleItems
+	}
+	if config.CycleItemCounter > 0 {
+		cycleItemCounter = config.CycleItemCounter
+	}
+	if config.CurrentCity != "" {
+		currentCity = config.CurrentCity
+	}
+	if config.CityLat != 0 || config.CityLng != 0 {
+		cityLat = config.CityLat
+		cityLng = config.CityLng
+	}
+	if config.TimezoneName != "" {
+		timezoneName = config.TimezoneName
+	}
+	mutex.Unlock()
+
+	log.Println("Loaded settings from config.json")
+}
+
+// saveConfig saves persistent settings to config.json (fault-tolerant)
+func saveConfig() {
+	mutex.Lock()
+	config := PersistentConfig{
+		ShowHeaders:        showHeaders,
+		AutoPlay:           autoPlay,
+		FrameDuration:      frameDuration,
+		EspRefreshDuration: espRefreshDuration,
+		GifFps:             gifFps,
+		CycleItems:         cycleItems,
+		CycleItemCounter:   cycleItemCounter,
+		CurrentCity:        currentCity,
+		CityLat:            cityLat,
+		CityLng:            cityLng,
+		TimezoneName:       timezoneName,
+	}
+	mutex.Unlock()
+
+	// Write to temp file first, then rename (atomic operation)
+	tempFile := configFile + ".tmp"
+	file, err := os.Create(tempFile)
+	if err != nil {
+		log.Printf("Error creating temp config file: %v", err)
+		return
+	}
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(config); err != nil {
+		file.Close()
+		os.Remove(tempFile)
+		log.Printf("Error encoding config: %v", err)
+		return
+	}
+	file.Close()
+
+	// Atomic rename for fault tolerance
+	if err := os.Rename(tempFile, configFile); err != nil {
+		log.Printf("Error renaming config file: %v", err)
+		os.Remove(tempFile)
+		return
+	}
+
+	log.Println("Settings saved to config.json")
+}
+
+// ==========================================
+// TOKEN CLEANUP (Issue 4)
+// ==========================================
+
+// cleanupExpiredTokens removes expired auth tokens periodically
+func cleanupExpiredTokens() {
+	ticker := time.NewTicker(1 * time.Hour)
+	for range ticker.C {
+		now := time.Now()
+		authMutex.Lock()
+		count := 0
+		for token, expiry := range authTokens {
+			if now.After(expiry) {
+				delete(authTokens, token)
+				count++
+			}
+		}
+		authMutex.Unlock()
+		if count > 0 {
+			log.Printf("Cleaned up %d expired auth tokens", count)
+		}
+	}
+}
+
+// ==========================================
+// RATE LIMITING (Issue 9)
+// ==========================================
+
+// checkRateLimit returns true if the IP is rate-limited
+func checkRateLimit(ip string) bool {
+	loginAttemptsMutex.RLock()
+	attempt, exists := loginAttempts[ip]
+	loginAttemptsMutex.RUnlock()
+
+	if !exists {
+		return false
+	}
+
+	// Reset counter if lockout time has passed
+	if time.Since(attempt.LastReset) > loginLockoutTime {
+		loginAttemptsMutex.Lock()
+		delete(loginAttempts, ip)
+		loginAttemptsMutex.Unlock()
+		return false
+	}
+
+	return attempt.Count >= maxLoginAttempts
+}
+
+// recordFailedLogin records a failed login attempt for rate limiting
+func recordFailedLogin(ip string) {
+	loginAttemptsMutex.Lock()
+	defer loginAttemptsMutex.Unlock()
+
+	attempt, exists := loginAttempts[ip]
+	if !exists {
+		loginAttempts[ip] = &LoginAttempt{Count: 1, LastReset: time.Now()}
+		return
+	}
+
+	// Reset if lockout expired
+	if time.Since(attempt.LastReset) > loginLockoutTime {
+		attempt.Count = 1
+		attempt.LastReset = time.Now()
+	} else {
+		attempt.Count++
+	}
+}
+
+// clearLoginAttempts clears rate limit for an IP after successful login
+func clearLoginAttempts(ip string) {
+	loginAttemptsMutex.Lock()
+	delete(loginAttempts, ip)
+	loginAttemptsMutex.Unlock()
+}
+
+// cleanupLoginAttempts periodically removes old login attempt records
+func cleanupLoginAttempts() {
+	ticker := time.NewTicker(5 * time.Minute)
+	for range ticker.C {
+		now := time.Now()
+		loginAttemptsMutex.Lock()
+		for ip, attempt := range loginAttempts {
+			if now.Sub(attempt.LastReset) > loginLockoutTime*2 {
+				delete(loginAttempts, ip)
+			}
+		}
+		loginAttemptsMutex.Unlock()
+	}
+}
+
+// ==========================================
+// TIMEZONE (Issue 13)
+// ==========================================
+
+// initializeTimezone sets up the display timezone
+func initializeTimezone() {
+	// Try to load from configured timezone name
+	var err error
+	displayLocation, err = time.LoadLocation(timezoneName)
+	if err != nil {
+		// Fallback to fixed offset for common timezones
+		log.Printf("Could not load timezone %s, using UTC: %v", timezoneName, err)
+		displayLocation = time.UTC
+	} else {
+		log.Printf("Loaded timezone: %s", timezoneName)
+	}
+}
+
+// handleTimezone handles timezone get/set
+func handleTimezone(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == http.MethodGet {
+		mutex.Lock()
+		tz := timezoneName
+		mutex.Unlock()
+		json.NewEncoder(w).Encode(map[string]string{"timezone": tz})
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		var req struct {
+			Timezone string `json:"timezone"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			jsonError(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		// Validate timezone
+		loc, err := time.LoadLocation(req.Timezone)
+		if err != nil {
+			jsonError(w, "Invalid timezone: "+req.Timezone, http.StatusBadRequest)
+			return
+		}
+
+		mutex.Lock()
+		timezoneName = req.Timezone
+		displayLocation = loc
+		mutex.Unlock()
+
+		saveConfig()
+
+		json.NewEncoder(w).Encode(map[string]string{"timezone": req.Timezone, "status": "updated"})
+		return
+	}
+
+	jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+}
+
+// ==========================================
+// JSON ERROR HELPER (Issue 11)
+// ==========================================
+
+// jsonError sends a consistent JSON error response
+func jsonError(w http.ResponseWriter, message string, status int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"error":  message,
+		"status": status,
+	})
+}
+
+// ==========================================
 // MAIN
 // ==========================================
 
@@ -1452,11 +1808,13 @@ func loadEnvFile() {
 	}
 	defer file.Close()
 
-	// Simple line-by-line parser
-	buf := make([]byte, 4096)
-	n, _ := file.Read(buf)
-	content := string(buf[:n])
-	lines := strings.Split(content, "\n")
+	// Read entire file (Issue 10: fix truncation)
+	contentBytes, err := io.ReadAll(file)
+	if err != nil {
+		log.Printf("Error reading .env file: %v", err)
+		return
+	}
+	lines := strings.Split(string(contentBytes), "\n")
 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -1483,25 +1841,26 @@ func main() {
 	// Load .env file if present
 	loadEnvFile()
 
+	// Load persistent config (Issue 2)
+	loadConfig()
+
 	// Initialize authentication from environment variable
 	dashboardPassword = os.Getenv("DASHBOARD_PASSWORD")
 	if dashboardPassword != "" {
 		authEnabled = true
+		// Hash password for secure comparison (Issue 5)
+		dashboardPasswordHash = hashPassword(dashboardPassword)
 		log.Printf("Authentication ENABLED - password required to access dashboard")
 	} else {
 		log.Printf("Authentication DISABLED - no DASHBOARD_PASSWORD set")
 	}
 
-	// Initialize IST timezone for time display
-	var err error
-	istLocation, err = time.LoadLocation("Asia/Kolkata")
-	if err != nil {
-		// Fallback: create fixed timezone offset for IST (UTC+5:30)
-		istLocation = time.FixedZone("IST", 5*60*60+30*60)
-		log.Printf("Using fixed IST offset (timezone data not available)")
-	} else {
-		log.Printf("Loaded Asia/Kolkata timezone for IST")
-	}
+	// Initialize timezone for time display (Issue 13: configurable)
+	initializeTimezone()
+
+	// Start cleanup goroutines (Issues 4, 9)
+	go cleanupExpiredTokens()
+	go cleanupLoginAttempts()
 
 	frames = []Frame{{Duration: 1000, Clear: true, Elements: []Element{{Type: "text", X: 20, Y: 25, Size: 2, Value: "BOOTING..."}}}}
 
@@ -1533,6 +1892,7 @@ func main() {
 	http.HandleFunc("/api/settings/toggle-headers", loggingMiddleware(authMiddleware(handleToggleHeaders)))
 	http.HandleFunc("/api/settings/headers-state", loggingMiddleware(authMiddleware(handleGetHeadersState)))
 	http.HandleFunc("/api/weather", loggingMiddleware(authMiddleware(handleWeather)))
+	http.HandleFunc("/api/settings/timezone", loggingMiddleware(authMiddleware(handleTimezone)))
 
 	port := os.Getenv("PORT")
 	if port == "" {
