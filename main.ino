@@ -1,4 +1,5 @@
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <Adafruit_GFX.h>
@@ -26,7 +27,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // ===== GIF LOCAL PLAYBACK =====
 // Each frame is stored as bitmap data (1024 bytes for 128x64 1-bit)
-#define MAX_GIF_FRAMES 20       // Limit to ~20KB of RAM for bitmaps (was 50, reduced for memory safety)
+#define MAX_GIF_FRAMES 10       // Limit to ~10KB of RAM for bitmaps (reduced for memory safety)
 #define BYTES_PER_FRAME 1024    // 128x64 / 8 = 1024 bytes per frame
 
 uint8_t gifFrames[MAX_GIF_FRAMES][BYTES_PER_FRAME];
@@ -125,55 +126,83 @@ void drawFrame(JsonDocument& doc) {
 int fetchFullGifWithStatus() {
   digitalWrite(LED_PIN, HIGH);
   
+  // Log available heap before allocation
+  Serial.printf("Free heap before GIF fetch: %d bytes\n", ESP.getFreeHeap());
+  
+  // Use WiFiClientSecure for HTTPS connections
+  WiFiClientSecure client;
+  client.setInsecure();  // Skip certificate verification (required for dev tunnels)
+  client.setTimeout(30);  // 30 second timeout
+  
   HTTPClient http;
-  http.begin(GIF_FULL_URL);
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);  // Follow redirects
+  http.setReuse(false);  // Don't reuse connection
+  
+  Serial.printf("Connecting to: %s\n", GIF_FULL_URL);
+  
+  if (!http.begin(client, GIF_FULL_URL)) {
+    Serial.println("ERROR: http.begin() failed");
+    digitalWrite(LED_PIN, LOW);
+    return -1;
+  }
+  
   http.setTimeout(30000);  // 30 second timeout for large GIFs
   
   // Add header to request limited frames for ESP32 memory constraints
   http.addHeader("X-ESP32-Max-Frames", String(MAX_GIF_FRAMES));
   
+  Serial.println("Sending HTTP GET request...");
   int code = http.GET();
+  Serial.printf("HTTP response code: %d\n", code);
 
   if (code != 200) {
+    String errorMsg = http.errorToString(code);
+    Serial.printf("GIF fetch failed with code: %d (%s)\n", code, errorMsg.c_str());
     http.end();
     digitalWrite(LED_PIN, LOW);
-    Serial.printf("GIF fetch failed with code: %d\n", code);
     return -1;  // Network error - don't change GIF mode state
   }
 
-  // Get response size for memory planning
+  // Get response size
   int contentLength = http.getSize();
   Serial.printf("GIF response size: %d bytes\n", contentLength);
-
-  // Get WiFi client for streaming
-  WiFiClient* stream = http.getStreamPtr();
+  Serial.printf("Free heap after connect: %d bytes\n", ESP.getFreeHeap());
   
-  // Calculate JSON buffer size
-  size_t jsonBufferSize;
-  if (contentLength <= 0) {
-    // Should not happen now that server sets Content-Length
-    Serial.println("WARNING: Unknown content length, using default 96KB buffer");
-    jsonBufferSize = 98304; 
-  } else {
-    // Allocate exactly what we need plus a small safety margin
-    // Cap at 120KB to leave some room for other system tasks
-    jsonBufferSize = min((size_t)contentLength + 1024, (size_t)122880);
+  // Read entire response as String (more reliable than streaming for HTTPS)
+  String payload = http.getString();
+  http.end();
+  
+  int payloadLen = payload.length();
+  Serial.printf("Received payload length: %d chars\n", payloadLen);
+  
+  if (payloadLen == 0) {
+    Serial.println("ERROR: Empty response received");
+    digitalWrite(LED_PIN, LOW);
+    return -1;
   }
   
+  // Debug: Print first 200 chars of response
+  Serial.println("Response preview:");
+  Serial.println(payload.substring(0, min(200, payloadLen)));
+  
+  // Calculate JSON buffer size - need extra space for JSON overhead
+  size_t jsonBufferSize = min((size_t)payloadLen * 2, (size_t)122880);
   Serial.printf("Allocating JSON buffer: %d bytes\n", jsonBufferSize);
+  Serial.printf("Free heap before JSON alloc: %d bytes\n", ESP.getFreeHeap());
   
   // Try to allocate dynamic JSON document
   DynamicJsonDocument* doc = new (std::nothrow) DynamicJsonDocument(jsonBufferSize);
   if (doc == nullptr) {
     Serial.println("ERROR: Failed to allocate JSON buffer - out of memory");
-    http.end();
     digitalWrite(LED_PIN, LOW);
     return -1;
   }
   
-  // Parse JSON directly from stream (memory efficient)
-  DeserializationError error = deserializeJson(*doc, *stream);
-  http.end();
+  // Parse JSON from String
+  DeserializationError error = deserializeJson(*doc, payload);
+  
+  // Free the payload string memory immediately
+  payload = "";
   
   if (error) {
     Serial.printf("JSON parse error: %s\n", error.c_str());
@@ -238,6 +267,7 @@ int fetchFullGifWithStatus() {
   delete doc;
 
   Serial.printf("Loaded %d GIF frames for local playback\n", gifFrameCount);
+  Serial.printf("Free heap after GIF load: %d bytes\n", ESP.getFreeHeap());
   digitalWrite(LED_PIN, LOW);
   
   isGifMode = (gifFrameCount > 0);
@@ -272,15 +302,29 @@ void playGifLocally() {
 int fetchFrame(const char* url) {
   digitalWrite(LED_PIN, HIGH);
   
+  // Use WiFiClientSecure for HTTPS connections
+  WiFiClientSecure client;
+  client.setInsecure();  // Skip certificate verification (required for dev tunnels)
+  client.setTimeout(10000);
+  
   HTTPClient http;
-  http.begin(url);
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);  // Follow redirects
+  http.setReuse(false);
+  
+  if (!http.begin(client, url)) {
+    Serial.println("ERROR: fetchFrame http.begin() failed");
+    digitalWrite(LED_PIN, LOW);
+    return 1000;
+  }
+  
   http.setTimeout(10000);  // 10 second timeout for single frames
   int code = http.GET();
 
   if (code != 200) {
+    String errorMsg = http.errorToString(code);
+    Serial.printf("fetchFrame failed with HTTP code: %d (%s)\n", code, errorMsg.c_str());
     http.end();
     digitalWrite(LED_PIN, LOW);
-    Serial.printf("fetchFrame failed with HTTP code: %d\n", code);
     return 1000;  // Retry after 1 second
   }
 

@@ -725,10 +725,8 @@ func handleMarquee(w http.ResponseWriter, r *http.Request) {
 	textWidth := len(req.Text) * charWidth
 	totalDistance := 128 + textWidth // Full scroll distance
 
-	// Generate frames for each position
-	var marqueeFrames []Frame
-	frameTime := 50 // ms per frame
-
+	// Generate all frame positions first
+	var allPositions []int
 	for loop := 0; loop < req.Loops; loop++ {
 		for offset := 0; offset < totalDistance; offset += req.Speed {
 			var x int
@@ -737,21 +735,53 @@ func handleMarquee(w http.ResponseWriter, r *http.Request) {
 			} else {
 				x = offset - textWidth
 			}
-
-			// Create text frame
-			textFrame := Frame{
-				Version:  1,
-				Duration: frameTime,
-				Clear:    true,
-				Elements: []Element{
-					{Type: "text", X: x, Y: req.Y, Size: req.Size, Value: req.Text},
-				},
-			}
-
-			// Convert text frame to bitmap frame for ESP32 local playback
-			bitmapFrame := convertFrameToBitmap(textFrame)
-			marqueeFrames = append(marqueeFrames, bitmapFrame)
+			allPositions = append(allPositions, x)
 		}
+	}
+
+	// Limit to 5 frames max for ESP32 memory (sample evenly)
+	const maxMarqueeFrames = 5
+	var selectedPositions []int
+	totalPositions := len(allPositions)
+
+	if totalPositions <= maxMarqueeFrames {
+		selectedPositions = allPositions
+	} else {
+		// Sample frames evenly across the animation
+		step := float64(totalPositions) / float64(maxMarqueeFrames)
+		for i := 0; i < maxMarqueeFrames; i++ {
+			idx := int(float64(i) * step)
+			if idx >= totalPositions {
+				idx = totalPositions - 1
+			}
+			selectedPositions = append(selectedPositions, allPositions[idx])
+		}
+		log.Printf("Marquee: sampling %d positions down to %d frames", totalPositions, maxMarqueeFrames)
+	}
+
+	// Generate frames for selected positions
+	var marqueeFrames []Frame
+	frameTime := 50 // ms per frame
+
+	// Adjust frame time to maintain approximate total animation duration
+	if totalPositions > maxMarqueeFrames {
+		frameTime = (totalPositions * 50) / len(selectedPositions)
+	}
+
+	for _, x := range selectedPositions {
+		// Create text frame
+		textFrame := Frame{
+			Version:  1,
+			Duration: frameTime,
+			Clear:    true,
+			Elements: []Element{
+				{Type: "text", X: x, Y: req.Y, Size: req.Size, Value: req.Text},
+			},
+		}
+
+		// Convert text frame to bitmap frame for ESP32 local playback
+		bitmapFrame := convertFrameToBitmap(textFrame)
+		marqueeFrames = append(marqueeFrames, bitmapFrame)
 	}
 
 	mutex.Lock()
@@ -1287,8 +1317,8 @@ func handleGifFull(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Limit frames to match ESP32 MAX_GIF_FRAMES (20 frames max for memory safety)
-	maxFrames := 20
+	// Limit frames to match ESP32 MAX_GIF_FRAMES (10 frames max for memory safety)
+	maxFrames := 10
 	framesToSend := make([]Frame, 0, maxFrames)
 
 	// Calculate frame duration based on FPS override
@@ -2004,7 +2034,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		isGifMode = true // Multi-frame GIF - enable local playback mode
 
 		totalFrames := len(g.Image)
-		const maxFrames = 20 // ESP32 MAX_GIF_FRAMES limit (reduced for memory safety)
+		const maxFrames = 10 // ESP32 MAX_GIF_FRAMES limit (reduced for memory safety)
 
 		// Calculate which frames to sample if we exceed the limit
 		var frameIndices []int
