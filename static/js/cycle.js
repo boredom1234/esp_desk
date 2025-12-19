@@ -167,6 +167,7 @@ function addCycleItem() {
     weather: "🌤 Weather",
     uptime: "⏱ Uptime",
     image: "🖼 Image",
+    pomodoro: "🍅 Pomodoro",
   };
 
   const newItem = {

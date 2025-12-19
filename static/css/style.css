@@ -1503,3 +1503,124 @@ input[type="range"]::-moz-range-thumb {
     left: 25px;
   }
 }
+
+/* ==========================================
+   POMODORO TIMER
+   ========================================== */
+
+.pomodoro-display {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: var(--radius-md);
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--border);
+}
+
+.pomodoro-mode {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+  color: var(--success);
+  margin-bottom: 0.5rem;
+  transition: color 0.3s ease;
+}
+
+.pomodoro-mode.break {
+  color: var(--primary);
+}
+
+.pomodoro-mode.long-break {
+  color: var(--secondary);
+}
+
+.pomodoro-time {
+  font-family: var(--font-mono);
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: var(--text-main);
+  text-shadow: 0 0 30px rgba(0, 212, 255, 0.25);
+  letter-spacing: 4px;
+  line-height: 1;
+  margin: 0.75rem 0;
+}
+
+.pomodoro-cycles {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+.pomodoro-controls {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.pomodoro-controls .btn {
+  min-width: 50px;
+}
+
+.pomodoro-controls .btn-primary {
+  min-width: 120px;
+}
+
+.pomodoro-controls .btn-primary.playing {
+  background: linear-gradient(135deg, var(--warning), #ff6600);
+}
+
+.pomodoro-settings {
+  padding: 1rem;
+  background: var(--bg-element);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  margin-bottom: 1rem;
+}
+
+.pomodoro-settings .slider-row {
+  margin-bottom: 0.75rem;
+}
+
+.pomodoro-settings .slider-row:last-of-type {
+  margin-bottom: 1rem;
+}
+
+.pomodoro-settings .btn {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-label input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 16px;
+  height: 16px;
+}
+
+/* Pomodoro responsive adjustments */
+@media (max-width: 480px) {
+  .pomodoro-time {
+    font-size: 2.5rem;
+    letter-spacing: 2px;
+  }
+
+  .pomodoro-controls {
+    flex-wrap: wrap;
+  }
+
+  .pomodoro-controls .btn-primary {
+    width: 100%;
+    order: -1;
+  }
+}

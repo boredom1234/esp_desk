@@ -126,12 +126,38 @@ type PersistentConfig struct {
 	TimezoneName       string      `json:"timezoneName"`     // Issue 13: configurable timezone
 	LedBrightness      int         `json:"ledBrightness"`    // 0-100 percentage
 	LedBeaconEnabled   bool        `json:"ledBeaconEnabled"` // Enable/disable beacon
+	// Pomodoro settings
+	PomodoroWorkDuration  int  `json:"pomodoroWorkDuration"`  // seconds
+	PomodoroBreakDuration int  `json:"pomodoroBreakDuration"` // seconds
+	PomodoroLongBreak     int  `json:"pomodoroLongBreak"`     // seconds
+	PomodoroCyclesUntil   int  `json:"pomodoroCyclesUntil"`   // cycles until long break
+	PomodoroShowInCycle   bool `json:"pomodoroShowInCycle"`   // show in display cycle
 }
 
 // LoginAttempt tracks rate limiting for auth (Issue 9)
 type LoginAttempt struct {
 	Count     int
 	LastReset time.Time
+}
+
+// PomodoroSession tracks the active Pomodoro timer state
+type PomodoroSession struct {
+	Active          bool      `json:"active"`
+	Mode            string    `json:"mode"`          // "work", "break", "longBreak"
+	TimeRemaining   int       `json:"timeRemaining"` // seconds remaining
+	StartedAt       time.Time `json:"startedAt"`
+	IsPaused        bool      `json:"isPaused"`
+	PausedRemaining int       `json:"pausedRemaining"` // time left when paused
+	CyclesCompleted int       `json:"cyclesCompleted"`
+}
+
+// PomodoroSettings stores customizable timer durations
+type PomodoroSettings struct {
+	WorkDuration    int  `json:"workDuration"`    // seconds (default 25*60)
+	BreakDuration   int  `json:"breakDuration"`   // seconds (default 5*60)
+	LongBreak       int  `json:"longBreak"`       // seconds (default 15*60)
+	CyclesUntilLong int  `json:"cyclesUntilLong"` // default 4
+	ShowInCycle     bool `json:"showInCycle"`     // whether to display in cycle
 }
 
 // ==========================================
@@ -186,6 +212,21 @@ var (
 	// Timezone for display (Issue 13: now configurable)
 	timezoneName    string = "Asia/Kolkata" // Default timezone
 	displayLocation *time.Location
+
+	// Pomodoro timer state
+	pomodoroSession = PomodoroSession{
+		Active:          false,
+		Mode:            "work",
+		TimeRemaining:   25 * 60, // 25 minutes default
+		CyclesCompleted: 0,
+	}
+	pomodoroSettings = PomodoroSettings{
+		WorkDuration:    25 * 60, // 25 minutes
+		BreakDuration:   5 * 60,  // 5 minutes
+		LongBreak:       15 * 60, // 15 minutes
+		CyclesUntilLong: 4,
+		ShowInCycle:     false,
+	}
 )
 
 // Decorative border for attractive display
@@ -687,8 +728,13 @@ func handleCustomText(w http.ResponseWriter, r *http.Request) {
 	switch req.Style {
 	case "centered":
 		// Approximate centering for OLED
-		charWidth := req.Size * 6
-		textWidth := len(req.Text) * charWidth
+		// Each character is 5 pixels wide with 1 pixel spacing
+		// But the last character doesn't need trailing spacing
+		charCount := len([]rune(req.Text))                         // Use rune count for proper Unicode support
+		textWidth := charCount*5*req.Size + (charCount-1)*req.Size // 5px per char + 1px spacing between chars
+		if charCount <= 0 {
+			textWidth = 0
+		}
 		x := (128 - textWidth) / 2
 		if x < 0 {
 			x = 0
@@ -1167,6 +1213,34 @@ func updateLoop() {
 	for range ticker.C {
 		mutex.Lock()
 
+		// Pomodoro timer countdown (runs every second)
+		if pomodoroSession.Active && !pomodoroSession.IsPaused {
+			if pomodoroSession.TimeRemaining > 0 {
+				pomodoroSession.TimeRemaining--
+			} else {
+				// Timer reached 0 - auto-transition to next phase
+				if pomodoroSession.Mode == "work" {
+					pomodoroSession.CyclesCompleted++
+					if pomodoroSession.CyclesCompleted >= pomodoroSettings.CyclesUntilLong {
+						pomodoroSession.Mode = "longBreak"
+						pomodoroSession.TimeRemaining = pomodoroSettings.LongBreak
+						pomodoroSession.CyclesCompleted = 0
+						log.Printf("🍅 Pomodoro: Auto-started long break (%d min)", pomodoroSettings.LongBreak/60)
+					} else {
+						pomodoroSession.Mode = "break"
+						pomodoroSession.TimeRemaining = pomodoroSettings.BreakDuration
+						log.Printf("🍅 Pomodoro: Auto-started break (%d min)", pomodoroSettings.BreakDuration/60)
+					}
+				} else {
+					// Break ended - start new work session
+					pomodoroSession.Mode = "work"
+					pomodoroSession.TimeRemaining = pomodoroSettings.WorkDuration
+					log.Printf("🍅 Pomodoro: Auto-started work session (%d min)", pomodoroSettings.WorkDuration/60)
+				}
+				pomodoroSession.StartedAt = time.Now()
+			}
+		}
+
 		if !isCustomMode {
 			// Use configurable timezone for time display
 			now := time.Now()
@@ -1240,6 +1314,68 @@ func updateLoop() {
 				}, uptimeElements...)
 			}
 			frameMap["uptime"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: uptimeElements}
+
+			// Pomodoro frame - clean, centered countdown display
+			pomodoroMinutes := pomodoroSession.TimeRemaining / 60
+			pomodoroSeconds := pomodoroSession.TimeRemaining % 60
+			pomodoroTimeStr := fmt.Sprintf("%02d:%02d", pomodoroMinutes, pomodoroSeconds)
+
+			// Mode display text
+			var modeText string
+			switch pomodoroSession.Mode {
+			case "work":
+				modeText = "FOCUS"
+			case "break":
+				modeText = "BREAK"
+			case "longBreak":
+				modeText = "LONG BREAK"
+			default:
+				modeText = "READY"
+			}
+
+			// Status indicator
+			statusText := ""
+			if pomodoroSession.IsPaused {
+				statusText = "PAUSED"
+			} else if !pomodoroSession.Active {
+				statusText = "READY"
+				modeText = "POMODORO"
+			}
+
+			// Cycle progress
+			cycleText := fmt.Sprintf("%d/%d", pomodoroSession.CyclesCompleted, pomodoroSettings.CyclesUntilLong)
+
+			// Build clean Pomodoro display elements
+			// Large centered countdown timer for visibility
+			pomodoroElements := []Element{
+				// Large time display in center
+				{Type: "text", X: 20, Y: 22, Size: 2, Value: pomodoroTimeStr},
+			}
+
+			if showHeaders {
+				// Header with mode
+				headerText := fmt.Sprintf("= %s =", modeText)
+				headerX := (128 - len(headerText)*6) / 2
+				if headerX < 0 {
+					headerX = 4
+				}
+				pomodoroElements = append([]Element{
+					{Type: "text", X: headerX, Y: 2, Size: 1, Value: headerText},
+					{Type: "line", X: 0, Y: 12, Width: 128, Height: 1},
+				}, pomodoroElements...)
+
+				// Footer with status and cycles
+				pomodoroElements = append(pomodoroElements, Element{Type: "line", X: 0, Y: 52, Width: 128, Height: 1})
+				if statusText != "" {
+					pomodoroElements = append(pomodoroElements, Element{Type: "text", X: 8, Y: 55, Size: 1, Value: statusText})
+				}
+				pomodoroElements = append(pomodoroElements, Element{Type: "text", X: 90, Y: 55, Size: 1, Value: cycleText})
+			} else {
+				// Without headers, add mode text below timer
+				pomodoroElements = append(pomodoroElements, Element{Type: "text", X: 45, Y: 48, Size: 1, Value: modeText})
+			}
+
+			frameMap["pomodoro"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: pomodoroElements}
 
 			// Build frames array based on cycleItems
 			frames = []Frame{}
@@ -1319,6 +1455,28 @@ func updateLoop() {
 						}
 						frames = append(frames, Frame{Version: 1, Duration: duration, Clear: true, Elements: elements})
 					}
+
+				case "pomodoro":
+					// Pomodoro timer display
+					frame := frameMap["pomodoro"]
+					frame.Duration = duration
+					frames = append(frames, frame)
+				}
+			}
+
+			// Auto-include Pomodoro in cycle if enabled in settings and not already in cycle
+			if pomodoroSettings.ShowInCycle {
+				hasPomodoroInCycle := false
+				for _, item := range cycleItems {
+					if item.Type == "pomodoro" && item.Enabled {
+						hasPomodoroInCycle = true
+						break
+					}
+				}
+				if !hasPomodoroInCycle {
+					frame := frameMap["pomodoro"]
+					frame.Duration = 3000
+					frames = append(frames, frame)
 				}
 			}
 
@@ -1726,6 +1884,21 @@ func loadConfig() {
 		ledBrightness = config.LedBrightness
 	}
 	ledBeaconEnabled = config.LedBeaconEnabled
+	// Pomodoro settings
+	if config.PomodoroWorkDuration > 0 {
+		pomodoroSettings.WorkDuration = config.PomodoroWorkDuration
+		pomodoroSession.TimeRemaining = config.PomodoroWorkDuration
+	}
+	if config.PomodoroBreakDuration > 0 {
+		pomodoroSettings.BreakDuration = config.PomodoroBreakDuration
+	}
+	if config.PomodoroLongBreak > 0 {
+		pomodoroSettings.LongBreak = config.PomodoroLongBreak
+	}
+	if config.PomodoroCyclesUntil > 0 {
+		pomodoroSettings.CyclesUntilLong = config.PomodoroCyclesUntil
+	}
+	pomodoroSettings.ShowInCycle = config.PomodoroShowInCycle
 	mutex.Unlock()
 
 	log.Println("Loaded settings from config.json")
@@ -1735,20 +1908,25 @@ func loadConfig() {
 func saveConfig() {
 	mutex.Lock()
 	config := PersistentConfig{
-		ShowHeaders:        showHeaders,
-		AutoPlay:           autoPlay,
-		FrameDuration:      frameDuration,
-		EspRefreshDuration: espRefreshDuration,
-		GifFps:             gifFps,
-		DisplayRotation:    displayRotation,
-		CycleItems:         cycleItems,
-		CycleItemCounter:   cycleItemCounter,
-		CurrentCity:        currentCity,
-		CityLat:            cityLat,
-		CityLng:            cityLng,
-		TimezoneName:       timezoneName,
-		LedBrightness:      ledBrightness,
-		LedBeaconEnabled:   ledBeaconEnabled,
+		ShowHeaders:           showHeaders,
+		AutoPlay:              autoPlay,
+		FrameDuration:         frameDuration,
+		EspRefreshDuration:    espRefreshDuration,
+		GifFps:                gifFps,
+		DisplayRotation:       displayRotation,
+		CycleItems:            cycleItems,
+		CycleItemCounter:      cycleItemCounter,
+		CurrentCity:           currentCity,
+		CityLat:               cityLat,
+		CityLng:               cityLng,
+		TimezoneName:          timezoneName,
+		LedBrightness:         ledBrightness,
+		LedBeaconEnabled:      ledBeaconEnabled,
+		PomodoroWorkDuration:  pomodoroSettings.WorkDuration,
+		PomodoroBreakDuration: pomodoroSettings.BreakDuration,
+		PomodoroLongBreak:     pomodoroSettings.LongBreak,
+		PomodoroCyclesUntil:   pomodoroSettings.CyclesUntilLong,
+		PomodoroShowInCycle:   pomodoroSettings.ShowInCycle,
 	}
 	mutex.Unlock()
 
@@ -1934,6 +2112,158 @@ func handleTimezone(w http.ResponseWriter, r *http.Request) {
 }
 
 // ==========================================
+// POMODORO TIMER HANDLER
+// ==========================================
+
+// handlePomodoro manages the Pomodoro timer state and settings
+func handlePomodoro(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == http.MethodGet {
+		// Return current Pomodoro state and settings
+		mutex.Lock()
+		response := map[string]interface{}{
+			"session":  pomodoroSession,
+			"settings": pomodoroSettings,
+		}
+		mutex.Unlock()
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		var req struct {
+			Action string `json:"action"` // "start", "pause", "resume", "reset", "skip"
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			jsonError(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		mutex.Lock()
+		switch req.Action {
+		case "start":
+			pomodoroSession.Active = true
+			pomodoroSession.IsPaused = false
+			pomodoroSession.StartedAt = time.Now()
+			pomodoroSession.Mode = "work"
+			pomodoroSession.TimeRemaining = pomodoroSettings.WorkDuration
+			log.Printf("🍅 Pomodoro started: %d min work session", pomodoroSettings.WorkDuration/60)
+
+		case "pause":
+			if pomodoroSession.Active && !pomodoroSession.IsPaused {
+				pomodoroSession.IsPaused = true
+				pomodoroSession.PausedRemaining = pomodoroSession.TimeRemaining
+				log.Printf("🍅 Pomodoro paused: %d seconds remaining", pomodoroSession.TimeRemaining)
+			}
+
+		case "resume":
+			if pomodoroSession.Active && pomodoroSession.IsPaused {
+				pomodoroSession.IsPaused = false
+				pomodoroSession.StartedAt = time.Now()
+				log.Printf("🍅 Pomodoro resumed: %d seconds remaining", pomodoroSession.TimeRemaining)
+			}
+
+		case "reset":
+			pomodoroSession.Active = false
+			pomodoroSession.IsPaused = false
+			pomodoroSession.Mode = "work"
+			pomodoroSession.TimeRemaining = pomodoroSettings.WorkDuration
+			pomodoroSession.CyclesCompleted = 0
+			log.Printf("🍅 Pomodoro reset")
+
+		case "skip":
+			// Skip to next phase
+			if pomodoroSession.Mode == "work" {
+				pomodoroSession.CyclesCompleted++
+				if pomodoroSession.CyclesCompleted >= pomodoroSettings.CyclesUntilLong {
+					pomodoroSession.Mode = "longBreak"
+					pomodoroSession.TimeRemaining = pomodoroSettings.LongBreak
+					pomodoroSession.CyclesCompleted = 0
+					log.Printf("🍅 Pomodoro: Long break started (%d min)", pomodoroSettings.LongBreak/60)
+				} else {
+					pomodoroSession.Mode = "break"
+					pomodoroSession.TimeRemaining = pomodoroSettings.BreakDuration
+					log.Printf("🍅 Pomodoro: Break started (%d min), cycle %d/%d",
+						pomodoroSettings.BreakDuration/60, pomodoroSession.CyclesCompleted, pomodoroSettings.CyclesUntilLong)
+				}
+			} else {
+				pomodoroSession.Mode = "work"
+				pomodoroSession.TimeRemaining = pomodoroSettings.WorkDuration
+				log.Printf("🍅 Pomodoro: Work session started (%d min)", pomodoroSettings.WorkDuration/60)
+			}
+			pomodoroSession.StartedAt = time.Now()
+			pomodoroSession.IsPaused = false
+
+		default:
+			mutex.Unlock()
+			jsonError(w, "Invalid action: "+req.Action, http.StatusBadRequest)
+			return
+		}
+		response := map[string]interface{}{
+			"session":  pomodoroSession,
+			"settings": pomodoroSettings,
+		}
+		mutex.Unlock()
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	if r.Method == http.MethodPut {
+		// Update Pomodoro settings
+		var req struct {
+			WorkDuration    *int  `json:"workDuration"`
+			BreakDuration   *int  `json:"breakDuration"`
+			LongBreak       *int  `json:"longBreak"`
+			CyclesUntilLong *int  `json:"cyclesUntilLong"`
+			ShowInCycle     *bool `json:"showInCycle"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			jsonError(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		mutex.Lock()
+		if req.WorkDuration != nil && *req.WorkDuration >= 60 && *req.WorkDuration <= 3600 {
+			pomodoroSettings.WorkDuration = *req.WorkDuration
+		}
+		if req.BreakDuration != nil && *req.BreakDuration >= 60 && *req.BreakDuration <= 1800 {
+			pomodoroSettings.BreakDuration = *req.BreakDuration
+		}
+		if req.LongBreak != nil && *req.LongBreak >= 300 && *req.LongBreak <= 2700 {
+			pomodoroSettings.LongBreak = *req.LongBreak
+		}
+		if req.CyclesUntilLong != nil && *req.CyclesUntilLong >= 2 && *req.CyclesUntilLong <= 8 {
+			pomodoroSettings.CyclesUntilLong = *req.CyclesUntilLong
+		}
+		if req.ShowInCycle != nil {
+			pomodoroSettings.ShowInCycle = *req.ShowInCycle
+		}
+
+		// Update session time if not active
+		if !pomodoroSession.Active {
+			pomodoroSession.TimeRemaining = pomodoroSettings.WorkDuration
+		}
+
+		response := map[string]interface{}{
+			"session":  pomodoroSession,
+			"settings": pomodoroSettings,
+		}
+		mutex.Unlock()
+
+		go saveConfig()
+		log.Printf("🍅 Pomodoro settings updated: work=%dmin, break=%dmin, long=%dmin, cycles=%d",
+			pomodoroSettings.WorkDuration/60, pomodoroSettings.BreakDuration/60,
+			pomodoroSettings.LongBreak/60, pomodoroSettings.CyclesUntilLong)
+
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+}
+
+// ==========================================
 // JSON ERROR HELPER (Issue 11)
 // ==========================================
 
@@ -2045,6 +2375,7 @@ func main() {
 	http.HandleFunc("/api/settings/headers-state", loggingMiddleware(authMiddleware(handleGetHeadersState)))
 	http.HandleFunc("/api/weather", loggingMiddleware(authMiddleware(handleWeather)))
 	http.HandleFunc("/api/settings/timezone", loggingMiddleware(authMiddleware(handleTimezone)))
+	http.HandleFunc("/api/pomodoro", loggingMiddleware(authMiddleware(handlePomodoro)))
 
 	port := os.Getenv("PORT")
 	if port == "" {

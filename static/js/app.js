@@ -54,6 +54,7 @@ function initAfterAuth() {
   loadCurrent();
   loadWeather();
   loadTimezone(); // Issue 13: Load timezone setting
+  initPomodoro(); // Initialize Pomodoro timer
 
   // Start polling only after auth verified
   startPolling();

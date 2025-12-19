@@ -139,6 +139,7 @@
                   <option value="uptime">⏱ Uptime</option>
                   <option value="text">💬 Text</option>
                   <option value="image">🖼 Image</option>
+                  <option value="pomodoro">🍅 Pomodoro</option>
                 </select>
                 <button
                   class="btn btn-secondary btn-sm"
@@ -209,6 +210,9 @@
               </button>
               <button class="tab-btn" onclick="switchTab('upload')">
                 Media
+              </button>
+              <button class="tab-btn" onclick="switchTab('pomodoro')">
+                Timer
               </button>
             </div>
 
@@ -425,6 +429,104 @@
                 </div>
               </div>
             </div>
+
+            <div class="tab-content" id="tab-pomodoro" style="display: none">
+              <div class="pomodoro-display">
+                <div class="pomodoro-mode" id="pomodoroMode">READY</div>
+                <div class="pomodoro-time" id="pomodoroTime">25:00</div>
+                <div class="pomodoro-cycles" id="pomodoroCycles">Cycle 0/4</div>
+              </div>
+
+              <div class="pomodoro-controls">
+                <button
+                  class="btn btn-primary"
+                  id="pomodoroStartBtn"
+                  onclick="startPomodoro()"
+                >
+                  ▶ Start
+                </button>
+                <button
+                  class="btn btn-secondary"
+                  onclick="resetPomodoro()"
+                  title="Reset"
+                >
+                  ↺
+                </button>
+                <button
+                  class="btn btn-secondary"
+                  onclick="skipPhase()"
+                  title="Skip to next phase"
+                >
+                  ⏭
+                </button>
+              </div>
+
+              <div class="pomodoro-settings">
+                <div class="slider-row">
+                  <label>Work <span id="workDurationVal">25</span> min</label>
+                  <input
+                    type="range"
+                    id="workDuration"
+                    min="1"
+                    max="60"
+                    value="25"
+                    oninput="updateDurationDisplay('work', this.value)"
+                  />
+                </div>
+                <div class="slider-row">
+                  <label>Break <span id="breakDurationVal">5</span> min</label>
+                  <input
+                    type="range"
+                    id="breakDuration"
+                    min="1"
+                    max="30"
+                    value="5"
+                    oninput="updateDurationDisplay('break', this.value)"
+                  />
+                </div>
+                <div class="slider-row">
+                  <label
+                    >Long Break <span id="longBreakVal">15</span> min</label
+                  >
+                  <input
+                    type="range"
+                    id="longBreakDuration"
+                    min="5"
+                    max="45"
+                    value="15"
+                    oninput="updateDurationDisplay('longBreak', this.value)"
+                  />
+                </div>
+                <div class="slider-row">
+                  <label>Cycles <span id="cyclesVal">4</span></label>
+                  <input
+                    type="range"
+                    id="cycleCount"
+                    min="2"
+                    max="8"
+                    value="4"
+                    oninput="updateDurationDisplay('cycles', this.value)"
+                  />
+                </div>
+                <button
+                  class="btn btn-secondary btn-sm"
+                  onclick="savePomodoroSettings()"
+                >
+                  Save Settings
+                </button>
+              </div>
+
+              <div class="action-footer">
+                <label class="toggle-label">
+                  <input
+                    type="checkbox"
+                    id="pomodoroInCycle"
+                    onchange="togglePomodoroInCycle()"
+                  />
+                  Show in Display Cycle
+                </label>
+              </div>
+            </div>
           </section>
 
           <!-- System Settings -->
@@ -608,6 +710,7 @@
     <script src="js/cycle.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/texthelper.js"></script>
+    <script src="js/pomodoro.js"></script>
     <script src="js/app.js"></script>
 
     <script>
