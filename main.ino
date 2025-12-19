@@ -30,12 +30,9 @@ const char* GIF_FULL_URL      = "https://vqxh0hd3-3000.inc1.devtunnels.ms/api/gi
 #define RGB_GREEN_PIN 26
 #define RGB_BLUE_PIN  27
 
-// PWM channels for smooth fading (ESP32 LEDC)
+// PWM settings for smooth fading (ESP32 LEDC)
 #define PWM_FREQ      5000
 #define PWM_RESOLUTION 8  // 8-bit = 0-255
-#define PWM_RED_CH    0
-#define PWM_GREEN_CH  1
-#define PWM_BLUE_CH   2
 
 // RGB Beacon state
 uint8_t ledBrightness = 128;        // 0-255, controlled from web UI
@@ -74,11 +71,12 @@ const unsigned long GIF_CHECK_INTERVAL = 30000;  // Check for new GIF every 30 s
 
 // ===== RGB LED FUNCTIONS =====
 // Set RGB LED to a specific color (scaled by brightness)
+// Note: ESP32 Arduino Core 3.x uses ledcWrite(pin, duty) instead of channel
 void setRGBColor(uint8_t r, uint8_t g, uint8_t b) {
   if (!ledBeaconEnabled) {
-    ledcWrite(PWM_RED_CH, 0);
-    ledcWrite(PWM_GREEN_CH, 0);
-    ledcWrite(PWM_BLUE_CH, 0);
+    ledcWrite(RGB_RED_PIN, 0);
+    ledcWrite(RGB_GREEN_PIN, 0);
+    ledcWrite(RGB_BLUE_PIN, 0);
     return;
   }
   // Scale color by brightness (0-255)
@@ -86,9 +84,9 @@ void setRGBColor(uint8_t r, uint8_t g, uint8_t b) {
   uint8_t scaledG = (g * ledBrightness) / 255;
   uint8_t scaledB = (b * ledBrightness) / 255;
   
-  ledcWrite(PWM_RED_CH, scaledR);
-  ledcWrite(PWM_GREEN_CH, scaledG);
-  ledcWrite(PWM_BLUE_CH, scaledB);
+  ledcWrite(RGB_RED_PIN, scaledR);
+  ledcWrite(RGB_GREEN_PIN, scaledG);
+  ledcWrite(RGB_BLUE_PIN, scaledB);
 }
 
 // Quick beacon flash (satellite pulse effect)
@@ -537,13 +535,10 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
 
-  // ===== RGB LED PWM Init =====
-  ledcSetup(PWM_RED_CH, PWM_FREQ, PWM_RESOLUTION);
-  ledcSetup(PWM_GREEN_CH, PWM_FREQ, PWM_RESOLUTION);
-  ledcSetup(PWM_BLUE_CH, PWM_FREQ, PWM_RESOLUTION);
-  ledcAttachPin(RGB_RED_PIN, PWM_RED_CH);
-  ledcAttachPin(RGB_GREEN_PIN, PWM_GREEN_CH);
-  ledcAttachPin(RGB_BLUE_PIN, PWM_BLUE_CH);
+  // ===== RGB LED PWM Init (ESP32 Arduino Core 3.x API) =====
+  ledcAttach(RGB_RED_PIN, PWM_FREQ, PWM_RESOLUTION);
+  ledcAttach(RGB_GREEN_PIN, PWM_FREQ, PWM_RESOLUTION);
+  ledcAttach(RGB_BLUE_PIN, PWM_FREQ, PWM_RESOLUTION);
   
   // Initial state: off
   setRGBColor(0, 0, 0);
