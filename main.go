@@ -601,6 +601,21 @@ var font5x7 = map[rune][]byte{
 	'"':  {0x00, 0x07, 0x00, 0x07, 0x00},
 }
 
+// calcCenteredX calculates the X position to center text on a 128-pixel wide OLED
+// Text width = charCount * 5 * size + (charCount - 1) * size (no trailing space)
+func calcCenteredX(text string, size int) int {
+	charCount := len([]rune(text))
+	if charCount <= 0 {
+		return 64 // Default to center
+	}
+	textWidth := charCount*5*size + (charCount-1)*size
+	x := (128 - textWidth) / 2
+	if x < 0 {
+		x = 0
+	}
+	return x
+}
+
 // renderTextToBitmap converts a text element to a bitmap for ESP32 local playback
 // Returns bitmap array (128x64 = 1024 bytes) as []int
 // Uses the same format as processImageToBitmap: row-major, MSB first
@@ -1257,15 +1272,16 @@ func updateLoop() {
 			// Get timezone abbreviation from current time in selected location
 			tzAbbrev, _ := now.Zone()
 			timeElements := []Element{
-				{Type: "text", X: 20, Y: 22, Size: 2, Value: currentTime},
+				{Type: "text", X: calcCenteredX(currentTime, 2), Y: 22, Size: 2, Value: currentTime},
 			}
 			if showHeaders {
+				timeHeaderText := "= TIME ="
 				timeElements = append([]Element{
-					{Type: "text", X: 40, Y: 2, Size: 1, Value: "= TIME ="},
+					{Type: "text", X: calcCenteredX(timeHeaderText, 1), Y: 2, Size: 1, Value: timeHeaderText},
 					{Type: "line", X: 0, Y: 12, Width: 128, Height: 1},
 				}, timeElements...)
 				timeElements = append(timeElements, Element{Type: "line", X: 0, Y: 52, Width: 128, Height: 1})
-				timeElements = append(timeElements, Element{Type: "text", X: 45, Y: 55, Size: 1, Value: tzAbbrev})
+				timeElements = append(timeElements, Element{Type: "text", X: calcCenteredX(tzAbbrev, 1), Y: 55, Size: 1, Value: tzAbbrev})
 			}
 			frameMap["time"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: timeElements}
 
@@ -1277,11 +1293,12 @@ func updateLoop() {
 			}
 
 			weatherElements := []Element{
-				{Type: "text", X: 25, Y: 20, Size: 2, Value: weatherData.Temperature},
+				{Type: "text", X: calcCenteredX(weatherData.Temperature, 2), Y: 20, Size: 2, Value: weatherData.Temperature},
 			}
 			if showHeaders {
+				weatherHeaderText := "= WEATHER ="
 				weatherElements = append([]Element{
-					{Type: "text", X: 28, Y: 2, Size: 1, Value: "= WEATHER ="},
+					{Type: "text", X: calcCenteredX(weatherHeaderText, 1), Y: 2, Size: 1, Value: weatherHeaderText},
 					{Type: "line", X: 0, Y: 12, Width: 128, Height: 1},
 				}, weatherElements...)
 				// Condition and AQI on same line if both fit
@@ -1290,26 +1307,27 @@ func updateLoop() {
 					weatherElements = append(weatherElements, Element{Type: "text", X: 5, Y: 42, Size: 1, Value: weatherData.Condition})
 					weatherElements = append(weatherElements, Element{Type: "text", X: 75, Y: 42, Size: 1, Value: aqiDisplay})
 				} else {
-					weatherElements = append(weatherElements, Element{Type: "text", X: 25, Y: 42, Size: 1, Value: weatherData.Condition})
+					weatherElements = append(weatherElements, Element{Type: "text", X: calcCenteredX(weatherData.Condition, 1), Y: 42, Size: 1, Value: weatherData.Condition})
 				}
 				weatherElements = append(weatherElements, Element{Type: "line", X: 0, Y: 53, Width: 128, Height: 1})
-				weatherElements = append(weatherElements, Element{Type: "text", X: 40, Y: 56, Size: 1, Value: weatherData.City})
+				weatherElements = append(weatherElements, Element{Type: "text", X: calcCenteredX(weatherData.City, 1), Y: 56, Size: 1, Value: weatherData.City})
 			} else {
 				// Without headers, show compact info
-				weatherElements = append(weatherElements, Element{Type: "text", X: 20, Y: 42, Size: 1, Value: weatherData.Condition})
+				weatherElements = append(weatherElements, Element{Type: "text", X: calcCenteredX(weatherData.Condition, 1), Y: 42, Size: 1, Value: weatherData.Condition})
 				if aqiDisplay != "" {
-					weatherElements = append(weatherElements, Element{Type: "text", X: 20, Y: 52, Size: 1, Value: aqiDisplay})
+					weatherElements = append(weatherElements, Element{Type: "text", X: calcCenteredX(aqiDisplay, 1), Y: 52, Size: 1, Value: aqiDisplay})
 				}
 			}
 			frameMap["weather"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: weatherElements}
 
 			// Uptime frame
 			uptimeElements := []Element{
-				{Type: "text", X: 10, Y: 28, Size: 1, Value: uptime},
+				{Type: "text", X: calcCenteredX(uptime, 1), Y: 28, Size: 1, Value: uptime},
 			}
 			if showHeaders {
+				uptimeHeaderText := "= UPTIME ="
 				uptimeElements = append([]Element{
-					{Type: "text", X: 32, Y: 2, Size: 1, Value: "= UPTIME ="},
+					{Type: "text", X: calcCenteredX(uptimeHeaderText, 1), Y: 2, Size: 1, Value: uptimeHeaderText},
 					{Type: "line", X: 0, Y: 12, Width: 128, Height: 1},
 				}, uptimeElements...)
 			}
@@ -1347,18 +1365,16 @@ func updateLoop() {
 
 			// Build clean Pomodoro display elements
 			// Large centered countdown timer for visibility
+			timeX := calcCenteredX(pomodoroTimeStr, 2)
 			pomodoroElements := []Element{
 				// Large time display in center
-				{Type: "text", X: 20, Y: 22, Size: 2, Value: pomodoroTimeStr},
+				{Type: "text", X: timeX, Y: 22, Size: 2, Value: pomodoroTimeStr},
 			}
 
 			if showHeaders {
 				// Header with mode
 				headerText := fmt.Sprintf("= %s =", modeText)
-				headerX := (128 - len(headerText)*6) / 2
-				if headerX < 0 {
-					headerX = 4
-				}
+				headerX := calcCenteredX(headerText, 1)
 				pomodoroElements = append([]Element{
 					{Type: "text", X: headerX, Y: 2, Size: 1, Value: headerText},
 					{Type: "line", X: 0, Y: 12, Width: 128, Height: 1},
@@ -1371,8 +1387,9 @@ func updateLoop() {
 				}
 				pomodoroElements = append(pomodoroElements, Element{Type: "text", X: 90, Y: 55, Size: 1, Value: cycleText})
 			} else {
-				// Without headers, add mode text below timer
-				pomodoroElements = append(pomodoroElements, Element{Type: "text", X: 45, Y: 48, Size: 1, Value: modeText})
+				// Without headers, add mode text below timer (centered)
+				modeX := calcCenteredX(modeText, 1)
+				pomodoroElements = append(pomodoroElements, Element{Type: "text", X: modeX, Y: 48, Size: 1, Value: modeText})
 			}
 
 			frameMap["pomodoro"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: pomodoroElements}

@@ -5,7 +5,7 @@
 
 function selectStyle(style) {
   textStyle = style;
-  document.querySelectorAll(".style-btn").forEach((btn) => {
+  document.querySelectorAll(".style-card").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.style === style);
   });
 }
