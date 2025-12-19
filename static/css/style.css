@@ -1052,6 +1052,47 @@ input[type="range"]::-moz-range-thumb {
   font-weight: 600;
 }
 
+/* Style Toggles (Combined Styles) */
+.style-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.style-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-element);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.style-toggle:hover {
+  border-color: var(--primary);
+  color: var(--text-main);
+}
+
+.style-toggle:has(input:checked) {
+  background: rgba(0, 212, 255, 0.15);
+  border-color: var(--primary);
+  color: var(--text-main);
+}
+
+.style-toggle input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
 /* Login Overlay */
 .login-overlay {
   display: none;

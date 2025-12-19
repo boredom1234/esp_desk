@@ -672,17 +672,64 @@ func renderTextToBitmap(text string, x, y, size int) []int {
 	return bitmap
 }
 
-// convertFrameToBitmap converts a frame with text elements to a frame with a single bitmap element
+// convertFrameToBitmap converts a frame with text/line elements to a frame with a single bitmap element
 func convertFrameToBitmap(frame Frame) Frame {
-	// Create bitmap buffer
-	bitmap := renderTextToBitmap("", 0, 0, 1) // Start with empty bitmap
+	const width = 128
+	const height = 64
+	bytesPerRow := (width + 7) / 8 // 16 bytes per row for 128 width
+	bitmap := make([]int, bytesPerRow*height)
 
-	// For simplicity, we'll render the first text element we find
-	// In a more complex implementation, we could render all elements
+	// Helper function to set a pixel
+	setPixel := func(px, py int) {
+		if px < 0 || px >= width || py < 0 || py >= height {
+			return
+		}
+		byteIndex := py*bytesPerRow + px/8
+		if byteIndex < len(bitmap) {
+			bitmap[byteIndex] |= (0x80 >> (px % 8))
+		}
+	}
+
+	// Render all elements
 	for _, el := range frame.Elements {
-		if el.Type == "text" {
-			bitmap = renderTextToBitmap(el.Value, el.X, el.Y, el.Size)
-			break
+		switch el.Type {
+		case "text":
+			// Render text element
+			currentX := el.X
+			size := el.Size
+			if size == 0 {
+				size = 1
+			}
+			for _, char := range el.Value {
+				charData, exists := font5x7[char]
+				if !exists {
+					charData = font5x7[' '] // Default to space
+				}
+				// Draw character with scaling
+				for col := 0; col < 5; col++ {
+					for row := 0; row < 7; row++ {
+						if charData[col]&(1<<row) != 0 {
+							for sx := 0; sx < size; sx++ {
+								for sy := 0; sy < size; sy++ {
+									setPixel(currentX+col*size+sx, el.Y+row*size+sy)
+								}
+							}
+						}
+					}
+				}
+				currentX += 6 * size
+				if currentX >= width {
+					break
+				}
+			}
+
+		case "line":
+			// Render line/rectangle element
+			for x := el.X; x < el.X+el.Width; x++ {
+				for y := el.Y; y < el.Y+el.Height; y++ {
+					setPixel(x, y)
+				}
+			}
 		}
 	}
 
@@ -719,7 +766,11 @@ func handleCustomText(w http.ResponseWriter, r *http.Request) {
 		X        int    `json:"x"`
 		Y        int    `json:"y"`
 		Size     int    `json:"size"`
-		Style    string `json:"style"` // "normal", "centered", "framed"
+		Style    string `json:"style"`    // Legacy: "normal", "centered", "framed"
+		Centered bool   `json:"centered"` // New: combined style flags
+		Framed   bool   `json:"framed"`
+		Large    bool   `json:"large"`
+		Inverted bool   `json:"inverted"`
 		Duration int    `json:"duration"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -727,10 +778,28 @@ func handleCustomText(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Defaults
-	if req.Size == 0 {
-		req.Size = 2
+	// Legacy style support - convert to new flags
+	if req.Style == "centered" {
+		req.Centered = true
+	} else if req.Style == "framed" {
+		req.Framed = true
 	}
+
+	// Defaults
+	size := 2
+	if req.Large {
+		size = 2
+	} else if req.Size > 0 {
+		size = req.Size
+	} else {
+		size = 1 // Default to normal size unless Large is checked
+	}
+
+	// If Large is checked, always use size 2
+	if req.Large {
+		size = 2
+	}
+
 	if req.Duration == 0 {
 		req.Duration = 5000
 	}
@@ -740,51 +809,106 @@ func handleCustomText(w http.ResponseWriter, r *http.Request) {
 
 	var elements []Element
 
-	switch req.Style {
-	case "centered":
-		// Approximate centering for OLED
-		// Each character is 5 pixels wide with 1 pixel spacing
-		// But the last character doesn't need trailing spacing
-		charCount := len([]rune(req.Text))                         // Use rune count for proper Unicode support
-		textWidth := charCount*5*req.Size + (charCount-1)*req.Size // 5px per char + 1px spacing between chars
-		if charCount <= 0 {
-			textWidth = 0
-		}
-		x := (128 - textWidth) / 2
-		if x < 0 {
-			x = 0
-		}
-		y := 28 // Vertically centered-ish
-		elements = []Element{
-			{Type: "text", X: x, Y: y, Size: req.Size, Value: req.Text},
-		}
+	// Calculate text position
+	charCount := len([]rune(req.Text))
+	textWidth := charCount*5*size + (charCount-1)*size
+	if charCount <= 0 {
+		textWidth = 0
+	}
 
-	case "framed":
-		// Decorative frame with text
-		elements = []Element{
+	// Default position
+	x := req.X
+	y := req.Y
+
+	// Frame insets (if framed, text must be inside the border)
+	frameInset := 0
+	if req.Framed {
+		frameInset = 4 // Pixels inside the frame
+	}
+
+	// Calculate Y position (centered vertically based on size)
+	if y == 0 {
+		lineHeight := 7 * size
+		if req.Framed {
+			// Center within frame area (between y=4 and y=59)
+			y = (64 - lineHeight) / 2
+		} else {
+			y = (64 - lineHeight) / 2
+		}
+	}
+
+	// Calculate X position
+	if req.Centered {
+		availableWidth := 128
+		if req.Framed {
+			availableWidth = 128 - (frameInset * 2) // Account for frame borders
+		}
+		x = (availableWidth - textWidth) / 2
+		if req.Framed {
+			x += frameInset // Offset by frame inset
+		}
+		if x < frameInset {
+			x = frameInset
+		}
+	} else if x == 0 {
+		x = frameInset + 2 // Small padding from left
+	}
+
+	// Add frame elements first if framed
+	if req.Framed {
+		elements = append(elements,
 			// Top border line
-			{Type: "line", X: 0, Y: 0, Width: 128, Height: 1},
+			Element{Type: "line", X: 0, Y: 0, Width: 128, Height: 1},
 			// Bottom border line
-			{Type: "line", X: 0, Y: 63, Width: 128, Height: 1},
+			Element{Type: "line", X: 0, Y: 63, Width: 128, Height: 1},
 			// Left border
-			{Type: "line", X: 0, Y: 0, Width: 1, Height: 64},
+			Element{Type: "line", X: 0, Y: 0, Width: 1, Height: 64},
 			// Right border
-			{Type: "line", X: 127, Y: 0, Width: 1, Height: 64},
-			// Main text centered
-			{Type: "text", X: 8, Y: 28, Size: req.Size, Value: req.Text},
-		}
+			Element{Type: "line", X: 127, Y: 0, Width: 1, Height: 64},
+		)
+	}
 
-	default: // "normal"
-		elements = []Element{
-			{Type: "text", X: req.X, Y: req.Y, Size: req.Size, Value: req.Text},
+	// Add text element
+	elements = append(elements, Element{
+		Type:  "text",
+		X:     x,
+		Y:     y,
+		Size:  size,
+		Value: req.Text,
+	})
+
+	// Handle inverted mode (swap foreground/background)
+	// For inverted, we'll use a bitmap approach
+	var finalFrames []Frame
+	if req.Inverted {
+		// Convert to bitmap and invert pixels
+		textFrame := Frame{
+			Version:  1,
+			Duration: req.Duration,
+			Clear:    true,
+			Elements: elements,
+		}
+		bitmapFrame := convertFrameToBitmap(textFrame)
+		// Invert the bitmap
+		for i, el := range bitmapFrame.Elements {
+			if el.Type == "bitmap" {
+				for j := range el.Bitmap {
+					bitmapFrame.Elements[i].Bitmap[j] = ^el.Bitmap[j] & 0xFF
+				}
+			}
+		}
+		finalFrames = []Frame{bitmapFrame}
+	} else {
+		finalFrames = []Frame{
+			{Version: 1, Duration: req.Duration, Clear: true, Elements: elements},
 		}
 	}
 
-	frames = []Frame{
-		{Version: 1, Duration: req.Duration, Clear: true, Elements: elements},
-	}
+	frames = finalFrames
 	index = 0
 	mutex.Unlock()
+
+	log.Printf("📝 Custom text: centered=%v, framed=%v, large=%v, inverted=%v", req.Centered, req.Framed, req.Large, req.Inverted)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "frameCount": 1})
@@ -804,6 +928,7 @@ func handleMarquee(w http.ResponseWriter, r *http.Request) {
 		Direction string `json:"direction"` // "left" or "right"
 		Loops     int    `json:"loops"`     // number of complete scrolls
 		MaxFrames int    `json:"maxFrames"` // max frames for ESP32 memory
+		Framed    bool   `json:"framed"`    // Static frame around scrolling area
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		jsonError(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
@@ -882,14 +1007,34 @@ func handleMarquee(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, x := range selectedPositions {
+		// Build frame elements
+		var frameElements []Element
+
+		// Add static frame border if requested
+		if req.Framed {
+			frameElements = append(frameElements,
+				// Top border line
+				Element{Type: "line", X: 0, Y: 0, Width: 128, Height: 1},
+				// Bottom border line
+				Element{Type: "line", X: 0, Y: 63, Width: 128, Height: 1},
+				// Left border
+				Element{Type: "line", X: 0, Y: 0, Width: 1, Height: 64},
+				// Right border
+				Element{Type: "line", X: 127, Y: 0, Width: 1, Height: 64},
+			)
+		}
+
+		// Add scrolling text
+		frameElements = append(frameElements,
+			Element{Type: "text", X: x, Y: req.Y, Size: req.Size, Value: req.Text},
+		)
+
 		// Create text frame
 		textFrame := Frame{
 			Version:  1,
 			Duration: frameTime,
 			Clear:    true,
-			Elements: []Element{
-				{Type: "text", X: x, Y: req.Y, Size: req.Size, Value: req.Text},
-			},
+			Elements: frameElements,
 		}
 
 		// Convert text frame to bitmap frame for ESP32 local playback

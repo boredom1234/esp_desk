@@ -229,31 +229,23 @@
                 </div>
               </div>
 
-              <div class="style-selector-modern">
-                <button
-                  class="style-card active"
-                  data-style="normal"
-                  onclick="selectStyle('normal')"
-                >
-                  <span class="preview-line">Abc</span>
-                  <span class="label">Normal</span>
-                </button>
-                <button
-                  class="style-card"
-                  data-style="centered"
-                  onclick="selectStyle('centered')"
-                >
-                  <span class="preview-line text-center">Abc</span>
-                  <span class="label">Center</span>
-                </button>
-                <button
-                  class="style-card"
-                  data-style="framed"
-                  onclick="selectStyle('framed')"
-                >
-                  <span class="preview-line framed">[Abc]</span>
-                  <span class="label">Frame</span>
-                </button>
+              <div class="style-toggles">
+                <label class="style-toggle">
+                  <input type="checkbox" id="styleCentered" />
+                  <span>⊡ Centered</span>
+                </label>
+                <label class="style-toggle">
+                  <input type="checkbox" id="styleFramed" />
+                  <span>▢ Framed</span>
+                </label>
+                <label class="style-toggle">
+                  <input type="checkbox" id="styleLarge" />
+                  <span>A Large</span>
+                </label>
+                <label class="style-toggle">
+                  <input type="checkbox" id="styleInverted" />
+                  <span>◐ Invert</span>
+                </label>
               </div>
 
               <div class="action-footer">
@@ -347,6 +339,13 @@
                     oninput="document.getElementById('marqueeMaxFramesVal').textContent=this.value"
                   />
                 </div>
+              </div>
+
+              <div class="style-toggles">
+                <label class="style-toggle">
+                  <input type="checkbox" id="marqueeFramed" />
+                  <span>▢ Static Frame</span>
+                </label>
               </div>
 
               <div class="action-footer">

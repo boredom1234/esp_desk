@@ -124,14 +124,22 @@ function sendCustomText() {
   const text = document.getElementById("customText").value;
   if (!text) return;
 
+  // Read style toggle states
+  const centered = document.getElementById("styleCentered")?.checked || false;
+  const framed = document.getElementById("styleFramed")?.checked || false;
+  const large = document.getElementById("styleLarge")?.checked || false;
+  const inverted = document.getElementById("styleInverted")?.checked || false;
+
   // Issue 1: Use authFetch for protected endpoint
   authFetch("/api/custom/text", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       text: text,
-      style: textStyle,
-      size: 2,
+      centered: centered,
+      framed: framed,
+      large: large,
+      inverted: inverted,
     }),
   })
     .then((res) => res.json())
@@ -152,6 +160,7 @@ function sendMarquee() {
 
   const speed = parseInt(document.getElementById("marqueeSpeed").value);
   const maxFrames = parseInt(document.getElementById("marqueeMaxFrames").value);
+  const framed = document.getElementById("marqueeFramed")?.checked || false;
 
   // Issue 1: Use authFetch for protected endpoint
   authFetch("/api/custom/marquee", {
@@ -164,6 +173,7 @@ function sendMarquee() {
       speed: speed,
       loops: 3,
       maxFrames: maxFrames,
+      framed: framed,
     }),
   })
     .then((res) => res.json())
