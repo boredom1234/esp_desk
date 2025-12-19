@@ -51,9 +51,12 @@ type Settings struct {
 	EspRefreshDuration int         `json:"espRefreshDuration"`
 	GifFps             int         `json:"gifFps"`
 	ShowHeaders        bool        `json:"showHeaders"`
+	DisplayRotation    int         `json:"displayRotation"` // 0 = normal, 2 = 180 degrees
 	FrameCount         int         `json:"frameCount"`
 	CurrentIndex       int         `json:"currentIndex"`
 	CycleItems         []CycleItem `json:"cycleItems"`
+	LedBrightness      int         `json:"ledBrightness"`    // 0-100 percentage for RGB LED beacon
+	LedBeaconEnabled   bool        `json:"ledBeaconEnabled"` // Enable/disable satellite beacon
 }
 
 // CycleItem represents a single item in the display cycle
@@ -114,12 +117,15 @@ type PersistentConfig struct {
 	FrameDuration      int         `json:"frameDuration"`
 	EspRefreshDuration int         `json:"espRefreshDuration"`
 	GifFps             int         `json:"gifFps"`
+	DisplayRotation    int         `json:"displayRotation"` // 0 = normal, 2 = 180 degrees
 	CycleItems         []CycleItem `json:"cycleItems"`
 	CycleItemCounter   int         `json:"cycleItemCounter"`
 	CurrentCity        string      `json:"currentCity"`
 	CityLat            float64     `json:"cityLat"`
 	CityLng            float64     `json:"cityLng"`
-	TimezoneName       string      `json:"timezoneName"` // Issue 13: configurable timezone
+	TimezoneName       string      `json:"timezoneName"`     // Issue 13: configurable timezone
+	LedBrightness      int         `json:"ledBrightness"`    // 0-100 percentage
+	LedBeaconEnabled   bool        `json:"ledBeaconEnabled"` // Enable/disable beacon
 }
 
 // LoginAttempt tracks rate limiting for auth (Issue 9)
@@ -146,6 +152,9 @@ var (
 	frameDuration      int  = 200
 	espRefreshDuration int  = 3000 // Duration ESP32 waits before fetching next frame (ms)
 	gifFps             int  = 0    // 0 = use original timing, 5-30 = override FPS
+	displayRotation    int  = 0    // 0 = normal, 2 = 180 degrees (for upside-down mounting)
+	ledBrightness      int  = 50   // 0-100 percentage for RGB LED beacon
+	ledBeaconEnabled   bool = true // Enable/disable satellite beacon pulse
 
 	// Display cycle items - flexible list of what to display
 	cycleItems = []CycleItem{
@@ -206,11 +215,14 @@ func currentFrame(w http.ResponseWriter, r *http.Request) {
 
 	// Include isGifMode hint so ESP32 can detect mode change immediately
 	response := map[string]interface{}{
-		"version":   frame.Version,
-		"duration":  frame.Duration,
-		"clear":     frame.Clear,
-		"elements":  frame.Elements,
-		"isGifMode": isGifMode, // Hint for ESP32 to fetch /api/gif/full immediately
+		"version":          frame.Version,
+		"duration":         frame.Duration,
+		"clear":            frame.Clear,
+		"elements":         frame.Elements,
+		"isGifMode":        isGifMode,        // Hint for ESP32 to fetch /api/gif/full immediately
+		"displayRotation":  displayRotation,  // 0 = normal, 2 = 180 degrees
+		"ledBrightness":    ledBrightness,    // 0-100 for RGB LED beacon
+		"ledBeaconEnabled": ledBeaconEnabled, // Enable/disable satellite beacon
 	}
 	json.NewEncoder(w).Encode(response)
 }
@@ -233,11 +245,14 @@ func nextFrame(w http.ResponseWriter, r *http.Request) {
 
 	// Include isGifMode hint so ESP32 can detect mode change immediately
 	response := map[string]interface{}{
-		"version":   frame.Version,
-		"duration":  frame.Duration,
-		"clear":     frame.Clear,
-		"elements":  frame.Elements,
-		"isGifMode": isGifMode, // Hint for ESP32 to fetch /api/gif/full immediately
+		"version":          frame.Version,
+		"duration":         frame.Duration,
+		"clear":            frame.Clear,
+		"elements":         frame.Elements,
+		"isGifMode":        isGifMode,        // Hint for ESP32 to fetch /api/gif/full immediately
+		"displayRotation":  displayRotation,  // 0 = normal, 2 = 180 degrees
+		"ledBrightness":    ledBrightness,    // 0-100 for RGB LED beacon
+		"ledBeaconEnabled": ledBeaconEnabled, // Enable/disable satellite beacon
 	}
 	json.NewEncoder(w).Encode(response)
 }
@@ -295,9 +310,12 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			EspRefreshDuration: espRefreshDuration,
 			GifFps:             gifFps,
 			ShowHeaders:        showHeaders,
+			DisplayRotation:    displayRotation,
 			FrameCount:         len(frames),
 			CurrentIndex:       index,
 			CycleItems:         cycleItems,
+			LedBrightness:      ledBrightness,
+			LedBeaconEnabled:   ledBeaconEnabled,
 		}
 		mutex.Unlock()
 		json.NewEncoder(w).Encode(settings)
@@ -311,7 +329,10 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			EspRefreshDuration *int        `json:"espRefreshDuration,omitempty"`
 			GifFps             *int        `json:"gifFps,omitempty"`
 			ShowHeaders        *bool       `json:"showHeaders,omitempty"`
+			DisplayRotation    *int        `json:"displayRotation,omitempty"`
 			CycleItems         []CycleItem `json:"cycleItems,omitempty"`
+			LedBrightness      *int        `json:"ledBrightness,omitempty"`
+			LedBeaconEnabled   *bool       `json:"ledBeaconEnabled,omitempty"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			jsonError(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
@@ -363,15 +384,38 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			cycleItems = req.CycleItems
 			changes = append(changes, fmt.Sprintf("cycleItems=%d items", len(cycleItems)))
 		}
+		if req.DisplayRotation != nil {
+			if *req.DisplayRotation == 0 || *req.DisplayRotation == 2 {
+				displayRotation = *req.DisplayRotation
+				changes = append(changes, fmt.Sprintf("displayRotation=%d", displayRotation))
+			}
+		}
+		if req.LedBrightness != nil {
+			ledBrightness = *req.LedBrightness
+			if ledBrightness < 0 {
+				ledBrightness = 0
+			}
+			if ledBrightness > 100 {
+				ledBrightness = 100
+			}
+			changes = append(changes, fmt.Sprintf("ledBrightness=%d%%", ledBrightness))
+		}
+		if req.LedBeaconEnabled != nil {
+			ledBeaconEnabled = *req.LedBeaconEnabled
+			changes = append(changes, fmt.Sprintf("ledBeaconEnabled=%v", ledBeaconEnabled))
+		}
 		settings := Settings{
 			AutoPlay:           autoPlay,
 			FrameDuration:      frameDuration,
 			EspRefreshDuration: espRefreshDuration,
 			GifFps:             gifFps,
 			ShowHeaders:        showHeaders,
+			DisplayRotation:    displayRotation,
 			FrameCount:         len(frames),
 			CurrentIndex:       index,
 			CycleItems:         cycleItems,
+			LedBrightness:      ledBrightness,
+			LedBeaconEnabled:   ledBeaconEnabled,
 		}
 		mutex.Unlock()
 
@@ -1674,6 +1718,14 @@ func loadConfig() {
 	if config.TimezoneName != "" {
 		timezoneName = config.TimezoneName
 	}
+	if config.DisplayRotation == 0 || config.DisplayRotation == 2 {
+		displayRotation = config.DisplayRotation
+	}
+	// LED beacon settings
+	if config.LedBrightness >= 0 && config.LedBrightness <= 100 {
+		ledBrightness = config.LedBrightness
+	}
+	ledBeaconEnabled = config.LedBeaconEnabled
 	mutex.Unlock()
 
 	log.Println("Loaded settings from config.json")
@@ -1688,12 +1740,15 @@ func saveConfig() {
 		FrameDuration:      frameDuration,
 		EspRefreshDuration: espRefreshDuration,
 		GifFps:             gifFps,
+		DisplayRotation:    displayRotation,
 		CycleItems:         cycleItems,
 		CycleItemCounter:   cycleItemCounter,
 		CurrentCity:        currentCity,
 		CityLat:            cityLat,
 		CityLng:            cityLng,
 		TimezoneName:       timezoneName,
+		LedBrightness:      ledBrightness,
+		LedBeaconEnabled:   ledBeaconEnabled,
 	}
 	mutex.Unlock()
 

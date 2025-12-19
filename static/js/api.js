@@ -64,9 +64,23 @@ function loadSettings() {
       updateAutoPlayButton();
       updateHeadersToggle(data.showHeaders);
 
+      // Update display rotation toggle (0 = normal, 2 = 180 degrees)
+      if (typeof updateRotationToggle === "function") {
+        displayRotation = data.displayRotation || 0;
+        updateRotationToggle(data.displayRotation === 2);
+      }
+
       // Update display cycle UI
       if (data.cycleItems) {
         updateDisplayCycleUI(data.cycleItems);
+      }
+
+      // Update LED beacon settings
+      if (typeof updateBeaconUI === "function") {
+        updateBeaconUI(
+          data.ledBrightness || 50,
+          data.ledBeaconEnabled !== false
+        );
       }
     })
     .catch((err) => {

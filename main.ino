@@ -23,6 +23,40 @@ const char* GIF_FULL_URL      = "https://vqxh0hd3-3000.inc1.devtunnels.ms/api/gi
 // ===== STATUS LED =====
 #define LED_PIN 2  // Built-in LED on most ESP32 boards (GPIO 2)
 
+// ===== RGB LED BEACON (Satellite Mode) =====
+// Connect RGB LED: R->GPIO25, G->GPIO26, B->GPIO27, Common GND->GND
+// Use 220Ω resistors on each anode for protection
+#define RGB_RED_PIN   25
+#define RGB_GREEN_PIN 26
+#define RGB_BLUE_PIN  27
+
+// PWM channels for smooth fading (ESP32 LEDC)
+#define PWM_FREQ      5000
+#define PWM_RESOLUTION 8  // 8-bit = 0-255
+#define PWM_RED_CH    0
+#define PWM_GREEN_CH  1
+#define PWM_BLUE_CH   2
+
+// RGB Beacon state
+uint8_t ledBrightness = 128;        // 0-255, controlled from web UI
+bool ledBeaconEnabled = true;       // Can be toggled from web UI
+unsigned long lastBeaconTime = 0;
+const unsigned long BEACON_INTERVAL = 2500;  // Flash every 2.5 seconds
+
+// Color constants (R, G, B) - scaled by brightness later
+struct RGBColor {
+  uint8_t r, g, b;
+};
+const RGBColor COLOR_IDLE     = {0, 100, 255};   // Blue - standby
+const RGBColor COLOR_FETCHING = {255, 165, 0};   // Orange - receiving data
+const RGBColor COLOR_SUCCESS  = {0, 255, 50};    // Green - data loaded
+const RGBColor COLOR_ERROR    = {255, 0, 0};     // Red - error
+const RGBColor COLOR_GIF_MODE = {180, 0, 255};   // Purple - animation playing
+const RGBColor COLOR_WIFI     = {0, 255, 255};   // Cyan - WiFi connecting
+
+// Current beacon color (updated by state)
+RGBColor currentBeaconColor = COLOR_IDLE;
+
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // ===== GIF LOCAL PLAYBACK =====
@@ -34,8 +68,50 @@ uint8_t gifFrames[MAX_GIF_FRAMES][BYTES_PER_FRAME];
 int gifDurations[MAX_GIF_FRAMES];
 int gifFrameCount = 0;
 bool isGifMode = false;
+int displayRotation = 0;  // 0 = normal, 2 = 180 degrees (for upside-down mounting)
 unsigned long lastGifCheck = 0;
 const unsigned long GIF_CHECK_INTERVAL = 30000;  // Check for new GIF every 30 seconds
+
+// ===== RGB LED FUNCTIONS =====
+// Set RGB LED to a specific color (scaled by brightness)
+void setRGBColor(uint8_t r, uint8_t g, uint8_t b) {
+  if (!ledBeaconEnabled) {
+    ledcWrite(PWM_RED_CH, 0);
+    ledcWrite(PWM_GREEN_CH, 0);
+    ledcWrite(PWM_BLUE_CH, 0);
+    return;
+  }
+  // Scale color by brightness (0-255)
+  uint8_t scaledR = (r * ledBrightness) / 255;
+  uint8_t scaledG = (g * ledBrightness) / 255;
+  uint8_t scaledB = (b * ledBrightness) / 255;
+  
+  ledcWrite(PWM_RED_CH, scaledR);
+  ledcWrite(PWM_GREEN_CH, scaledG);
+  ledcWrite(PWM_BLUE_CH, scaledB);
+}
+
+// Quick beacon flash (satellite pulse effect)
+void beaconFlash(RGBColor color, int durationMs = 80) {
+  setRGBColor(color.r, color.g, color.b);
+  delay(durationMs);
+  setRGBColor(0, 0, 0);  // Turn off
+}
+
+// Non-blocking beacon update (call from loop)
+void updateBeacon() {
+  if (!ledBeaconEnabled) return;
+  
+  unsigned long now = millis();
+  if (now - lastBeaconTime >= BEACON_INTERVAL) {
+    lastBeaconTime = now;
+    
+    // Quick flash with current state color
+    setRGBColor(currentBeaconColor.r, currentBeaconColor.g, currentBeaconColor.b);
+    delay(80);  // Brief flash
+    setRGBColor(0, 0, 0);  // Back to off
+  }
+}
 
 // ===== FUNCTION: DRAW BITMAP FROM BUFFER =====
 void drawBitmapFromBuffer(const uint8_t* bitmap) {
@@ -301,6 +377,7 @@ void playGifLocally() {
 // ===== FUNCTION: FETCH SINGLE FRAME (LEGACY/FALLBACK) =====
 int fetchFrame(const char* url) {
   digitalWrite(LED_PIN, HIGH);
+  beaconFlash(COLOR_FETCHING, 50);  // Orange flash on data fetch
   
   // Use WiFiClientSecure for HTTPS connections
   WiFiClientSecure client;
@@ -339,6 +416,35 @@ int fetchFrame(const char* url) {
     Serial.printf("JSON parse error in fetchFrame: %s\n", error.c_str());
     digitalWrite(LED_PIN, LOW);
     return 1000;  // Retry after 1 second
+  }
+
+  // ===== CHECK FOR DISPLAY ROTATION =====
+  // Server can send displayRotation (0 = normal, 2 = 180 degrees)
+  int serverRotation = doc["displayRotation"] | 0;
+  if (serverRotation != displayRotation) {
+    displayRotation = serverRotation;
+    display.setRotation(displayRotation);
+    Serial.printf("Display rotation changed to: %d\n", displayRotation);
+  }
+
+  // ===== CHECK FOR LED BEACON SETTINGS =====
+  // Server sends LED brightness (0-100%) and enabled state
+  int serverBrightness = doc["ledBrightness"] | -1;
+  if (serverBrightness >= 0 && serverBrightness <= 100) {
+    // Convert 0-100% to 0-255 for PWM
+    uint8_t newBrightness = (serverBrightness * 255) / 100;
+    if (newBrightness != ledBrightness) {
+      ledBrightness = newBrightness;
+      Serial.printf("LED brightness changed to: %d%%\n", serverBrightness);
+    }
+  }
+  bool serverBeaconEnabled = doc["ledBeaconEnabled"] | true;
+  if (serverBeaconEnabled != ledBeaconEnabled) {
+    ledBeaconEnabled = serverBeaconEnabled;
+    Serial.printf("LED beacon %s\n", ledBeaconEnabled ? "ENABLED" : "DISABLED");
+    if (!ledBeaconEnabled) {
+      setRGBColor(0, 0, 0);  // Turn off LED when disabled
+    }
   }
 
   // ===== CHECK FOR GIF MODE HINT =====
@@ -431,6 +537,18 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
 
+  // ===== RGB LED PWM Init =====
+  ledcSetup(PWM_RED_CH, PWM_FREQ, PWM_RESOLUTION);
+  ledcSetup(PWM_GREEN_CH, PWM_FREQ, PWM_RESOLUTION);
+  ledcSetup(PWM_BLUE_CH, PWM_FREQ, PWM_RESOLUTION);
+  ledcAttachPin(RGB_RED_PIN, PWM_RED_CH);
+  ledcAttachPin(RGB_GREEN_PIN, PWM_GREEN_CH);
+  ledcAttachPin(RGB_BLUE_PIN, PWM_BLUE_CH);
+  
+  // Initial state: off
+  setRGBColor(0, 0, 0);
+  currentBeaconColor = COLOR_WIFI;  // Cyan during WiFi connect
+
   // OLED init
   if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDRESS)) {
     Serial.println("SSD1306 allocation failed - restarting in 5 seconds");
@@ -481,8 +599,12 @@ void setup() {
 }
 
 void loop() {
+  // ===== RGB BEACON UPDATE (satellite pulse) =====
+  updateBeacon();
+  
   // WiFi reconnection check
   if (WiFi.status() != WL_CONNECTED) {
+    currentBeaconColor = COLOR_WIFI;  // Cyan during reconnect
     Serial.println("WiFi lost, reconnecting...");
     WiFi.disconnect();
     WiFi.begin(ssid, password);
@@ -492,14 +614,18 @@ void loop() {
       retries++;
     }
     if (WiFi.status() != WL_CONNECTED) {
+      currentBeaconColor = COLOR_ERROR;  // Red on failure
       delay(5000);
       return;
     }
     Serial.println("WiFi reconnected");
+    beaconFlash(COLOR_SUCCESS, 150);  // Green flash on reconnect
   }
 
   if (isGifMode && gifFrameCount > 0) {
     // ===== LOCAL ANIMATION PLAYBACK (GIF/MARQUEE) =====
+    currentBeaconColor = COLOR_GIF_MODE;  // Purple during animation
+    
     // Play all frames from RAM without API calls
     playGifLocally();
     
@@ -508,6 +634,8 @@ void loop() {
     checkForGifUpdate();
   } else {
     // ===== LEGACY POLLING MODE =====
+    currentBeaconColor = COLOR_IDLE;  // Blue in normal mode
+    
     // Check for GIF updates periodically when not in GIF mode
     checkForGifUpdate();
     

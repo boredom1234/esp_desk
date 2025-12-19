@@ -449,6 +449,47 @@
 
               <div class="setting-row">
                 <div class="label-group">
+                  <span>Rotate 180°</span>
+                  <small>For upside-down mounting</small>
+                </div>
+                <button
+                  class="toggle-switch"
+                  id="rotationToggle"
+                  onclick="toggleRotation()"
+                >
+                  <span class="toggle-indicator"></span>
+                </button>
+              </div>
+
+              <div class="setting-row">
+                <div class="label-group">
+                  <span>🛰️ LED Beacon</span>
+                  <small id="ledBrightnessValue">50%</small>
+                </div>
+                <div class="beacon-controls">
+                  <button
+                    class="toggle-switch active"
+                    id="beaconToggle"
+                    onclick="toggleBeacon()"
+                    title="Toggle beacon on/off"
+                  >
+                    <span class="toggle-indicator"></span>
+                  </button>
+                  <input
+                    type="range"
+                    class="mini-slider beacon-slider"
+                    id="ledBrightnessSlider"
+                    min="10"
+                    max="100"
+                    step="5"
+                    value="50"
+                    oninput="updateLedBrightness(this.value)"
+                  />
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div class="label-group">
                   <span>ESP Refresh</span>
                   <small id="espRefreshValue">3.0s</small>
                 </div>
