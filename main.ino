@@ -71,7 +71,7 @@ const unsigned long GIF_CHECK_INTERVAL = 30000;  // Check for new GIF every 30 s
 
 // ===== RGB LED FUNCTIONS =====
 // Set RGB LED to a specific color (scaled by brightness)
-// Note: ESP32 Arduino Core 3.x uses ledcWrite(pin, duty) instead of channel
+// Common cathode (common GND): 0 = OFF, 255 = ON
 void setRGBColor(uint8_t r, uint8_t g, uint8_t b) {
   if (!ledBeaconEnabled) {
     ledcWrite(RGB_RED_PIN, 0);
