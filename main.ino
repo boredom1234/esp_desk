@@ -6,6 +6,10 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
+// ===== NETWORK ERROR HANDLING =====
+static int networkRetryCount = 0;
+const int MAX_RETRY_DELAY = 30000;  // 30 seconds max backoff
+
 // ===== WIFI MULTI (Multiple Network Support) =====
 // Add your WiFi networks here - ESP32 will automatically connect to the strongest available
 // Format: wifiMulti.addAP("SSID", "PASSWORD");
@@ -23,6 +27,8 @@ const char* WIFI_SSID_3 = "";  // e.g., "Mobile-Hotspot"
 const char* WIFI_PASS_3 = "";
 
 // ===== BACKEND =====
+// TODO: Consider using WiFiManager or SPIFFS config file for dynamic URL configuration
+// Dev tunnel URLs expire periodically and require manual updates
 const char* FRAME_CURRENT_URL = "https://vqxh0hd3-3000.inc1.devtunnels.ms/frame/current";
 const char* FRAME_NEXT_URL    = "https://vqxh0hd3-3000.inc1.devtunnels.ms/frame/next";
 const char* GIF_FULL_URL      = "https://vqxh0hd3-3000.inc1.devtunnels.ms/api/gif/full";
@@ -71,6 +77,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // ===== GIF LOCAL PLAYBACK =====
 // Each frame is stored as bitmap data (1024 bytes for 128x64 1-bit)
+// NOTE: Static allocation uses ~10KB RAM permanently. Dynamic allocation would save
+// memory when not in GIF mode, but risks heap fragmentation on ESP32.
 #define MAX_GIF_FRAMES 10       // Limit to ~10KB of RAM for bitmaps (reduced for memory safety)
 #define BYTES_PER_FRAME 1024    // 128x64 / 8 = 1024 bytes per frame
 
@@ -219,7 +227,7 @@ int fetchFullGifWithStatus() {
   // Use WiFiClientSecure for HTTPS connections
   WiFiClientSecure client;
   client.setInsecure();  // Skip certificate verification (required for dev tunnels)
-  client.setTimeout(30);  // 30 second timeout
+  client.setTimeout(30000);  // 30 second timeout (in milliseconds)
   
   HTTPClient http;
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);  // Follow redirects
@@ -326,8 +334,9 @@ int fetchFullGifWithStatus() {
   for (JsonObject frame : framesArray) {
     if (gifFrameCount >= MAX_GIF_FRAMES) break;
 
-    // Get duration
-    gifDurations[gifFrameCount] = frame["duration"] | 100;
+    // Get duration (clamped to safe range)
+    int frameDuration = frame["duration"] | 100;
+    gifDurations[gifFrameCount] = constrain(frameDuration, 10, 60000);  // Clamp: 10ms - 60s
 
     // Get bitmap from first element
     JsonArray elements = frame["elements"].as<JsonArray>();
@@ -373,7 +382,8 @@ void playGifLocally() {
     // Check WiFi status - if lost, exit GIF playback to attempt reconnection
     if (WiFi.status() != WL_CONNECTED) {
       Serial.println("WiFi lost during GIF playback, exiting for reconnection");
-      isGifMode = false; // Force exit GIF mode so main loop handles reconnection
+      isGifMode = false;   // Force exit GIF mode so main loop handles reconnection
+      gifFrameCount = 0;   // Clear stale frame count to prevent using old data
       return;
     }
     
@@ -402,7 +412,10 @@ int fetchFrame(const char* url) {
   if (!http.begin(client, url)) {
     Serial.println("ERROR: fetchFrame http.begin() failed");
     digitalWrite(LED_PIN, LOW);
-    return 1000;
+    networkRetryCount++;
+    int backoffDelay = min(1000 * (1 << min(networkRetryCount, 5)), MAX_RETRY_DELAY);
+    Serial.printf("Retry backoff: %dms (attempt %d)\n", backoffDelay, networkRetryCount);
+    return backoffDelay;
   }
   
   http.setTimeout(10000);  // 10 second timeout for single frames
@@ -413,7 +426,10 @@ int fetchFrame(const char* url) {
     Serial.printf("fetchFrame failed with HTTP code: %d (%s)\n", code, errorMsg.c_str());
     http.end();
     digitalWrite(LED_PIN, LOW);
-    return 1000;  // Retry after 1 second
+    networkRetryCount++;
+    int backoffDelay = min(1000 * (1 << min(networkRetryCount, 5)), MAX_RETRY_DELAY);
+    Serial.printf("Retry backoff: %dms (attempt %d)\n", backoffDelay, networkRetryCount);
+    return backoffDelay;
   }
 
   // Increased buffer size to 8192 for large animations
@@ -426,7 +442,10 @@ int fetchFrame(const char* url) {
   if (error) {
     Serial.printf("JSON parse error in fetchFrame: %s\n", error.c_str());
     digitalWrite(LED_PIN, LOW);
-    return 1000;  // Retry after 1 second
+    networkRetryCount++;
+    int backoffDelay = min(1000 * (1 << min(networkRetryCount, 5)), MAX_RETRY_DELAY);
+    Serial.printf("Retry backoff: %dms (attempt %d)\n", backoffDelay, networkRetryCount);
+    return backoffDelay;
   }
 
   // ===== CHECK FOR DISPLAY ROTATION =====
@@ -493,8 +512,13 @@ int fetchFrame(const char* url) {
   drawFrame(doc);
   
   digitalWrite(LED_PIN, LOW);
+  
+  // Reset retry count on successful fetch
+  networkRetryCount = 0;
 
-  return doc["duration"] | 3000;
+  // Clamp duration to safe range (100ms - 60s)
+  int duration = doc["duration"] | 3000;
+  return constrain(duration, 100, 60000);
 }
 
 // ===== FUNCTION: CHECK GIF MODE =====
@@ -571,7 +595,8 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
 
-  // ===== RGB LED PWM Init (ESP32 Arduino Core 3.x API) =====
+  // ===== RGB LED PWM Init =====
+  // NOTE: Uses ESP32 Arduino Core 3.x API (ledcAttach). For Core 2.x, use ledcSetup/ledcAttachPin instead.
   ledcAttach(RGB_RED_PIN, PWM_FREQ, PWM_RESOLUTION);
   ledcAttach(RGB_GREEN_PIN, PWM_FREQ, PWM_RESOLUTION);
   ledcAttach(RGB_BLUE_PIN, PWM_FREQ, PWM_RESOLUTION);
