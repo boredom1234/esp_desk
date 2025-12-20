@@ -129,6 +129,14 @@ void setRGBColor(uint8_t r, uint8_t g, uint8_t b) {
   uint8_t scaledG = (g * ledBrightness) / 255;
   uint8_t scaledB = (b * ledBrightness) / 255;
   
+  // Debug: log color changes periodically (every 2 seconds max)
+  static unsigned long lastDebugLog = 0;
+  if (millis() - lastDebugLog > 2000) {
+    Serial.printf("RGB SET: R=%d G=%d B=%d (scaled from %d,%d,%d, brightness=%d)\n", 
+                  scaledR, scaledG, scaledB, r, g, b, ledBrightness);
+    lastDebugLog = millis();
+  }
+  
   ledcWrite(rgbRedChannel, scaledR);
   ledcWrite(rgbGreenChannel, scaledG);
   ledcWrite(rgbBlueChannel, scaledB);
@@ -775,6 +783,34 @@ void setup() {
   
   // Initial state: off
   setRGBColor(0, 0, 0);
+  
+  // ===== LED TEST SEQUENCE =====
+  // Quick test to verify RGB LED hardware is connected correctly
+  Serial.println("Testing RGB LED - RED...");
+  ledcWrite(rgbRedChannel, 255);
+  delay(300);
+  ledcWrite(rgbRedChannel, 0);
+  
+  Serial.println("Testing RGB LED - GREEN...");
+  ledcWrite(rgbGreenChannel, 255);
+  delay(300);
+  ledcWrite(rgbGreenChannel, 0);
+  
+  Serial.println("Testing RGB LED - BLUE...");
+  ledcWrite(rgbBlueChannel, 255);
+  delay(300);
+  ledcWrite(rgbBlueChannel, 0);
+  
+  Serial.println("Testing RGB LED - WHITE (all on)...");
+  ledcWrite(rgbRedChannel, 255);
+  ledcWrite(rgbGreenChannel, 255);
+  ledcWrite(rgbBlueChannel, 255);
+  delay(300);
+  ledcWrite(rgbRedChannel, 0);
+  ledcWrite(rgbGreenChannel, 0);
+  ledcWrite(rgbBlueChannel, 0);
+  Serial.println("LED test complete - did you see R, G, B, WHITE flash?");
+  
   currentBeaconColor = COLOR_WIFI;  // Cyan during WiFi connect
 
   // OLED init
