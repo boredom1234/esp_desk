@@ -34,6 +34,10 @@ func currentFrame(w http.ResponseWriter, r *http.Request) {
 		"displayRotation":  displayRotation,  // 0 = normal, 2 = 180 degrees
 		"ledBrightness":    ledBrightness,    // 0-100 for RGB LED beacon
 		"ledBeaconEnabled": ledBeaconEnabled, // Enable/disable satellite beacon
+		"ledEffectMode":    ledEffectMode,    // "auto", "static", "flash", "pulse", "rainbow"
+		"ledCustomColor":   ledCustomColor,   // Hex color e.g. "#FF5500"
+		"ledFlashSpeed":    ledFlashSpeed,    // Flash interval ms
+		"ledPulseSpeed":    ledPulseSpeed,    // Pulse cycle ms
 	}
 	json.NewEncoder(w).Encode(response)
 }
@@ -64,6 +68,10 @@ func nextFrame(w http.ResponseWriter, r *http.Request) {
 		"displayRotation":  displayRotation,  // 0 = normal, 2 = 180 degrees
 		"ledBrightness":    ledBrightness,    // 0-100 for RGB LED beacon
 		"ledBeaconEnabled": ledBeaconEnabled, // Enable/disable satellite beacon
+		"ledEffectMode":    ledEffectMode,    // "auto", "static", "flash", "pulse", "rainbow"
+		"ledCustomColor":   ledCustomColor,   // Hex color e.g. "#FF5500"
+		"ledFlashSpeed":    ledFlashSpeed,    // Flash interval ms
+		"ledPulseSpeed":    ledPulseSpeed,    // Pulse cycle ms
 	}
 	json.NewEncoder(w).Encode(response)
 }

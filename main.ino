@@ -95,6 +95,15 @@ unsigned long beaconFlashStart = 0;
 int beaconFlashDuration = 80;
 RGBColor beaconFlashColor = {0, 0, 0};
 
+// ===== LED EFFECT MODE (Configurable from Web Dashboard) =====
+String ledEffectMode = "auto";  // "auto", "static", "flash", "pulse", "rainbow"
+uint8_t ledCustomR = 0, ledCustomG = 100, ledCustomB = 255;  // Custom color (default blue)
+int ledFlashSpeed = 500;        // Flash interval in ms
+int ledPulseSpeed = 1000;       // Pulse cycle duration in ms
+unsigned long lastEffectUpdate = 0;
+bool effectFlashState = false;  // For flash mode toggle
+
+
 // Adaptive GIF check interval - shorter in polling mode, longer in GIF mode
 unsigned long getGifCheckInterval() {
   return isGifMode ? 60000 : 15000;  // 60s when playing GIF, 15s when polling
@@ -160,6 +169,83 @@ void updateBeacon() {
     // Start non-blocking flash with current state color
     startBeaconFlash(currentBeaconColor, 80);
   }
+}
+
+// ===== LED EFFECT STATE MACHINE =====
+// Handles configurable LED effects from web dashboard
+void updateLedEffect() {
+  if (!ledBeaconEnabled) {
+    setRGBColor(0, 0, 0);
+    return;
+  }
+  
+  // Auto mode: use existing beacon logic (state-based colors)
+  if (ledEffectMode == "auto") {
+    updateBeacon();
+    return;
+  }
+  
+  unsigned long now = millis();
+  
+  // Static mode: solid custom color
+  if (ledEffectMode == "static") {
+    setRGBColor(ledCustomR, ledCustomG, ledCustomB);
+    return;
+  }
+  
+  // Flash mode: blink custom color on/off
+  if (ledEffectMode == "flash") {
+    if (now - lastEffectUpdate >= (unsigned long)ledFlashSpeed) {
+      lastEffectUpdate = now;
+      effectFlashState = !effectFlashState;
+    }
+    if (effectFlashState) {
+      setRGBColor(ledCustomR, ledCustomG, ledCustomB);
+    } else {
+      setRGBColor(0, 0, 0);
+    }
+    return;
+  }
+  
+  // Pulse mode: breathing effect using sine wave
+  if (ledEffectMode == "pulse") {
+    // Calculate phase (0.0 to 1.0) within the pulse cycle
+    float phase = (float)(now % ledPulseSpeed) / (float)ledPulseSpeed;
+    // Use sine wave for smooth breathing (-1 to 1 -> 0 to 1)
+    float brightness = (sin(phase * 2.0 * PI - PI / 2.0) + 1.0) / 2.0;
+    setRGBColor(
+      (uint8_t)(ledCustomR * brightness),
+      (uint8_t)(ledCustomG * brightness),
+      (uint8_t)(ledCustomB * brightness)
+    );
+    return;
+  }
+  
+  // Rainbow mode: cycle through HSV hue values
+  if (ledEffectMode == "rainbow") {
+    // Hue cycles 0-360 over 6 seconds
+    int hue = (now / 16) % 360;  // ~6 second full cycle
+    
+    // HSV to RGB conversion (simplified, S=1, V=1)
+    int h_i = hue / 60;
+    float f = (float)(hue % 60) / 60.0;
+    uint8_t p = 0;
+    uint8_t q = (uint8_t)(255 * (1.0 - f));
+    uint8_t t = (uint8_t)(255 * f);
+    
+    switch (h_i % 6) {
+      case 0: setRGBColor(255, t, p); break;
+      case 1: setRGBColor(q, 255, p); break;
+      case 2: setRGBColor(p, 255, t); break;
+      case 3: setRGBColor(p, q, 255); break;
+      case 4: setRGBColor(t, p, 255); break;
+      case 5: setRGBColor(255, p, q); break;
+    }
+    return;
+  }
+  
+  // Fallback: use auto mode behavior
+  updateBeacon();
 }
 
 // ===== FUNCTION: DRAW BITMAP FROM BUFFER =====
@@ -520,6 +606,43 @@ int fetchFrame(const char* url) {
     }
   }
 
+  // ===== CHECK FOR LED EFFECT SETTINGS =====
+  // Server sends effect mode, custom color, and timing settings
+  const char* serverEffectMode = doc["ledEffectMode"] | "auto";
+  if (String(serverEffectMode) != ledEffectMode) {
+    ledEffectMode = String(serverEffectMode);
+    Serial.printf("LED effect mode changed to: %s\n", serverEffectMode);
+  }
+  
+  // Parse custom color (hex format #RRGGBB)
+  const char* customColor = doc["ledCustomColor"] | "#0064FF";
+  if (strlen(customColor) == 7 && customColor[0] == '#') {
+    // Parse hex color to RGB components
+    long hexValue = strtol(customColor + 1, NULL, 16);
+    uint8_t newR = (hexValue >> 16) & 0xFF;
+    uint8_t newG = (hexValue >> 8) & 0xFF;
+    uint8_t newB = hexValue & 0xFF;
+    if (newR != ledCustomR || newG != ledCustomG || newB != ledCustomB) {
+      ledCustomR = newR;
+      ledCustomG = newG;
+      ledCustomB = newB;
+      Serial.printf("LED custom color changed to: %s (R:%d G:%d B:%d)\n", customColor, newR, newG, newB);
+    }
+  }
+  
+  // Flash and pulse speed settings
+  int serverFlashSpeed = doc["ledFlashSpeed"] | 500;
+  if (serverFlashSpeed >= 100 && serverFlashSpeed <= 2000 && serverFlashSpeed != ledFlashSpeed) {
+    ledFlashSpeed = serverFlashSpeed;
+    Serial.printf("LED flash speed changed to: %dms\n", ledFlashSpeed);
+  }
+  
+  int serverPulseSpeed = doc["ledPulseSpeed"] | 1000;
+  if (serverPulseSpeed >= 500 && serverPulseSpeed <= 3000 && serverPulseSpeed != ledPulseSpeed) {
+    ledPulseSpeed = serverPulseSpeed;
+    Serial.printf("LED pulse speed changed to: %dms\n", ledPulseSpeed);
+  }
+
   // ===== CHECK FOR GIF MODE HINT =====
   // Server indicates if GIF/Marquee mode is active via isGifMode field
   // This allows immediate detection without waiting for 30s poll interval
@@ -707,8 +830,8 @@ void setup() {
 }
 
 void loop() {
-  // ===== RGB BEACON UPDATE (satellite pulse) =====
-  updateBeacon();
+  // ===== RGB LED EFFECT UPDATE (configurable from web dashboard) =====
+  updateLedEffect();
   
   // ===== WiFi RECONNECTION CHECK (with visual feedback) =====
   if (WiFi.status() != WL_CONNECTED) {

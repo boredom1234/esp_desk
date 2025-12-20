@@ -40,6 +40,10 @@ type Settings struct {
 	CycleItems         []CycleItem `json:"cycleItems"`
 	LedBrightness      int         `json:"ledBrightness"`    // 0-100 percentage for RGB LED beacon
 	LedBeaconEnabled   bool        `json:"ledBeaconEnabled"` // Enable/disable satellite beacon
+	LedEffectMode      string      `json:"ledEffectMode"`    // "auto", "static", "flash", "pulse", "rainbow"
+	LedCustomColor     string      `json:"ledCustomColor"`   // Hex color e.g. "#FF5500"
+	LedFlashSpeed      int         `json:"ledFlashSpeed"`    // Flash interval ms
+	LedPulseSpeed      int         `json:"ledPulseSpeed"`    // Pulse cycle duration ms
 }
 
 // CycleItem represents a single item in the display cycle
@@ -109,6 +113,10 @@ type PersistentConfig struct {
 	TimezoneName       string      `json:"timezoneName"`     // Issue 13: configurable timezone
 	LedBrightness      int         `json:"ledBrightness"`    // 0-100 percentage
 	LedBeaconEnabled   bool        `json:"ledBeaconEnabled"` // Enable/disable beacon
+	LedEffectMode      string      `json:"ledEffectMode"`    // "auto", "static", "flash", "pulse", "rainbow"
+	LedCustomColor     string      `json:"ledCustomColor"`   // Hex color
+	LedFlashSpeed      int         `json:"ledFlashSpeed"`    // Flash interval ms
+	LedPulseSpeed      int         `json:"ledPulseSpeed"`    // Pulse cycle ms
 	// Pomodoro settings
 	PomodoroWorkDuration  int  `json:"pomodoroWorkDuration"`  // seconds
 	PomodoroBreakDuration int  `json:"pomodoroBreakDuration"` // seconds

@@ -16,16 +16,20 @@ var (
 	index              int
 	mutex              sync.Mutex
 	startTime          time.Time
-	isCustomMode       bool = false
-	isGifMode          bool = false // True when playing multi-frame GIF animation
-	showHeaders        bool = true
-	autoPlay           bool = true
-	frameDuration      int  = 200
-	espRefreshDuration int  = 3000 // Duration ESP32 waits before fetching next frame (ms)
-	gifFps             int  = 0    // 0 = use original timing, 5-30 = override FPS
-	displayRotation    int  = 0    // 0 = normal, 2 = 180 degrees (for upside-down mounting)
-	ledBrightness      int  = 50   // 0-100 percentage for RGB LED beacon
-	ledBeaconEnabled   bool = true // Enable/disable satellite beacon pulse
+	isCustomMode       bool   = false
+	isGifMode          bool   = false // True when playing multi-frame GIF animation
+	showHeaders        bool   = true
+	autoPlay           bool   = true
+	frameDuration      int    = 200
+	espRefreshDuration int    = 3000      // Duration ESP32 waits before fetching next frame (ms)
+	gifFps             int    = 0         // 0 = use original timing, 5-30 = override FPS
+	displayRotation    int    = 0         // 0 = normal, 2 = 180 degrees (for upside-down mounting)
+	ledBrightness      int    = 50        // 0-100 percentage for RGB LED beacon
+	ledBeaconEnabled   bool   = true      // Enable/disable satellite beacon pulse
+	ledEffectMode      string = "auto"    // "auto", "static", "flash", "pulse", "rainbow"
+	ledCustomColor     string = "#0064FF" // Hex color for static/flash/pulse modes
+	ledFlashSpeed      int    = 500       // Flash interval in ms (100-2000)
+	ledPulseSpeed      int    = 1000      // Breathing cycle duration in ms (500-3000)
 
 	// Display cycle items - flexible list of what to display
 	cycleItems = []CycleItem{

@@ -589,6 +589,205 @@
                 </div>
               </div>
 
+              <div class="setting-block led-effects-block">
+                <label>🎨 LED Effect Mode</label>
+                <div class="effect-buttons" id="ledEffectButtons">
+                  <button
+                    class="effect-btn active"
+                    data-effect="auto"
+                    onclick="setLedEffect('auto')"
+                  >
+                    Auto
+                  </button>
+                  <button
+                    class="effect-btn"
+                    data-effect="static"
+                    onclick="setLedEffect('static')"
+                  >
+                    Static
+                  </button>
+                  <button
+                    class="effect-btn"
+                    data-effect="flash"
+                    onclick="setLedEffect('flash')"
+                  >
+                    Flash
+                  </button>
+                  <button
+                    class="effect-btn"
+                    data-effect="pulse"
+                    onclick="setLedEffect('pulse')"
+                  >
+                    Pulse
+                  </button>
+                  <button
+                    class="effect-btn"
+                    data-effect="rainbow"
+                    onclick="setLedEffect('rainbow')"
+                  >
+                    Rainbow
+                  </button>
+                </div>
+
+                <div
+                  class="led-color-row"
+                  id="ledColorRow"
+                  style="display: none"
+                >
+                  <label>Color</label>
+                  <div class="color-presets">
+                    <button
+                      class="color-preset"
+                      style="background: #ff0000"
+                      onclick="setLedColor('#FF0000')"
+                      title="Red"
+                    ></button>
+                    <button
+                      class="color-preset"
+                      style="background: #00ff00"
+                      onclick="setLedColor('#00FF00')"
+                      title="Green"
+                    ></button>
+                    <button
+                      class="color-preset"
+                      style="background: #0064ff"
+                      onclick="setLedColor('#0064FF')"
+                      title="Blue"
+                    ></button>
+                    <button
+                      class="color-preset"
+                      style="background: #ff6600"
+                      onclick="setLedColor('#FF6600')"
+                      title="Orange"
+                    ></button>
+                    <button
+                      class="color-preset"
+                      style="background: #ff00ff"
+                      onclick="setLedColor('#FF00FF')"
+                      title="Magenta"
+                    ></button>
+                    <button
+                      class="color-preset"
+                      style="background: #00ffff"
+                      onclick="setLedColor('#00FFFF')"
+                      title="Cyan"
+                    ></button>
+                  </div>
+                  <input
+                    type="color"
+                    id="ledColorPicker"
+                    value="#0064FF"
+                    onchange="setLedColor(this.value)"
+                    title="Custom color"
+                  />
+                </div>
+
+                <div
+                  class="led-rgb-sliders"
+                  id="ledRgbSliders"
+                  style="display: none"
+                >
+                  <div class="rgb-slider-row">
+                    <label style="color: #ff6666">R</label>
+                    <input
+                      type="range"
+                      class="rgb-slider slider-red"
+                      id="ledSliderR"
+                      min="0"
+                      max="255"
+                      value="0"
+                      oninput="updateRgbSlider()"
+                    />
+                    <input
+                      type="number"
+                      class="rgb-value"
+                      id="ledValueR"
+                      min="0"
+                      max="255"
+                      value="0"
+                      oninput="updateRgbValue()"
+                    />
+                  </div>
+                  <div class="rgb-slider-row">
+                    <label style="color: #66ff66">G</label>
+                    <input
+                      type="range"
+                      class="rgb-slider slider-green"
+                      id="ledSliderG"
+                      min="0"
+                      max="255"
+                      value="100"
+                      oninput="updateRgbSlider()"
+                    />
+                    <input
+                      type="number"
+                      class="rgb-value"
+                      id="ledValueG"
+                      min="0"
+                      max="255"
+                      value="100"
+                      oninput="updateRgbValue()"
+                    />
+                  </div>
+                  <div class="rgb-slider-row">
+                    <label style="color: #6699ff">B</label>
+                    <input
+                      type="range"
+                      class="rgb-slider slider-blue"
+                      id="ledSliderB"
+                      min="0"
+                      max="255"
+                      value="255"
+                      oninput="updateRgbSlider()"
+                    />
+                    <input
+                      type="number"
+                      class="rgb-value"
+                      id="ledValueB"
+                      min="0"
+                      max="255"
+                      value="255"
+                      oninput="updateRgbValue()"
+                    />
+                  </div>
+                  <div class="rgb-preview-row">
+                    <div
+                      class="rgb-preview-swatch"
+                      id="rgbPreviewSwatch"
+                      style="background: #0064ff"
+                    ></div>
+                    <input
+                      type="text"
+                      class="rgb-hex-input"
+                      id="rgbHexInput"
+                      value="#0064FF"
+                      maxlength="7"
+                      placeholder="#RRGGBB"
+                      onchange="updateFromHexInput()"
+                      onkeyup="if(event.key==='Enter') updateFromHexInput()"
+                    />
+                  </div>
+                </div>
+
+                <div
+                  class="led-speed-row"
+                  id="ledSpeedRow"
+                  style="display: none"
+                >
+                  <label>Speed <span id="ledSpeedValue">500ms</span></label>
+                  <input
+                    type="range"
+                    class="mini-slider"
+                    id="ledSpeedSlider"
+                    min="100"
+                    max="2000"
+                    step="100"
+                    value="500"
+                    oninput="updateLedSpeed(this.value)"
+                  />
+                </div>
+              </div>
+
               <div class="setting-row">
                 <div class="label-group">
                   <span>ESP Refresh</span>
@@ -705,6 +904,7 @@
     <script src="js/upload.js"></script>
     <script src="js/autoplay.js"></script>
     <script src="js/controls.js"></script>
+    <script src="js/led.js"></script>
     <script src="js/weather.js"></script>
     <script src="js/cycle.js"></script>
     <script src="js/auth.js"></script>

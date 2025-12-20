@@ -31,6 +31,10 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			CycleItems:         cycleItems,
 			LedBrightness:      ledBrightness,
 			LedBeaconEnabled:   ledBeaconEnabled,
+			LedEffectMode:      ledEffectMode,
+			LedCustomColor:     ledCustomColor,
+			LedFlashSpeed:      ledFlashSpeed,
+			LedPulseSpeed:      ledPulseSpeed,
 		}
 		mutex.Unlock()
 		json.NewEncoder(w).Encode(settings)
@@ -48,6 +52,10 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			CycleItems         []CycleItem `json:"cycleItems,omitempty"`
 			LedBrightness      *int        `json:"ledBrightness,omitempty"`
 			LedBeaconEnabled   *bool       `json:"ledBeaconEnabled,omitempty"`
+			LedEffectMode      *string     `json:"ledEffectMode,omitempty"`
+			LedCustomColor     *string     `json:"ledCustomColor,omitempty"`
+			LedFlashSpeed      *int        `json:"ledFlashSpeed,omitempty"`
+			LedPulseSpeed      *int        `json:"ledPulseSpeed,omitempty"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			jsonError(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
@@ -119,6 +127,41 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			ledBeaconEnabled = *req.LedBeaconEnabled
 			changes = append(changes, fmt.Sprintf("ledBeaconEnabled=%v", ledBeaconEnabled))
 		}
+		if req.LedEffectMode != nil {
+			// Validate effect mode
+			validModes := map[string]bool{"auto": true, "static": true, "flash": true, "pulse": true, "rainbow": true}
+			if validModes[*req.LedEffectMode] {
+				ledEffectMode = *req.LedEffectMode
+				changes = append(changes, fmt.Sprintf("ledEffectMode=%s", ledEffectMode))
+			}
+		}
+		if req.LedCustomColor != nil {
+			// Basic hex color validation
+			if len(*req.LedCustomColor) == 7 && (*req.LedCustomColor)[0] == '#' {
+				ledCustomColor = *req.LedCustomColor
+				changes = append(changes, fmt.Sprintf("ledCustomColor=%s", ledCustomColor))
+			}
+		}
+		if req.LedFlashSpeed != nil {
+			ledFlashSpeed = *req.LedFlashSpeed
+			if ledFlashSpeed < 100 {
+				ledFlashSpeed = 100
+			}
+			if ledFlashSpeed > 2000 {
+				ledFlashSpeed = 2000
+			}
+			changes = append(changes, fmt.Sprintf("ledFlashSpeed=%dms", ledFlashSpeed))
+		}
+		if req.LedPulseSpeed != nil {
+			ledPulseSpeed = *req.LedPulseSpeed
+			if ledPulseSpeed < 500 {
+				ledPulseSpeed = 500
+			}
+			if ledPulseSpeed > 3000 {
+				ledPulseSpeed = 3000
+			}
+			changes = append(changes, fmt.Sprintf("ledPulseSpeed=%dms", ledPulseSpeed))
+		}
 		settings := Settings{
 			AutoPlay:           autoPlay,
 			FrameDuration:      frameDuration,
@@ -131,6 +174,10 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			CycleItems:         cycleItems,
 			LedBrightness:      ledBrightness,
 			LedBeaconEnabled:   ledBeaconEnabled,
+			LedEffectMode:      ledEffectMode,
+			LedCustomColor:     ledCustomColor,
+			LedFlashSpeed:      ledFlashSpeed,
+			LedPulseSpeed:      ledPulseSpeed,
 		}
 		mutex.Unlock()
 
@@ -236,6 +283,22 @@ func loadConfig() {
 		ledBrightness = config.LedBrightness
 	}
 	ledBeaconEnabled = config.LedBeaconEnabled
+	// LED effect settings
+	if config.LedEffectMode != "" {
+		validModes := map[string]bool{"auto": true, "static": true, "flash": true, "pulse": true, "rainbow": true}
+		if validModes[config.LedEffectMode] {
+			ledEffectMode = config.LedEffectMode
+		}
+	}
+	if config.LedCustomColor != "" && len(config.LedCustomColor) == 7 {
+		ledCustomColor = config.LedCustomColor
+	}
+	if config.LedFlashSpeed >= 100 && config.LedFlashSpeed <= 2000 {
+		ledFlashSpeed = config.LedFlashSpeed
+	}
+	if config.LedPulseSpeed >= 500 && config.LedPulseSpeed <= 3000 {
+		ledPulseSpeed = config.LedPulseSpeed
+	}
 	// Pomodoro settings
 	if config.PomodoroWorkDuration > 0 {
 		pomodoroSettings.WorkDuration = config.PomodoroWorkDuration
@@ -274,6 +337,10 @@ func saveConfig() {
 		TimezoneName:          timezoneName,
 		LedBrightness:         ledBrightness,
 		LedBeaconEnabled:      ledBeaconEnabled,
+		LedEffectMode:         ledEffectMode,
+		LedCustomColor:        ledCustomColor,
+		LedFlashSpeed:         ledFlashSpeed,
+		LedPulseSpeed:         ledPulseSpeed,
 		PomodoroWorkDuration:  pomodoroSettings.WorkDuration,
 		PomodoroBreakDuration: pomodoroSettings.BreakDuration,
 		PomodoroLongBreak:     pomodoroSettings.LongBreak,

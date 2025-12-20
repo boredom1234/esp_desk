@@ -82,6 +82,18 @@ function loadSettings() {
           data.ledBeaconEnabled !== false
         );
       }
+
+      // Update LED effect settings
+      if (typeof initLedSettings === "function") {
+        initLedSettings(
+          data.ledBeaconEnabled !== false,
+          data.ledBrightness || 50,
+          data.ledEffectMode || "auto",
+          data.ledCustomColor || "#0064FF",
+          data.ledFlashSpeed || 500,
+          data.ledPulseSpeed || 1000
+        );
+      }
     })
     .catch((err) => {
       if (err.message !== "Unauthorized") {
