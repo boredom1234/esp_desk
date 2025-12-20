@@ -88,7 +88,17 @@ int gifFrameCount = 0;
 bool isGifMode = false;
 int displayRotation = 0;  // 0 = normal, 2 = 180 degrees (for upside-down mounting)
 unsigned long lastGifCheck = 0;
-const unsigned long GIF_CHECK_INTERVAL = 30000;  // Check for new GIF every 30 seconds
+
+// Non-blocking beacon flash state
+bool beaconFlashing = false;
+unsigned long beaconFlashStart = 0;
+int beaconFlashDuration = 80;
+RGBColor beaconFlashColor = {0, 0, 0};
+
+// Adaptive GIF check interval - shorter in polling mode, longer in GIF mode
+unsigned long getGifCheckInterval() {
+  return isGifMode ? 60000 : 15000;  // 60s when playing GIF, 15s when polling
+}
 
 // ===== RGB LED FUNCTIONS =====
 // Set RGB LED to a specific color (scaled by brightness)
@@ -110,25 +120,45 @@ void setRGBColor(uint8_t r, uint8_t g, uint8_t b) {
   ledcWrite(RGB_BLUE_PIN, scaledB);
 }
 
-// Quick beacon flash (satellite pulse effect)
-void beaconFlash(RGBColor color, int durationMs = 80) {
+// Start a non-blocking beacon flash (replaces blocking beaconFlash)
+void startBeaconFlash(RGBColor color, int durationMs = 80) {
+  if (!ledBeaconEnabled) return;
+  beaconFlashing = true;
+  beaconFlashStart = millis();
+  beaconFlashDuration = durationMs;
+  beaconFlashColor = color;
+  setRGBColor(color.r, color.g, color.b);
+}
+
+// Legacy blocking beacon flash (only for WiFi reconnection where blocking is acceptable)
+void beaconFlashBlocking(RGBColor color, int durationMs = 80) {
+  if (!ledBeaconEnabled) return;
   setRGBColor(color.r, color.g, color.b);
   delay(durationMs);
-  setRGBColor(0, 0, 0);  // Turn off
+  setRGBColor(0, 0, 0);
+}
+
+// Update non-blocking beacon flash state (call from loop)
+void updateBeaconFlash() {
+  if (beaconFlashing && (millis() - beaconFlashStart >= (unsigned long)beaconFlashDuration)) {
+    setRGBColor(0, 0, 0);
+    beaconFlashing = false;
+  }
 }
 
 // Non-blocking beacon update (call from loop)
 void updateBeacon() {
   if (!ledBeaconEnabled) return;
   
+  // Update any active flash
+  updateBeaconFlash();
+  
   unsigned long now = millis();
   if (now - lastBeaconTime >= BEACON_INTERVAL) {
     lastBeaconTime = now;
     
-    // Quick flash with current state color
-    setRGBColor(currentBeaconColor.r, currentBeaconColor.g, currentBeaconColor.b);
-    delay(80);  // Brief flash
-    setRGBColor(0, 0, 0);  // Back to off
+    // Start non-blocking flash with current state color
+    startBeaconFlash(currentBeaconColor, 80);
   }
 }
 
@@ -263,8 +293,14 @@ int fetchFullGifWithStatus() {
   Serial.printf("GIF response size: %d bytes\n", contentLength);
   Serial.printf("Free heap after connect: %d bytes\n", ESP.getFreeHeap());
   
+  // Pre-allocate string for faster parsing
+  String payload;
+  if (contentLength > 0) {
+    payload.reserve(contentLength + 64);  // Pre-allocate with small buffer
+  }
+  
   // Read entire response as String (more reliable than streaming for HTTPS)
-  String payload = http.getString();
+  payload = http.getString();
   http.end();
   
   int payloadLen = payload.length();
@@ -280,8 +316,8 @@ int fetchFullGifWithStatus() {
   Serial.println("Response preview:");
   Serial.println(payload.substring(0, min(200, payloadLen)));
   
-  // Calculate JSON buffer size - need extra space for JSON overhead
-  size_t jsonBufferSize = min((size_t)payloadLen * 2, (size_t)122880);
+  // Calculate JSON buffer size - tighter sizing: ~16KB overhead + payload, max 98KB
+  size_t jsonBufferSize = min((size_t)(16384 + payloadLen), (size_t)98304);
   Serial.printf("Allocating JSON buffer: %d bytes\n", jsonBufferSize);
   Serial.printf("Free heap before JSON alloc: %d bytes\n", ESP.getFreeHeap());
   
@@ -398,7 +434,7 @@ void playGifLocally() {
 // ===== FUNCTION: FETCH SINGLE FRAME (LEGACY/FALLBACK) =====
 int fetchFrame(const char* url) {
   digitalWrite(LED_PIN, HIGH);
-  beaconFlash(COLOR_FETCHING, 50);  // Orange flash on data fetch
+  startBeaconFlash(COLOR_FETCHING, 50);  // Orange flash on data fetch (non-blocking)
   
   // Use WiFiClientSecure for HTTPS connections
   WiFiClientSecure client;
@@ -407,7 +443,7 @@ int fetchFrame(const char* url) {
   
   HTTPClient http;
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);  // Follow redirects
-  http.setReuse(false);
+  http.setReuse(true);  // Reuse connection for faster polling
   
   if (!http.begin(client, url)) {
     Serial.println("ERROR: fetchFrame http.begin() failed");
@@ -434,7 +470,14 @@ int fetchFrame(const char* url) {
 
   // Increased buffer size to 8192 for large animations
   StaticJsonDocument<8192> doc;
-  String payload = http.getString();
+  
+  // Pre-allocate string for faster parsing
+  String payload;
+  int contentLen = http.getSize();
+  if (contentLen > 0 && contentLen < 16384) {
+    payload.reserve(contentLen + 32);
+  }
+  payload = http.getString();
   http.end();
   
   DeserializationError error = deserializeJson(doc, payload);
@@ -524,7 +567,7 @@ int fetchFrame(const char* url) {
 // ===== FUNCTION: CHECK GIF MODE =====
 // Periodically check if server has a new GIF to download
 void checkForGifUpdate() {
-  if (millis() - lastGifCheck < GIF_CHECK_INTERVAL) {
+  if (millis() - lastGifCheck < getGifCheckInterval()) {
     return;
   }
   lastGifCheck = millis();
@@ -687,9 +730,9 @@ void loop() {
       Serial.print(".");
       retries++;
       
-      // Periodically flash beacon during reconnection
+      // Periodically flash beacon during reconnection (blocking is OK here)
       if (retries % 4 == 0) {
-        beaconFlash(COLOR_WIFI, 50);
+        beaconFlashBlocking(COLOR_WIFI, 50);
       }
     }
     Serial.println();
@@ -705,7 +748,7 @@ void loop() {
     
     Serial.println("WiFi reconnected");
     Serial.printf("Connected to: %s\n", WiFi.SSID().c_str());
-    beaconFlash(COLOR_SUCCESS, 150);  // Green flash on reconnect
+    beaconFlashBlocking(COLOR_SUCCESS, 150);  // Green flash on reconnect (blocking OK)
     
     // Re-fetch content after reconnection
     if (fetchFullGif()) {
