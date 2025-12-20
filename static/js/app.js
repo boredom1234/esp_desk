@@ -110,7 +110,7 @@ function loadCurrentWithChangeDetection() {
         showRefreshIndicator();
       }
     })
-    .catch(() => {});
+    .catch(() => { });
 }
 
 // Visual indicator when new data is received
@@ -152,16 +152,21 @@ function updateGifFpsDisplay(fps) {
   }
 }
 
+// Debounced API call for GIF FPS setting
+const saveGifFpsDebounced = debounce((fps) => {
+  authFetch("/api/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ gifFps: fps }),
+  }).catch(() => { });
+}, 300);
+
 function updateGifFps(value) {
   gifFps = parseInt(value);
   updateGifFpsDisplay(gifFps);
 
-  // Issue 1: Use authFetch for protected endpoint
-  authFetch("/api/settings", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ gifFps: gifFps }),
-  }).catch(() => {});
+  // Debounced API call
+  saveGifFpsDebounced(gifFps);
 }
 
 function resetGifFps() {
@@ -169,12 +174,12 @@ function resetGifFps() {
   document.getElementById("gifFpsSlider").value = 0;
   updateGifFpsDisplay(0);
 
-  // Issue 1: Use authFetch for protected endpoint
+  // Immediate call since this is a button action, not a slider drag
   authFetch("/api/settings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ gifFps: 0 }),
-  }).catch(() => {});
+  }).catch(() => { });
 }
 
 // ==========================================
@@ -191,7 +196,7 @@ function loadTimezone() {
         }
       }
     })
-    .catch(() => {});
+    .catch(() => { });
 }
 
 function updateTimezone() {

@@ -41,6 +41,19 @@ function updateAutoPlayButton() {
   }
 }
 
+// Debounced API call for speed setting
+const saveSpeedDebounced = debounce((speed) => {
+  authFetch("/api/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ frameDuration: speed }),
+  }).catch((err) => {
+    if (err.message !== "Unauthorized") {
+      console.error("updateSpeed error:", err);
+    }
+  });
+}, 300);
+
 function updateSpeed(value) {
   frameSpeed = parseInt(value);
   document.getElementById("speedValue").textContent = `${frameSpeed}ms`;
@@ -49,14 +62,6 @@ function updateSpeed(value) {
     startAutoPlay(); // Restart with new speed
   }
 
-  // Issue 1: Use authFetch for protected endpoint
-  authFetch("/api/settings", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ frameDuration: frameSpeed }),
-  }).catch((err) => {
-    if (err.message !== "Unauthorized") {
-      console.error("updateSpeed error:", err);
-    }
-  });
+  // Debounced API call
+  saveSpeedDebounced(frameSpeed);
 }

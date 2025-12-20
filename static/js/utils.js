@@ -1,5 +1,28 @@
 // ==========================================
-// ESP DESK_OS - XSS Sanitization Utilities
+// ESP DESK_OS - Utility Functions
+// ==========================================
+
+// ==========================================
+// DEBOUNCE UTILITY
+// ==========================================
+
+/**
+ * Creates a debounced function that delays invoking func until after wait
+ * milliseconds have elapsed since the last time it was invoked.
+ * @param {Function} func - The function to debounce
+ * @param {number} wait - The number of milliseconds to delay
+ * @returns {Function} - The debounced function
+ */
+function debounce(func, wait) {
+  let timeout;
+  return function (...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
+
+// ==========================================
+// XSS SANITIZATION
 // ==========================================
 
 /**

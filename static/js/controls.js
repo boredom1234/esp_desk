@@ -40,22 +40,27 @@ function toggleHeaders() {
     });
 }
 
+// Debounced API call for ESP refresh
+const saveEspRefreshDebounced = debounce((duration) => {
+  authFetch("/api/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ espRefreshDuration: duration }),
+  }).catch((err) => {
+    if (err.message !== "Unauthorized") {
+      console.error("updateEspRefresh error:", err);
+    }
+  });
+}, 300);
+
 function updateEspRefresh(value) {
   espRefreshDuration = parseInt(value);
   document.getElementById("espRefreshValue").textContent = `${(
     espRefreshDuration / 1000
   ).toFixed(1)}s`;
 
-  // Issue 1: Use authFetch for protected endpoint
-  authFetch("/api/settings", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ espRefreshDuration: espRefreshDuration }),
-  }).catch((err) => {
-    if (err.message !== "Unauthorized") {
-      console.error("updateEspRefresh error:", err);
-    }
-  });
+  // Debounced API call
+  saveEspRefreshDebounced(espRefreshDuration);
 }
 
 function updateHeadersToggle(isOn) {
@@ -124,24 +129,28 @@ function toggleBeacon() {
   console.log("🛰️ LED Beacon:", ledBeaconEnabled ? "ON" : "OFF");
 }
 
+// Debounced API call for LED brightness
+const saveLedBrightnessDebounced = debounce((brightness) => {
+  authFetch("/api/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ledBrightness: brightness }),
+  }).catch((err) => {
+    if (err.message !== "Unauthorized") {
+      console.error("updateLedBrightness error:", err);
+    }
+  });
+  console.log("🛰️ LED Brightness:", brightness + "%");
+}, 300);
+
 function updateLedBrightness(value) {
   ledBrightness = parseInt(value);
   document.getElementById(
     "ledBrightnessValue"
   ).textContent = `${ledBrightness}%`;
 
-  // Save to backend API
-  authFetch("/api/settings", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ledBrightness: ledBrightness }),
-  }).catch((err) => {
-    if (err.message !== "Unauthorized") {
-      console.error("updateLedBrightness error:", err);
-    }
-  });
-
-  console.log("🛰️ LED Brightness:", ledBrightness + "%");
+  // Debounced API call
+  saveLedBrightnessDebounced(ledBrightness);
 }
 
 // Update beacon UI from settings (called by loadSettings in api.js)

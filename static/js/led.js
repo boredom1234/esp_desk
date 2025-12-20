@@ -7,6 +7,11 @@ let ledCustomColor = "#0064FF";
 let ledFlashSpeed = 500;
 let ledPulseSpeed = 1000;
 
+// Debounced version for slider inputs
+const saveLedSettingsDebounced = debounce(() => {
+  saveLedSettings();
+}, 300);
+
 /**
  * Set the LED effect mode
  * @param {string} mode - Effect mode: 'auto', 'static', 'flash', 'pulse', 'rainbow'
@@ -82,7 +87,8 @@ function updateLedSpeed(value) {
     speedLabel.textContent = speed + "ms";
   }
 
-  saveLedSettings();
+  // Use debounced version for slider inputs
+  saveLedSettingsDebounced();
 }
 
 /**
@@ -293,7 +299,8 @@ function updateColorFromRgb(hexColor) {
     btn.classList.remove("active");
   });
 
-  saveLedSettings();
+  // Use debounced version for slider inputs
+  saveLedSettingsDebounced();
 }
 
 /**
