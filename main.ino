@@ -87,6 +87,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 uint8_t gifFrames[MAX_GIF_FRAMES][BYTES_PER_FRAME];
 int gifDurations[MAX_GIF_FRAMES];
+bool gifClearFlags[MAX_GIF_FRAMES];  // Per-frame clear flag
 int gifFrameCount = 0;
 bool isGifMode = false;
 int displayRotation = 0;  // 0 = normal, 2 = 180 degrees (for upside-down mounting)
@@ -186,6 +187,72 @@ void updateBeacon() {
   }
 }
 
+// ===== PARSE LED SETTINGS FROM JSON =====
+// Extracts LED effect settings from server response (used by both polling and GIF modes)
+void parseLedSettings(JsonDocument& doc) {
+  // LED brightness (0-100% from server, converted to 0-255)
+  int serverBrightness = doc["ledBrightness"] | -1;
+  if (serverBrightness >= 0 && serverBrightness <= 100) {
+    uint8_t newBrightness = (serverBrightness * 255) / 100;
+    if (newBrightness != ledBrightness) {
+      ledBrightness = newBrightness;
+      Serial.printf("LED brightness changed to: %d%%\n", serverBrightness);
+    }
+  }
+  
+  // LED beacon enabled state
+  bool serverBeaconEnabled = doc["ledBeaconEnabled"] | true;
+  if (serverBeaconEnabled != ledBeaconEnabled) {
+    ledBeaconEnabled = serverBeaconEnabled;
+    Serial.printf("LED beacon %s\n", ledBeaconEnabled ? "ENABLED" : "DISABLED");
+    if (!ledBeaconEnabled) {
+      setRGBColor(0, 0, 0);
+    }
+  }
+  
+  // LED effect mode
+  const char* serverEffectMode = doc["ledEffectMode"] | "auto";
+  if (String(serverEffectMode) != ledEffectMode) {
+    ledEffectMode = String(serverEffectMode);
+    Serial.printf("LED effect mode changed to: %s\n", serverEffectMode);
+    
+    // Clear any pending beacon flash when switching to non-auto modes
+    // This prevents leftover flash states from interfering with custom effects
+    if (ledEffectMode != "auto") {
+      beaconFlashing = false;
+    }
+  }
+  
+  // Custom color (hex format #RRGGBB)
+  const char* customColor = doc["ledCustomColor"] | "#0064FF";
+  if (strlen(customColor) == 7 && customColor[0] == '#') {
+    long hexValue = strtol(customColor + 1, NULL, 16);
+    uint8_t newR = (hexValue >> 16) & 0xFF;
+    uint8_t newG = (hexValue >> 8) & 0xFF;
+    uint8_t newB = hexValue & 0xFF;
+    if (newR != ledCustomR || newG != ledCustomG || newB != ledCustomB) {
+      ledCustomR = newR;
+      ledCustomG = newG;
+      ledCustomB = newB;
+      Serial.printf("LED custom color changed to: %s (R:%d G:%d B:%d)\n", customColor, newR, newG, newB);
+    }
+  }
+  
+  // Flash speed
+  int serverFlashSpeed = doc["ledFlashSpeed"] | 500;
+  if (serverFlashSpeed >= 100 && serverFlashSpeed <= 2000 && serverFlashSpeed != ledFlashSpeed) {
+    ledFlashSpeed = serverFlashSpeed;
+    Serial.printf("LED flash speed changed to: %dms\n", ledFlashSpeed);
+  }
+  
+  // Pulse speed
+  int serverPulseSpeed = doc["ledPulseSpeed"] | 1000;
+  if (serverPulseSpeed >= 500 && serverPulseSpeed <= 3000 && serverPulseSpeed != ledPulseSpeed) {
+    ledPulseSpeed = serverPulseSpeed;
+    Serial.printf("LED pulse speed changed to: %dms\n", ledPulseSpeed);
+  }
+}
+
 // ===== LED EFFECT STATE MACHINE =====
 // Handles configurable LED effects from web dashboard
 void updateLedEffect() {
@@ -279,7 +346,8 @@ void drawFrame(JsonDocument& doc) {
   JsonArray elements = doc["elements"].as<JsonArray>();
 
   for (JsonObject el : elements) {
-    const char* type = el["type"];
+    const char* type = el["type"] | "";
+    if (strlen(type) == 0) continue;  // Skip invalid elements
 
     if (strcmp(type, "text") == 0) {
       int x = el["x"] | 0;
@@ -444,6 +512,7 @@ int fetchFullGifWithStatus() {
     return -1;  // Parse error - don't change GIF mode state
   }
 
+
   bool gifMode = (*doc)["isGifMode"] | false;
   int frameCount = (*doc)["frameCount"] | 0;
 
@@ -471,6 +540,9 @@ int fetchFullGifWithStatus() {
   for (JsonObject frame : framesArray) {
     if (gifFrameCount >= MAX_GIF_FRAMES) break;
 
+    // Store clear flag for this frame
+    gifClearFlags[gifFrameCount] = frame["clear"] | true;
+
     // Get duration (clamped to safe range)
     int frameDuration = frame["duration"] | 100;
     gifDurations[gifFrameCount] = constrain(frameDuration, 10, 60000);  // Clamp: 10ms - 60s
@@ -479,7 +551,8 @@ int fetchFullGifWithStatus() {
     JsonArray elements = frame["elements"].as<JsonArray>();
     if (elements.size() > 0) {
       JsonObject el = elements[0];
-      if (strcmp(el["type"], "bitmap") == 0) {
+      const char* elType = el["type"] | "";
+      if (strcmp(elType, "bitmap") == 0) {
         JsonArray bitmap = el["bitmap"].as<JsonArray>();
         int len = bitmap.size();
         if (len > 0 && len <= BYTES_PER_FRAME) {
@@ -524,8 +597,12 @@ void playGifLocally() {
       return;
     }
     
-    // Draw frame from buffer
-    drawBitmapFromBuffer(gifFrames[i]);
+    // Conditionally clear based on frame's clear flag
+    if (gifClearFlags[i]) {
+      display.clearDisplay();
+    }
+    display.drawBitmap(0, 0, gifFrames[i], 128, 64, SSD1306_WHITE);
+    display.display();
     
     // Wait for frame duration
     delay(gifDurations[i]);
@@ -535,7 +612,6 @@ void playGifLocally() {
 // ===== FUNCTION: FETCH SINGLE FRAME (LEGACY/FALLBACK) =====
 int fetchFrame(const char* url) {
   digitalWrite(LED_PIN, HIGH);
-  startBeaconFlash(COLOR_FETCHING, 50);  // Orange flash on data fetch (non-blocking)
   
   // Use WiFiClientSecure for HTTPS connections
   WiFiClientSecure client;
@@ -601,62 +677,9 @@ int fetchFrame(const char* url) {
     Serial.printf("Display rotation changed to: %d\n", displayRotation);
   }
 
-  // ===== CHECK FOR LED BEACON SETTINGS =====
-  // Server sends LED brightness (0-100%) and enabled state
-  int serverBrightness = doc["ledBrightness"] | -1;
-  if (serverBrightness >= 0 && serverBrightness <= 100) {
-    // Convert 0-100% to 0-255 for PWM
-    uint8_t newBrightness = (serverBrightness * 255) / 100;
-    if (newBrightness != ledBrightness) {
-      ledBrightness = newBrightness;
-      Serial.printf("LED brightness changed to: %d%%\n", serverBrightness);
-    }
-  }
-  bool serverBeaconEnabled = doc["ledBeaconEnabled"] | true;
-  if (serverBeaconEnabled != ledBeaconEnabled) {
-    ledBeaconEnabled = serverBeaconEnabled;
-    Serial.printf("LED beacon %s\n", ledBeaconEnabled ? "ENABLED" : "DISABLED");
-    if (!ledBeaconEnabled) {
-      setRGBColor(0, 0, 0);  // Turn off LED when disabled
-    }
-  }
-
-  // ===== CHECK FOR LED EFFECT SETTINGS =====
-  // Server sends effect mode, custom color, and timing settings
-  const char* serverEffectMode = doc["ledEffectMode"] | "auto";
-  if (String(serverEffectMode) != ledEffectMode) {
-    ledEffectMode = String(serverEffectMode);
-    Serial.printf("LED effect mode changed to: %s\n", serverEffectMode);
-  }
-  
-  // Parse custom color (hex format #RRGGBB)
-  const char* customColor = doc["ledCustomColor"] | "#0064FF";
-  if (strlen(customColor) == 7 && customColor[0] == '#') {
-    // Parse hex color to RGB components
-    long hexValue = strtol(customColor + 1, NULL, 16);
-    uint8_t newR = (hexValue >> 16) & 0xFF;
-    uint8_t newG = (hexValue >> 8) & 0xFF;
-    uint8_t newB = hexValue & 0xFF;
-    if (newR != ledCustomR || newG != ledCustomG || newB != ledCustomB) {
-      ledCustomR = newR;
-      ledCustomG = newG;
-      ledCustomB = newB;
-      Serial.printf("LED custom color changed to: %s (R:%d G:%d B:%d)\n", customColor, newR, newG, newB);
-    }
-  }
-  
-  // Flash and pulse speed settings
-  int serverFlashSpeed = doc["ledFlashSpeed"] | 500;
-  if (serverFlashSpeed >= 100 && serverFlashSpeed <= 2000 && serverFlashSpeed != ledFlashSpeed) {
-    ledFlashSpeed = serverFlashSpeed;
-    Serial.printf("LED flash speed changed to: %dms\n", ledFlashSpeed);
-  }
-  
-  int serverPulseSpeed = doc["ledPulseSpeed"] | 1000;
-  if (serverPulseSpeed >= 500 && serverPulseSpeed <= 3000 && serverPulseSpeed != ledPulseSpeed) {
-    ledPulseSpeed = serverPulseSpeed;
-    Serial.printf("LED pulse speed changed to: %dms\n", ledPulseSpeed);
-  }
+  // ===== CHECK FOR LED SETTINGS =====
+  // Parse LED brightness, effect mode, custom color, and timing settings
+  parseLedSettings(doc);
 
   // ===== CHECK FOR GIF MODE HINT =====
   // Server indicates if GIF/Marquee mode is active via isGifMode field
@@ -905,8 +928,8 @@ void loop() {
       Serial.print(".");
       retries++;
       
-      // Periodically flash beacon during reconnection (blocking is OK here)
-      if (retries % 4 == 0) {
+      // Periodically flash beacon during reconnection (only in auto mode)
+      if (retries % 4 == 0 && ledEffectMode == "auto") {
         beaconFlashBlocking(COLOR_WIFI, 50);
       }
     }
@@ -923,7 +946,10 @@ void loop() {
     
     Serial.println("WiFi reconnected");
     Serial.printf("Connected to: %s\n", WiFi.SSID().c_str());
-    beaconFlashBlocking(COLOR_SUCCESS, 150);  // Green flash on reconnect (blocking OK)
+    // Green flash on reconnect (only in auto mode to not interrupt custom effects)
+    if (ledEffectMode == "auto") {
+      beaconFlashBlocking(COLOR_SUCCESS, 150);
+    }
     
     // Re-fetch content after reconnection
     if (fetchFullGif()) {
@@ -953,6 +979,13 @@ void loop() {
     
     // Fetch next frame from server
     int duration = fetchFrame(FRAME_NEXT_URL);
-    delay(duration);
+    
+    // Non-blocking wait: keep updating LED effects during the wait period
+    // This ensures rainbow/pulse effects animate smoothly instead of freezing
+    unsigned long waitStart = millis();
+    while (millis() - waitStart < (unsigned long)duration) {
+      updateLedEffect();  // Keep LED effects animating
+      delay(20);  // Small delay to prevent CPU hogging (~50Hz update rate)
+    }
   }
 }
