@@ -1,13 +1,26 @@
 #include <WiFi.h>
+#include <WiFiMulti.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
-// ===== WIFI =====
-const char* ssid = "Wokwi-GUEST";
-const char* password = "";
+// ===== WIFI MULTI (Multiple Network Support) =====
+// Add your WiFi networks here - ESP32 will automatically connect to the strongest available
+// Format: wifiMulti.addAP("SSID", "PASSWORD");
+WiFiMulti wifiMulti;
+
+// Primary WiFi network (required)
+const char* WIFI_SSID_1 = "Wokwi-GUEST";
+const char* WIFI_PASS_1 = "";
+
+// Backup WiFi networks (optional - leave empty strings to skip)
+const char* WIFI_SSID_2 = "";  // e.g., "Home-WiFi"
+const char* WIFI_PASS_2 = "";
+
+const char* WIFI_SSID_3 = "";  // e.g., "Mobile-Hotspot"
+const char* WIFI_PASS_3 = "";
 
 // ===== BACKEND =====
 const char* FRAME_CURRENT_URL = "https://vqxh0hd3-3000.inc1.devtunnels.ms/frame/current";
@@ -527,6 +540,29 @@ void checkForGifUpdate() {
   }
 }
 
+// ===== FUNCTION: SHOW WIFI CONNECTING SCREEN =====
+// Display "Connecting to WiFi..." message on OLED
+void showWifiConnecting() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(20, 28);
+  display.print("Connecting WiFi...");
+  display.display();
+}
+
+// ===== FUNCTION: SHOW WIFI FAILED SCREEN =====
+void showWifiFailed() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(10, 24);
+  display.print("WiFi Failed!");
+  display.setCursor(10, 36);
+  display.print("Restarting...");
+  display.display();
+}
+
 void setup() {
   Serial.begin(115200);
   Wire.begin();
@@ -551,33 +587,42 @@ void setup() {
     ESP.restart();
   }
 
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(20, 28);
-  display.print("Connecting WiFi...");
-  display.display();
+  // Show connecting screen
+  showWifiConnecting();
 
-  // WiFi
-  WiFi.begin(ssid, password);
+  // ===== WiFiMulti Setup =====
+  // Add primary network (required)
+  wifiMulti.addAP(WIFI_SSID_1, WIFI_PASS_1);
+  Serial.printf("Added WiFi network: %s\n", WIFI_SSID_1);
+  
+  // Add backup networks only if SSID is not empty
+  if (strlen(WIFI_SSID_2) > 0) {
+    wifiMulti.addAP(WIFI_SSID_2, WIFI_PASS_2);
+    Serial.printf("Added backup WiFi network: %s\n", WIFI_SSID_2);
+  }
+  if (strlen(WIFI_SSID_3) > 0) {
+    wifiMulti.addAP(WIFI_SSID_3, WIFI_PASS_3);
+    Serial.printf("Added backup WiFi network: %s\n", WIFI_SSID_3);
+  }
+
+  // WiFi connection using WiFiMulti (auto-select best network)
+  Serial.println("Connecting to WiFi (trying all configured networks)...");
   int retries = 0;
-  while (WiFi.status() != WL_CONNECTED && retries < 40) {
+  while (wifiMulti.run() != WL_CONNECTED && retries < 40) {
     delay(500);
+    Serial.print(".");
     retries++;
   }
+  Serial.println();
   
   if (WiFi.status() != WL_CONNECTED) {
-    display.clearDisplay();
-    display.setCursor(10, 24);
-    display.print("WiFi Failed!");
-    display.setCursor(10, 36);
-    display.print("Restarting...");
-    display.display();
+    showWifiFailed();
     delay(3000);
     ESP.restart();
   }
 
   Serial.println("WiFi connected");
+  Serial.printf("Connected to: %s\n", WiFi.SSID().c_str());
   Serial.print("IP: ");
   Serial.println(WiFi.localIP());
 
@@ -597,24 +642,53 @@ void loop() {
   // ===== RGB BEACON UPDATE (satellite pulse) =====
   updateBeacon();
   
-  // WiFi reconnection check
+  // ===== WiFi RECONNECTION CHECK (with visual feedback) =====
   if (WiFi.status() != WL_CONNECTED) {
+    // Exit GIF mode to allow reconnection screen to show
+    isGifMode = false;
+    
     currentBeaconColor = COLOR_WIFI;  // Cyan during reconnect
-    Serial.println("WiFi lost, reconnecting...");
-    WiFi.disconnect();
-    WiFi.begin(ssid, password);
+    Serial.println("WiFi lost, showing reconnection screen...");
+    
+    // ===== SHOW "CONNECTING TO WIFI..." ON DISPLAY =====
+    showWifiConnecting();
+    
+    Serial.println("Attempting to reconnect (trying all configured networks)...");
+    
+    // WiFiMulti.run() automatically handles reconnection to best available network
     int retries = 0;
-    while (WiFi.status() != WL_CONNECTED && retries < 20) {
+    while (wifiMulti.run() != WL_CONNECTED && retries < 40) {
       delay(500);
+      Serial.print(".");
       retries++;
+      
+      // Periodically flash beacon during reconnection
+      if (retries % 4 == 0) {
+        beaconFlash(COLOR_WIFI, 50);
+      }
     }
+    Serial.println();
+    
     if (WiFi.status() != WL_CONNECTED) {
+      // Still not connected after retries
       currentBeaconColor = COLOR_ERROR;  // Red on failure
+      showWifiFailed();
+      Serial.println("WiFi reconnection failed, restarting in 5 seconds...");
       delay(5000);
-      return;
+      ESP.restart();  // Restart to try fresh connection
     }
+    
     Serial.println("WiFi reconnected");
+    Serial.printf("Connected to: %s\n", WiFi.SSID().c_str());
     beaconFlash(COLOR_SUCCESS, 150);  // Green flash on reconnect
+    
+    // Re-fetch content after reconnection
+    if (fetchFullGif()) {
+      Serial.println("GIF mode restored after reconnection");
+    } else {
+      Serial.println("Polling mode restored after reconnection");
+      fetchFrame(FRAME_CURRENT_URL);
+    }
   }
 
   if (isGifMode && gifFrameCount > 0) {
