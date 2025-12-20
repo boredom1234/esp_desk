@@ -49,10 +49,8 @@ const char* GIF_FULL_URL      = "https://vqxh0hd3-3000.inc1.devtunnels.ms/api/gi
 #define RGB_GREEN_PIN 26
 #define RGB_BLUE_PIN  27
 
-// PWM channel numbers (assigned by ledcAttach in setup)
-uint8_t rgbRedChannel = 0;
-uint8_t rgbGreenChannel = 0;
-uint8_t rgbBlueChannel = 0;
+// PWM setup flag (ESP32 Core 3.x uses pin number directly in ledcWrite)
+bool rgbPwmInitialized = false;
 
 // PWM settings for smooth fading (ESP32 LEDC)
 #define PWM_FREQ      5000
@@ -118,10 +116,13 @@ unsigned long getGifCheckInterval() {
 // Set RGB LED to a specific color (scaled by brightness)
 // Common cathode (common GND): 0 = OFF, 255 = ON
 void setRGBColor(uint8_t r, uint8_t g, uint8_t b) {
+  if (!rgbPwmInitialized) return;  // Safety check
+  
   if (!ledBeaconEnabled) {
-    ledcWrite(rgbRedChannel, 0);
-    ledcWrite(rgbGreenChannel, 0);
-    ledcWrite(rgbBlueChannel, 0);
+    // ESP32 Core 3.x: ledcWrite uses GPIO pin number directly
+    ledcWrite(RGB_RED_PIN, 0);
+    ledcWrite(RGB_GREEN_PIN, 0);
+    ledcWrite(RGB_BLUE_PIN, 0);
     return;
   }
   // Scale color by brightness (0-255)
@@ -137,9 +138,10 @@ void setRGBColor(uint8_t r, uint8_t g, uint8_t b) {
     lastDebugLog = millis();
   }
   
-  ledcWrite(rgbRedChannel, scaledR);
-  ledcWrite(rgbGreenChannel, scaledG);
-  ledcWrite(rgbBlueChannel, scaledB);
+  // ESP32 Core 3.x: ledcWrite uses GPIO pin number directly
+  ledcWrite(RGB_RED_PIN, scaledR);
+  ledcWrite(RGB_GREEN_PIN, scaledG);
+  ledcWrite(RGB_BLUE_PIN, scaledB);
 }
 
 // Start a non-blocking beacon flash (replaces blocking beaconFlash)
@@ -775,40 +777,48 @@ void setup() {
   digitalWrite(LED_PIN, LOW);
 
   // ===== RGB LED PWM Init =====
-  // NOTE: Uses ESP32 Arduino Core 3.x API (ledcAttach). For Core 2.x, use ledcSetup/ledcAttachPin instead.
-  rgbRedChannel = ledcAttach(RGB_RED_PIN, PWM_FREQ, PWM_RESOLUTION);
-  rgbGreenChannel = ledcAttach(RGB_GREEN_PIN, PWM_FREQ, PWM_RESOLUTION);
-  rgbBlueChannel = ledcAttach(RGB_BLUE_PIN, PWM_FREQ, PWM_RESOLUTION);
-  Serial.printf("RGB LED channels: R=%d, G=%d, B=%d\n", rgbRedChannel, rgbGreenChannel, rgbBlueChannel);
+  // NOTE: ESP32 Arduino Core 3.x API - ledcAttach returns bool, ledcWrite takes GPIO pin directly
+  bool redOk = ledcAttach(RGB_RED_PIN, PWM_FREQ, PWM_RESOLUTION);
+  bool greenOk = ledcAttach(RGB_GREEN_PIN, PWM_FREQ, PWM_RESOLUTION);
+  bool blueOk = ledcAttach(RGB_BLUE_PIN, PWM_FREQ, PWM_RESOLUTION);
+  rgbPwmInitialized = redOk && greenOk && blueOk;
+  Serial.printf("RGB LED PWM init: R=%s, G=%s, B=%s\n", 
+                redOk ? "OK" : "FAIL", 
+                greenOk ? "OK" : "FAIL", 
+                blueOk ? "OK" : "FAIL");
+  
+  if (!rgbPwmInitialized) {
+    Serial.println("WARNING: RGB LED PWM initialization failed!");
+  }
   
   // Initial state: off
   setRGBColor(0, 0, 0);
   
   // ===== LED TEST SEQUENCE =====
   // Quick test to verify RGB LED hardware is connected correctly
-  Serial.println("Testing RGB LED - RED...");
-  ledcWrite(rgbRedChannel, 255);
+  Serial.println("Testing RGB LED - RED (GPIO 25)...");
+  ledcWrite(RGB_RED_PIN, 255);
   delay(300);
-  ledcWrite(rgbRedChannel, 0);
+  ledcWrite(RGB_RED_PIN, 0);
   
-  Serial.println("Testing RGB LED - GREEN...");
-  ledcWrite(rgbGreenChannel, 255);
+  Serial.println("Testing RGB LED - GREEN (GPIO 26)...");
+  ledcWrite(RGB_GREEN_PIN, 255);
   delay(300);
-  ledcWrite(rgbGreenChannel, 0);
+  ledcWrite(RGB_GREEN_PIN, 0);
   
-  Serial.println("Testing RGB LED - BLUE...");
-  ledcWrite(rgbBlueChannel, 255);
+  Serial.println("Testing RGB LED - BLUE (GPIO 27)...");
+  ledcWrite(RGB_BLUE_PIN, 255);
   delay(300);
-  ledcWrite(rgbBlueChannel, 0);
+  ledcWrite(RGB_BLUE_PIN, 0);
   
   Serial.println("Testing RGB LED - WHITE (all on)...");
-  ledcWrite(rgbRedChannel, 255);
-  ledcWrite(rgbGreenChannel, 255);
-  ledcWrite(rgbBlueChannel, 255);
+  ledcWrite(RGB_RED_PIN, 255);
+  ledcWrite(RGB_GREEN_PIN, 255);
+  ledcWrite(RGB_BLUE_PIN, 255);
   delay(300);
-  ledcWrite(rgbRedChannel, 0);
-  ledcWrite(rgbGreenChannel, 0);
-  ledcWrite(rgbBlueChannel, 0);
+  ledcWrite(RGB_RED_PIN, 0);
+  ledcWrite(RGB_GREEN_PIN, 0);
+  ledcWrite(RGB_BLUE_PIN, 0);
   Serial.println("LED test complete - did you see R, G, B, WHITE flash?");
   
   currentBeaconColor = COLOR_WIFI;  // Cyan during WiFi connect
