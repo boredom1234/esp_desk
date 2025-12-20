@@ -49,6 +49,11 @@ const char* GIF_FULL_URL      = "https://vqxh0hd3-3000.inc1.devtunnels.ms/api/gi
 #define RGB_GREEN_PIN 26
 #define RGB_BLUE_PIN  27
 
+// PWM channel numbers (assigned by ledcAttach in setup)
+uint8_t rgbRedChannel = 0;
+uint8_t rgbGreenChannel = 0;
+uint8_t rgbBlueChannel = 0;
+
 // PWM settings for smooth fading (ESP32 LEDC)
 #define PWM_FREQ      5000
 #define PWM_RESOLUTION 8  // 8-bit = 0-255
@@ -114,9 +119,9 @@ unsigned long getGifCheckInterval() {
 // Common cathode (common GND): 0 = OFF, 255 = ON
 void setRGBColor(uint8_t r, uint8_t g, uint8_t b) {
   if (!ledBeaconEnabled) {
-    ledcWrite(RGB_RED_PIN, 0);
-    ledcWrite(RGB_GREEN_PIN, 0);
-    ledcWrite(RGB_BLUE_PIN, 0);
+    ledcWrite(rgbRedChannel, 0);
+    ledcWrite(rgbGreenChannel, 0);
+    ledcWrite(rgbBlueChannel, 0);
     return;
   }
   // Scale color by brightness (0-255)
@@ -124,9 +129,9 @@ void setRGBColor(uint8_t r, uint8_t g, uint8_t b) {
   uint8_t scaledG = (g * ledBrightness) / 255;
   uint8_t scaledB = (b * ledBrightness) / 255;
   
-  ledcWrite(RGB_RED_PIN, scaledR);
-  ledcWrite(RGB_GREEN_PIN, scaledG);
-  ledcWrite(RGB_BLUE_PIN, scaledB);
+  ledcWrite(rgbRedChannel, scaledR);
+  ledcWrite(rgbGreenChannel, scaledG);
+  ledcWrite(rgbBlueChannel, scaledB);
 }
 
 // Start a non-blocking beacon flash (replaces blocking beaconFlash)
@@ -763,9 +768,10 @@ void setup() {
 
   // ===== RGB LED PWM Init =====
   // NOTE: Uses ESP32 Arduino Core 3.x API (ledcAttach). For Core 2.x, use ledcSetup/ledcAttachPin instead.
-  ledcAttach(RGB_RED_PIN, PWM_FREQ, PWM_RESOLUTION);
-  ledcAttach(RGB_GREEN_PIN, PWM_FREQ, PWM_RESOLUTION);
-  ledcAttach(RGB_BLUE_PIN, PWM_FREQ, PWM_RESOLUTION);
+  rgbRedChannel = ledcAttach(RGB_RED_PIN, PWM_FREQ, PWM_RESOLUTION);
+  rgbGreenChannel = ledcAttach(RGB_GREEN_PIN, PWM_FREQ, PWM_RESOLUTION);
+  rgbBlueChannel = ledcAttach(RGB_BLUE_PIN, PWM_FREQ, PWM_RESOLUTION);
+  Serial.printf("RGB LED channels: R=%d, G=%d, B=%d\n", rgbRedChannel, rgbGreenChannel, rgbBlueChannel);
   
   // Initial state: off
   setRGBColor(0, 0, 0);
