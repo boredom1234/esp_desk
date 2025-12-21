@@ -157,4 +157,11 @@ type GifFullResponse struct {
 	FrameCount int     `json:"frameCount"`
 	GifFps     int     `json:"gifFps"`
 	Frames     []Frame `json:"frames"`
+	// LED settings for beacon control during GIF playback
+	LedBrightness    int    `json:"ledBrightness"`
+	LedBeaconEnabled bool   `json:"ledBeaconEnabled"`
+	LedEffectMode    string `json:"ledEffectMode"`
+	LedCustomColor   string `json:"ledCustomColor"`
+	LedFlashSpeed    int    `json:"ledFlashSpeed"`
+	LedPulseSpeed    int    `json:"ledPulseSpeed"`
 }

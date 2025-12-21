@@ -33,10 +33,16 @@ func handleGifFull(w http.ResponseWriter, r *http.Request) {
 	if !isGifMode || len(frames) == 0 {
 		log.Printf("📡 ESP32 check: isGifMode=false (polling mode)")
 		json.NewEncoder(w).Encode(GifFullResponse{
-			IsGifMode:  false,
-			FrameCount: len(frames),
-			GifFps:     gifFps,
-			Frames:     nil,
+			IsGifMode:        false,
+			FrameCount:       len(frames),
+			GifFps:           gifFps,
+			Frames:           nil,
+			LedBrightness:    ledBrightness,
+			LedBeaconEnabled: ledBeaconEnabled,
+			LedEffectMode:    ledEffectMode,
+			LedCustomColor:   ledCustomColor,
+			LedFlashSpeed:    ledFlashSpeed,
+			LedPulseSpeed:    ledPulseSpeed,
 		})
 		return
 	}
@@ -68,10 +74,16 @@ func handleGifFull(w http.ResponseWriter, r *http.Request) {
 	log.Printf("📡 ESP32 check: isGifMode=true (%d frames sent for local playback)", len(framesToSend))
 
 	resp := GifFullResponse{
-		IsGifMode:  true,
-		FrameCount: len(framesToSend),
-		GifFps:     gifFps,
-		Frames:     framesToSend,
+		IsGifMode:        true,
+		FrameCount:       len(framesToSend),
+		GifFps:           gifFps,
+		Frames:           framesToSend,
+		LedBrightness:    ledBrightness,
+		LedBeaconEnabled: ledBeaconEnabled,
+		LedEffectMode:    ledEffectMode,
+		LedCustomColor:   ledCustomColor,
+		LedFlashSpeed:    ledFlashSpeed,
+		LedPulseSpeed:    ledPulseSpeed,
 	}
 
 	// Buffer the JSON to calculate precise length

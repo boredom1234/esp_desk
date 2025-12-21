@@ -516,6 +516,10 @@ int fetchFullGifWithStatus() {
   bool gifMode = (*doc)["isGifMode"] | false;
   int frameCount = (*doc)["frameCount"] | 0;
 
+  // ===== PARSE LED SETTINGS FROM GIF RESPONSE =====
+  // Always parse LED settings even if not in GIF mode - this keeps beacon in sync
+  parseLedSettings(*doc);
+
   if (!gifMode || frameCount == 0) {
     Serial.println("Server says: Not in GIF mode or no frames");
     delete doc;
@@ -604,8 +608,13 @@ void playGifLocally() {
     display.drawBitmap(0, 0, gifFrames[i], 128, 64, SSD1306_WHITE);
     display.display();
     
-    // Wait for frame duration
-    delay(gifDurations[i]);
+    // Non-blocking wait: keep updating LED effects during frame display
+    // This ensures beacon settings (enabled/disabled) are respected during GIF playback
+    unsigned long frameStart = millis();
+    while (millis() - frameStart < (unsigned long)gifDurations[i]) {
+      updateLedEffect();  // Keep LED effects animating and respect beacon enabled state
+      delay(20);  // Small delay to prevent CPU hogging (~50Hz update rate)
+    }
   }
 }
 
