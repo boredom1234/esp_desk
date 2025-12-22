@@ -98,6 +98,71 @@
   color: var(--text-secondary);
 }
 
+/* Analog Clock Settings */
+.analog-settings-block {
+  margin-top: 0.5rem;
+}
+
+.analog-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.analog-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.analog-toggle-row span {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* Spotify Settings */
+.spotify-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.spotify-status {
+  color: var(--text-muted);
+}
+
+.spotify-status.connected {
+  color: var(--success);
+}
+
+.spotify-status.ready {
+  color: var(--warning);
+}
+
+.spotify-config {
+  margin-top: 0.75rem;
+}
+
+.spotify-config .input-group {
+  margin-bottom: 0.5rem;
+}
+
+.config-hint {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.config-hint a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.config-hint a:hover {
+  text-decoration: underline;
+}
+
 /* Info Box */
 .setting-info {
   padding: 0.875rem 1rem;

@@ -89,6 +89,8 @@ function getTypeIcon(type) {
   const icons = {
     time: "🕐",
     bcd: "🔢",
+    analog: "🧮",
+    spotify: "🎵",
     weather: "🌤",
     uptime: "⏱",
     text: "💬",
@@ -183,6 +185,8 @@ function addCycleItem() {
   const labelMap = {
     time: "🕐 Time",
     bcd: "🔢 BCD Clock",
+    analog: "🧮 Analog Clock",
+    spotify: "🎵 Now Playing",
     weather: "🌤 Weather",
     uptime: "⏱ Uptime",
     image: "🖼 Image",

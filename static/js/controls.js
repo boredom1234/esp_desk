@@ -285,3 +285,70 @@ function loadBCDSettings() {
       }
     });
 }
+
+// ===== Analog Clock Controls =====
+let analogShowSeconds = false;
+let analogShowRoman = false;
+
+function toggleAnalogSeconds() {
+  analogShowSeconds = !analogShowSeconds;
+  updateAnalogSecondsUI(analogShowSeconds);
+
+  // Save to backend API
+  authFetch("/api/settings/analog", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ analogShowSeconds: analogShowSeconds }),
+  }).catch((err) => {
+    if (err.message !== "Unauthorized") {
+      console.error("toggleAnalogSeconds error:", err);
+    }
+  });
+}
+
+function toggleAnalogRoman() {
+  analogShowRoman = !analogShowRoman;
+  updateAnalogRomanUI(analogShowRoman);
+
+  // Save to backend API
+  authFetch("/api/settings/analog", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ analogShowRoman: analogShowRoman }),
+  }).catch((err) => {
+    if (err.message !== "Unauthorized") {
+      console.error("toggleAnalogRoman error:", err);
+    }
+  });
+}
+
+function updateAnalogSecondsUI(showSeconds) {
+  analogShowSeconds = showSeconds;
+  const toggle = document.getElementById("analogSecondsToggle");
+  if (toggle) toggle.classList.toggle("active", showSeconds);
+}
+
+function updateAnalogRomanUI(showRoman) {
+  analogShowRoman = showRoman;
+  const toggle = document.getElementById("analogRomanToggle");
+  if (toggle) toggle.classList.toggle("active", showRoman);
+}
+
+function updateAnalogSettingsUI(showSeconds, showRoman) {
+  updateAnalogSecondsUI(showSeconds);
+  updateAnalogRomanUI(showRoman);
+}
+
+// Load Analog settings from server (called on page load)
+function loadAnalogSettings() {
+  authFetch("/api/settings/analog")
+    .then((res) => res.json())
+    .then((data) => {
+      updateAnalogSettingsUI(data.analogShowSeconds, data.analogShowRoman);
+    })
+    .catch((err) => {
+      if (err.message !== "Unauthorized") {
+        console.error("loadAnalogSettings error:", err);
+      }
+    });
+}

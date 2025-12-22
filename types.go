@@ -48,7 +48,7 @@ type Settings struct {
 }
 
 // CycleItem represents a single item in the display cycle
-// Type can be: "time", "weather", "uptime", "text", "image", "countdown", "qr", "bcd"
+// Type can be: "time", "weather", "uptime", "text", "image", "countdown", "qr", "bcd", "analog", "spotify"
 type CycleItem struct {
 	ID          string `json:"id"`                    // Unique ID for the item
 	Type        string `json:"type"`                  // "time", "weather", "uptime", "text", "image", "countdown", "qr"
@@ -125,12 +125,19 @@ type PersistentConfig struct {
 	// BCD Clock settings
 	BCD24HourMode  bool `json:"bcd24HourMode"`  // true = 24-hour, false = 12-hour
 	BCDShowSeconds bool `json:"bcdShowSeconds"` // true = show seconds, false = hide
+	// Analog Clock settings
+	AnalogShowSeconds bool `json:"analogShowSeconds"` // Show second hand
+	AnalogShowRoman   bool `json:"analogShowRoman"`   // Use Roman numerals
 	// Pomodoro settings
 	PomodoroWorkDuration  int  `json:"pomodoroWorkDuration"`  // seconds
 	PomodoroBreakDuration int  `json:"pomodoroBreakDuration"` // seconds
 	PomodoroLongBreak     int  `json:"pomodoroLongBreak"`     // seconds
 	PomodoroCyclesUntil   int  `json:"pomodoroCyclesUntil"`   // cycles until long break
 	PomodoroShowInCycle   bool `json:"pomodoroShowInCycle"`   // show in display cycle
+	// Spotify settings
+	SpotifyClientID     string `json:"spotifyClientId"`
+	SpotifyClientSecret string `json:"spotifyClientSecret"`
+	SpotifyRefreshToken string `json:"spotifyRefreshToken"`
 }
 
 // LoginAttempt tracks rate limiting for auth (Issue 9)

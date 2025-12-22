@@ -36,13 +36,18 @@ var (
 	bcd24HourMode  bool = true // true = 24-hour format, false = 12-hour format
 	bcdShowSeconds bool = true // true = show seconds (6 columns), false = hide (4 columns)
 
+	// Analog Clock settings
+	analogShowSeconds bool = false // Show second hand
+	analogShowRoman   bool = false // Use Roman numerals (12, 3, 6, 9)
+
 	// Display cycle items - flexible list of what to display
 	cycleItems = []CycleItem{
 		{ID: "time-1", Type: "time", Label: "🕐 Time", Enabled: true, Duration: 3000},
 		{ID: "bcd-1", Type: "bcd", Label: "🔢 BCD Clock", Enabled: true, Duration: 3000},
+		{ID: "analog-1", Type: "analog", Label: "🧮 Analog Clock", Enabled: true, Duration: 3000},
 		{ID: "weather-1", Type: "weather", Label: "🌤 Weather", Enabled: true, Duration: 3000},
 	}
-	cycleItemCounter = 3 // For generating unique IDs
+	cycleItemCounter = 4 // For generating unique IDs
 
 	// Weather state
 	currentCity string  = "Bangalore"

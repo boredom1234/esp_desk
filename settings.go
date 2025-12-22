@@ -335,6 +335,18 @@ func loadConfig() {
 	// BCD Clock settings
 	bcd24HourMode = config.BCD24HourMode
 	bcdShowSeconds = config.BCDShowSeconds
+	// Analog Clock settings
+	analogShowSeconds = config.AnalogShowSeconds
+	analogShowRoman = config.AnalogShowRoman
+	// Spotify settings
+	if config.SpotifyClientID != "" {
+		spotifyCredentials.ClientID = config.SpotifyClientID
+		spotifyCredentials.ClientSecret = config.SpotifyClientSecret
+		spotifyCredentials.RefreshToken = config.SpotifyRefreshToken
+		if config.SpotifyRefreshToken != "" {
+			spotifyEnabled = true
+		}
+	}
 	mutex.Unlock()
 
 	log.Println("Loaded settings from config.json")
@@ -370,6 +382,11 @@ func saveConfig() {
 		PomodoroShowInCycle:   pomodoroSettings.ShowInCycle,
 		BCD24HourMode:         bcd24HourMode,
 		BCDShowSeconds:        bcdShowSeconds,
+		AnalogShowSeconds:     analogShowSeconds,
+		AnalogShowRoman:       analogShowRoman,
+		SpotifyClientID:       spotifyCredentials.ClientID,
+		SpotifyClientSecret:   spotifyCredentials.ClientSecret,
+		SpotifyRefreshToken:   spotifyCredentials.RefreshToken,
 	}
 	mutex.Unlock()
 
@@ -481,11 +498,14 @@ func handleReset(w http.ResponseWriter, r *http.Request) {
 	cycleItems = []CycleItem{
 		{ID: "time-1", Type: "time", Label: "🕐 Time", Enabled: true, Duration: 3000},
 		{ID: "bcd-1", Type: "bcd", Label: "🔢 BCD Clock", Enabled: true, Duration: 3000},
+		{ID: "analog-1", Type: "analog", Label: "🧮 Analog Clock", Enabled: true, Duration: 3000},
 		{ID: "weather-1", Type: "weather", Label: "🌤 Weather", Enabled: true, Duration: 3000},
 	}
-	cycleItemCounter = 3
+	cycleItemCounter = 4
 	bcd24HourMode = true
 	bcdShowSeconds = true
+	analogShowSeconds = false
+	analogShowRoman = false
 	currentCity = "Bangalore"
 	cityLat = 12.96
 	cityLng = 77.57
@@ -560,6 +580,74 @@ func handleBCDSettings(w http.ResponseWriter, r *http.Request) {
 
 		if len(changes) > 0 {
 			log.Printf("🔢 BCD Clock settings updated: %s", strings.Join(changes, ", "))
+		}
+
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+}
+
+// ==========================================
+// ANALOG CLOCK SETTINGS
+// ==========================================
+
+// handleAnalogSettings handles Analog clock configuration get/set
+func handleAnalogSettings(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == http.MethodGet {
+		mutex.Lock()
+		response := map[string]interface{}{
+			"analogShowSeconds": analogShowSeconds,
+			"analogShowRoman":   analogShowRoman,
+		}
+		mutex.Unlock()
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		var req struct {
+			AnalogShowSeconds *bool `json:"analogShowSeconds,omitempty"`
+			AnalogShowRoman   *bool `json:"analogShowRoman,omitempty"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			jsonError(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		mutex.Lock()
+		var changes []string
+		if req.AnalogShowSeconds != nil {
+			analogShowSeconds = *req.AnalogShowSeconds
+			if analogShowSeconds {
+				changes = append(changes, "seconds=visible")
+			} else {
+				changes = append(changes, "seconds=hidden")
+			}
+		}
+		if req.AnalogShowRoman != nil {
+			analogShowRoman = *req.AnalogShowRoman
+			if analogShowRoman {
+				changes = append(changes, "numerals=Roman")
+			} else {
+				changes = append(changes, "numerals=markers")
+			}
+		}
+		response := map[string]interface{}{
+			"analogShowSeconds": analogShowSeconds,
+			"analogShowRoman":   analogShowRoman,
+			"status":            "updated",
+		}
+		mutex.Unlock()
+
+		// Persist settings
+		go saveConfig()
+
+		if len(changes) > 0 {
+			log.Printf("🧮 Analog Clock settings updated: %s", strings.Join(changes, ", "))
 		}
 
 		json.NewEncoder(w).Encode(response)

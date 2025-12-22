@@ -342,6 +342,16 @@ func updateLoop() {
 					// BCD (Binary-Coded Decimal) clock display
 					bcdFrame := generateBCDFrame(duration)
 					frames = append(frames, bcdFrame)
+
+				case "analog":
+					// Analog clock display
+					analogFrame := generateAnalogFrame(duration)
+					frames = append(frames, analogFrame)
+
+				case "spotify":
+					// Spotify now playing display
+					spotifyFrame := generateSpotifyFrame(duration)
+					frames = append(frames, spotifyFrame)
 				}
 			}
 

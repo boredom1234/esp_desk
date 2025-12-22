@@ -76,6 +76,9 @@ func main() {
 	go cleanupExpiredTokens()
 	go cleanupLoginAttempts()
 
+	// Start Spotify background poller
+	startSpotifyPoller()
+
 	frames = []Frame{{Duration: 1000, Clear: true, Elements: []Element{{Type: "text", X: 20, Y: 25, Size: 2, Value: "BOOTING..."}}}}
 
 	go updateLoop()
@@ -110,6 +113,10 @@ func main() {
 	http.HandleFunc("/api/pomodoro", loggingMiddleware(authMiddleware(handlePomodoro)))
 	http.HandleFunc("/api/qrcode", loggingMiddleware(authMiddleware(handleQRCode)))
 	http.HandleFunc("/api/settings/bcd", loggingMiddleware(authMiddleware(handleBCDSettings)))
+	http.HandleFunc("/api/settings/analog", loggingMiddleware(authMiddleware(handleAnalogSettings)))
+	http.HandleFunc("/api/settings/spotify", loggingMiddleware(authMiddleware(handleSpotifySettings)))
+	http.HandleFunc("/api/spotify/auth", loggingMiddleware(authMiddleware(handleSpotifyAuth)))
+	http.HandleFunc("/api/spotify/callback", loggingMiddleware(handleSpotifyCallback)) // No auth - OAuth callback
 
 	port := os.Getenv("PORT")
 	if port == "" {

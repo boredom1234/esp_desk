@@ -55,6 +55,8 @@ function initAfterAuth() {
   loadWeather();
   loadTimezone(); // Issue 13: Load timezone setting
   loadBCDSettings(); // Load BCD clock settings
+  loadAnalogSettings(); // Load Analog clock settings
+  loadSpotifyStatus(); // Load Spotify status
   initPomodoro(); // Initialize Pomodoro timer
 
   // Start polling only after auth verified

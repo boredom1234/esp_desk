@@ -143,6 +143,8 @@
                 <select id="addItemType" class="modern-select">
                   <option value="time">🕐 Time</option>
                   <option value="bcd">🔢 BCD Clock</option>
+                  <option value="analog">🧮 Analog Clock</option>
+                  <option value="spotify">🎵 Now Playing</option>
                   <option value="weather">🌤 Weather</option>
                   <option value="uptime">⏱ Uptime</option>
                   <option value="text">💬 Text</option>
@@ -285,7 +287,7 @@
                   id="customText"
                   placeholder="Enter display text..."
                   rows="3"
-                  maxlength="50"
+                  maxlength="100"
                 ></textarea>
                 <div class="limit-indicator">
                   <span id="customTextCounter">0/10</span> chars/line
@@ -703,6 +705,32 @@
                       </div>
                     </div>
                   </div>
+
+                  <div class="setting-block analog-settings-block">
+                    <label>🧮 Analog Clock</label>
+                    <div class="analog-toggles">
+                      <div class="analog-toggle-row">
+                        <span>Second Hand</span>
+                        <button
+                          class="toggle-switch"
+                          id="analogSecondsToggle"
+                          onclick="toggleAnalogSeconds()"
+                        >
+                          <span class="toggle-indicator"></span>
+                        </button>
+                      </div>
+                      <div class="analog-toggle-row">
+                        <span>Show Numerals</span>
+                        <button
+                          class="toggle-switch"
+                          id="analogRomanToggle"
+                          onclick="toggleAnalogRoman()"
+                        >
+                          <span class="toggle-indicator"></span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -950,6 +978,91 @@
                 </div>
               </div>
 
+              <!-- Spotify Section -->
+              <div class="accordion-item" data-section="spotify">
+                <button
+                  class="accordion-header"
+                  onclick="toggleAccordion('spotify')"
+                >
+                  <span class="accordion-title">
+                    <span class="icon">🎵</span> Spotify
+                  </span>
+                  <span class="accordion-chevron">▼</span>
+                </button>
+                <div class="accordion-content">
+                  <div class="accordion-body">
+                    <div class="setting-row">
+                      <div class="label-group">
+                        <span>Status</span>
+                        <small id="spotifyStatus">⚙️ Not configured</small>
+                      </div>
+                      <div class="spotify-actions">
+                        <button
+                          class="btn btn-primary btn-sm"
+                          id="spotifyConnectBtn"
+                          onclick="connectSpotify()"
+                          style="display: none"
+                        >
+                          Connect
+                        </button>
+                        <button
+                          class="btn btn-danger btn-sm"
+                          id="spotifyDisconnectBtn"
+                          onclick="disconnectSpotify()"
+                          style="display: none"
+                        >
+                          Disconnect
+                        </button>
+                        <button
+                          class="btn btn-secondary btn-sm"
+                          onclick="toggleSpotifyConfig()"
+                        >
+                          ⚙️
+                        </button>
+                      </div>
+                    </div>
+
+                    <div
+                      class="setting-block spotify-config"
+                      id="spotifyConfigSection"
+                      style="display: none"
+                    >
+                      <label>Spotify App Credentials</label>
+                      <small class="config-hint">
+                        Get these from
+                        <a
+                          href="https://developer.spotify.com/dashboard"
+                          target="_blank"
+                          >developer.spotify.com</a
+                        >
+                      </small>
+                      <div class="input-group">
+                        <input
+                          type="text"
+                          id="spotifyClientId"
+                          placeholder="Client ID"
+                          class="full-width"
+                        />
+                      </div>
+                      <div class="input-group">
+                        <input
+                          type="password"
+                          id="spotifyClientSecret"
+                          placeholder="Client Secret"
+                          class="full-width"
+                        />
+                      </div>
+                      <button
+                        class="btn btn-primary btn-sm"
+                        onclick="saveSpotifyCredentials()"
+                      >
+                        Save Credentials
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- Environment Section -->
               <div class="accordion-item" data-section="environment">
                 <button
@@ -1133,6 +1246,7 @@
     <script src="js/pomodoro.js"></script>
     <script src="js/qrcode.js"></script>
     <script src="js/accordion.js"></script>
+    <script src="js/spotify.js"></script>
     <script src="js/app.js"></script>
 
     <script>
