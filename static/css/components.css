@@ -1044,3 +1044,112 @@ input[type="range"]::-moz-range-thumb {
   gap: 0.5rem;
   margin-top: 0.75rem;
 }
+
+/* ============================================
+   ACCORDION COMPONENT
+   ============================================ */
+.accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.accordion-item {
+  background: var(--bg-element);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  transition: all var(--transition-normal);
+}
+
+.accordion-item:hover {
+  border-color: var(--border-hover);
+}
+
+.accordion-item.expanded {
+  background: linear-gradient(
+    180deg,
+    var(--bg-elevated) 0%,
+    rgba(30, 30, 36, 0.95) 100%
+  );
+  border-color: rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 15px var(--primary-glow);
+}
+
+.accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.875rem 1rem;
+  background: transparent;
+  border: none;
+  width: 100%;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.accordion-header:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.accordion-title {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.accordion-title .icon {
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+.accordion-chevron {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  transition: transform var(--transition-normal);
+  font-family: var(--font-main);
+}
+
+.accordion-item.expanded .accordion-chevron {
+  transform: rotate(180deg);
+  color: var(--primary);
+}
+
+.accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease-out, padding 0.35s ease-out,
+    opacity 0.25s ease-out;
+  opacity: 0;
+}
+
+.accordion-item.expanded .accordion-content {
+  max-height: 1000px;
+  padding: 0 1rem 1rem 1rem;
+  opacity: 1;
+}
+
+.accordion-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--divider);
+}
+
+/* Adjust nested setting-row styles inside accordion */
+.accordion-body .setting-row {
+  margin-top: 0;
+}
+
+.accordion-body .setting-block {
+  margin-top: 0;
+}
+
+/* First item in accordion body doesn't need extra top margin */
+.accordion-body > *:first-child {
+  margin-top: 0;
+}

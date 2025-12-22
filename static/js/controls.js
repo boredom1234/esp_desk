@@ -126,7 +126,7 @@ function toggleBeacon() {
     }
   });
 
-  console.log("🛰️ LED Beacon:", ledBeaconEnabled ? "ON" : "OFF");
+  //("🛰️ LED Beacon:", ledBeaconEnabled ? "ON" : "OFF");
 }
 
 // Debounced API call for LED brightness
@@ -140,7 +140,7 @@ const saveLedBrightnessDebounced = debounce((brightness) => {
       console.error("updateLedBrightness error:", err);
     }
   });
-  console.log("🛰️ LED Brightness:", brightness + "%");
+  //("🛰️ LED Brightness:", brightness + "%");
 }, 300);
 
 function updateLedBrightness(value) {
@@ -192,7 +192,7 @@ function setDisplayScale(scale) {
     }
   });
 
-  console.log("📐 Display Scale:", scale);
+  //("📐 Display Scale:", scale);
 }
 
 function updateDisplayScaleUI(scale) {
@@ -232,7 +232,7 @@ function setBCDFormat(is24Hour) {
     }
   });
 
-  console.log("🔢 BCD Format:", is24Hour ? "24hr" : "12hr");
+  //("🔢 BCD Format:", is24Hour ? "24hr" : "12hr");
 }
 
 function toggleBCDSeconds() {
@@ -250,7 +250,7 @@ function toggleBCDSeconds() {
     }
   });
 
-  console.log("🔢 BCD Seconds:", bcdShowSeconds ? "visible" : "hidden");
+  //("🔢 BCD Seconds:", bcdShowSeconds ? "visible" : "hidden");
 }
 
 function updateBCDFormatUI(is24Hour) {

@@ -597,428 +597,521 @@
               <h2>System Preferences</h2>
             </div>
 
-            <div class="settings-list">
-              <div class="setting-row">
-                <div class="label-group">
-                  <span>Show Headers</span>
-                </div>
+            <div class="accordion" id="settingsAccordion">
+              <!-- Display Section -->
+              <div class="accordion-item expanded" data-section="display">
                 <button
-                  class="toggle-switch"
-                  id="headersToggle"
-                  onclick="toggleHeaders()"
+                  class="accordion-header"
+                  onclick="toggleAccordion('display')"
                 >
-                  <span class="toggle-indicator"></span>
+                  <span class="accordion-title">
+                    <span class="icon">🖥️</span> Display
+                  </span>
+                  <span class="accordion-chevron">▼</span>
                 </button>
-              </div>
-
-              <div class="setting-row">
-                <div class="label-group">
-                  <span>Rotate 180°</span>
-                  <small>For upside-down mounting</small>
-                </div>
-                <button
-                  class="toggle-switch"
-                  id="rotationToggle"
-                  onclick="toggleRotation()"
-                >
-                  <span class="toggle-indicator"></span>
-                </button>
-              </div>
-
-              <div class="setting-row">
-                <div class="label-group">
-                  <span>📐 Display Scale</span>
-                  <small id="displayScaleValue">Normal</small>
-                </div>
-                <div class="scale-buttons" id="displayScaleButtons">
-                  <button
-                    class="scale-btn"
-                    data-scale="compact"
-                    onclick="setDisplayScale('compact')"
-                  >
-                    Compact
-                  </button>
-                  <button
-                    class="scale-btn active"
-                    data-scale="normal"
-                    onclick="setDisplayScale('normal')"
-                  >
-                    Normal
-                  </button>
-                  <button
-                    class="scale-btn"
-                    data-scale="large"
-                    onclick="setDisplayScale('large')"
-                  >
-                    Large
-                  </button>
-                </div>
-              </div>
-
-              <div class="setting-block bcd-settings-block">
-                <label>🔢 BCD Clock</label>
-                <div class="bcd-toggles">
-                  <div class="bcd-toggle-row">
-                    <span>Format</span>
-                    <div class="toggle-group">
+                <div class="accordion-content">
+                  <div class="accordion-body">
+                    <div class="setting-row">
+                      <div class="label-group">
+                        <span>Show Headers</span>
+                      </div>
                       <button
-                        class="toggle-opt"
-                        id="bcd12hr"
-                        onclick="setBCDFormat(false)"
+                        class="toggle-switch"
+                        id="headersToggle"
+                        onclick="toggleHeaders()"
                       >
-                        12hr
+                        <span class="toggle-indicator"></span>
                       </button>
+                    </div>
+
+                    <div class="setting-row">
+                      <div class="label-group">
+                        <span>Rotate 180°</span>
+                        <small>For upside-down mounting</small>
+                      </div>
                       <button
-                        class="toggle-opt active"
-                        id="bcd24hr"
-                        onclick="setBCDFormat(true)"
+                        class="toggle-switch"
+                        id="rotationToggle"
+                        onclick="toggleRotation()"
                       >
-                        24hr
+                        <span class="toggle-indicator"></span>
+                      </button>
+                    </div>
+
+                    <div class="setting-row">
+                      <div class="label-group">
+                        <span>📐 Display Scale</span>
+                        <small id="displayScaleValue">Normal</small>
+                      </div>
+                      <div class="scale-buttons" id="displayScaleButtons">
+                        <button
+                          class="scale-btn"
+                          data-scale="compact"
+                          onclick="setDisplayScale('compact')"
+                        >
+                          Compact
+                        </button>
+                        <button
+                          class="scale-btn active"
+                          data-scale="normal"
+                          onclick="setDisplayScale('normal')"
+                        >
+                          Normal
+                        </button>
+                        <button
+                          class="scale-btn"
+                          data-scale="large"
+                          onclick="setDisplayScale('large')"
+                        >
+                          Large
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="setting-block bcd-settings-block">
+                      <label>🔢 BCD Clock</label>
+                      <div class="bcd-toggles">
+                        <div class="bcd-toggle-row">
+                          <span>Format</span>
+                          <div class="toggle-group">
+                            <button
+                              class="toggle-opt"
+                              id="bcd12hr"
+                              onclick="setBCDFormat(false)"
+                            >
+                              12hr
+                            </button>
+                            <button
+                              class="toggle-opt active"
+                              id="bcd24hr"
+                              onclick="setBCDFormat(true)"
+                            >
+                              24hr
+                            </button>
+                          </div>
+                        </div>
+                        <div class="bcd-toggle-row">
+                          <span>Seconds</span>
+                          <button
+                            class="toggle-switch active"
+                            id="bcdSecondsToggle"
+                            onclick="toggleBCDSeconds()"
+                          >
+                            <span class="toggle-indicator"></span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- LED Beacon Section -->
+              <div class="accordion-item" data-section="led">
+                <button
+                  class="accordion-header"
+                  onclick="toggleAccordion('led')"
+                >
+                  <span class="accordion-title">
+                    <span class="icon">💡</span> LED Beacon
+                  </span>
+                  <span class="accordion-chevron">▼</span>
+                </button>
+                <div class="accordion-content">
+                  <div class="accordion-body">
+                    <div class="setting-row">
+                      <div class="label-group">
+                        <span>🛰️ LED Beacon</span>
+                        <small id="ledBrightnessValue">50%</small>
+                      </div>
+                      <div class="beacon-controls">
+                        <button
+                          class="toggle-switch active"
+                          id="beaconToggle"
+                          onclick="toggleBeacon()"
+                          title="Toggle beacon on/off"
+                        >
+                          <span class="toggle-indicator"></span>
+                        </button>
+                        <input
+                          type="range"
+                          class="mini-slider beacon-slider"
+                          id="ledBrightnessSlider"
+                          min="10"
+                          max="100"
+                          step="5"
+                          value="50"
+                          oninput="updateLedBrightness(this.value)"
+                        />
+                      </div>
+                    </div>
+
+                    <div class="setting-block led-effects-block">
+                      <label>🎨 LED Effect Mode</label>
+                      <div class="effect-buttons" id="ledEffectButtons">
+                        <button
+                          class="effect-btn active"
+                          data-effect="auto"
+                          onclick="setLedEffect('auto')"
+                        >
+                          Auto
+                        </button>
+                        <button
+                          class="effect-btn"
+                          data-effect="static"
+                          onclick="setLedEffect('static')"
+                        >
+                          Static
+                        </button>
+                        <button
+                          class="effect-btn"
+                          data-effect="flash"
+                          onclick="setLedEffect('flash')"
+                        >
+                          Flash
+                        </button>
+                        <button
+                          class="effect-btn"
+                          data-effect="pulse"
+                          onclick="setLedEffect('pulse')"
+                        >
+                          Pulse
+                        </button>
+                        <button
+                          class="effect-btn"
+                          data-effect="rainbow"
+                          onclick="setLedEffect('rainbow')"
+                        >
+                          Rainbow
+                        </button>
+                      </div>
+
+                      <div
+                        class="led-color-row"
+                        id="ledColorRow"
+                        style="display: none"
+                      >
+                        <label>Color</label>
+                        <div class="color-presets">
+                          <button
+                            class="color-preset"
+                            style="background: #ff0000"
+                            onclick="setLedColor('#FF0000')"
+                            title="Red"
+                          ></button>
+                          <button
+                            class="color-preset"
+                            style="background: #00ff00"
+                            onclick="setLedColor('#00FF00')"
+                            title="Green"
+                          ></button>
+                          <button
+                            class="color-preset"
+                            style="background: #0064ff"
+                            onclick="setLedColor('#0064FF')"
+                            title="Blue"
+                          ></button>
+                          <button
+                            class="color-preset"
+                            style="background: #ff6600"
+                            onclick="setLedColor('#FF6600')"
+                            title="Orange"
+                          ></button>
+                          <button
+                            class="color-preset"
+                            style="background: #ff00ff"
+                            onclick="setLedColor('#FF00FF')"
+                            title="Magenta"
+                          ></button>
+                          <button
+                            class="color-preset"
+                            style="background: #00ffff"
+                            onclick="setLedColor('#00FFFF')"
+                            title="Cyan"
+                          ></button>
+                        </div>
+                        <input
+                          type="color"
+                          id="ledColorPicker"
+                          value="#0064FF"
+                          onchange="setLedColor(this.value)"
+                          title="Custom color"
+                        />
+                      </div>
+
+                      <div
+                        class="led-rgb-sliders"
+                        id="ledRgbSliders"
+                        style="display: none"
+                      >
+                        <div class="rgb-slider-row">
+                          <label style="color: #ff6666">R</label>
+                          <input
+                            type="range"
+                            class="rgb-slider slider-red"
+                            id="ledSliderR"
+                            min="0"
+                            max="255"
+                            value="0"
+                            oninput="updateRgbSlider()"
+                          />
+                          <input
+                            type="number"
+                            class="rgb-value"
+                            id="ledValueR"
+                            min="0"
+                            max="255"
+                            value="0"
+                            oninput="updateRgbValue()"
+                          />
+                        </div>
+                        <div class="rgb-slider-row">
+                          <label style="color: #66ff66">G</label>
+                          <input
+                            type="range"
+                            class="rgb-slider slider-green"
+                            id="ledSliderG"
+                            min="0"
+                            max="255"
+                            value="100"
+                            oninput="updateRgbSlider()"
+                          />
+                          <input
+                            type="number"
+                            class="rgb-value"
+                            id="ledValueG"
+                            min="0"
+                            max="255"
+                            value="100"
+                            oninput="updateRgbValue()"
+                          />
+                        </div>
+                        <div class="rgb-slider-row">
+                          <label style="color: #6699ff">B</label>
+                          <input
+                            type="range"
+                            class="rgb-slider slider-blue"
+                            id="ledSliderB"
+                            min="0"
+                            max="255"
+                            value="255"
+                            oninput="updateRgbSlider()"
+                          />
+                          <input
+                            type="number"
+                            class="rgb-value"
+                            id="ledValueB"
+                            min="0"
+                            max="255"
+                            value="255"
+                            oninput="updateRgbValue()"
+                          />
+                        </div>
+                        <div class="rgb-preview-row">
+                          <div
+                            class="rgb-preview-swatch"
+                            id="rgbPreviewSwatch"
+                            style="background: #0064ff"
+                          ></div>
+                          <input
+                            type="text"
+                            class="rgb-hex-input"
+                            id="rgbHexInput"
+                            value="#0064FF"
+                            maxlength="7"
+                            placeholder="#RRGGBB"
+                            onchange="updateFromHexInput()"
+                            onkeyup="if(event.key==='Enter') updateFromHexInput()"
+                          />
+                        </div>
+                      </div>
+
+                      <div
+                        class="led-speed-row"
+                        id="ledSpeedRow"
+                        style="display: none"
+                      >
+                        <label
+                          >Speed <span id="ledSpeedValue">500ms</span></label
+                        >
+                        <input
+                          type="range"
+                          class="mini-slider"
+                          id="ledSpeedSlider"
+                          min="100"
+                          max="2000"
+                          step="100"
+                          value="500"
+                          oninput="updateLedSpeed(this.value)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Environment Section -->
+              <div class="accordion-item" data-section="environment">
+                <button
+                  class="accordion-header"
+                  onclick="toggleAccordion('environment')"
+                >
+                  <span class="accordion-title">
+                    <span class="icon">🌍</span> Environment
+                  </span>
+                  <span class="accordion-chevron">▼</span>
+                </button>
+                <div class="accordion-content">
+                  <div class="accordion-body">
+                    <div class="setting-block">
+                      <label>Timezone</label>
+                      <select
+                        id="timezoneSelect"
+                        onchange="updateTimezone()"
+                        class="modern-select full-width"
+                      >
+                        <optgroup label="Popular">
+                          <option value="Asia/Kolkata" selected>
+                            India (IST)
+                          </option>
+                          <option value="UTC">UTC</option>
+                          <option value="America/New_York">New York</option>
+                          <option value="Europe/London">London</option>
+                        </optgroup>
+                        <optgroup label="Asia">
+                          <option value="Asia/Tokyo">Japan (JST)</option>
+                          <option value="Asia/Shanghai">China (CST)</option>
+                          <option value="Asia/Singapore">
+                            Singapore (SGT)
+                          </option>
+                          <option value="Asia/Dubai">Dubai (GST)</option>
+                          <option value="Asia/Hong_Kong">
+                            Hong Kong (HKT)
+                          </option>
+                          <option value="Asia/Seoul">South Korea (KST)</option>
+                        </optgroup>
+                        <optgroup label="Europe">
+                          <option value="Europe/Paris">Paris (CET)</option>
+                          <option value="Europe/Berlin">Berlin (CET)</option>
+                          <option value="Europe/Moscow">Moscow (MSK)</option>
+                        </optgroup>
+                        <optgroup label="Americas">
+                          <option value="America/Los_Angeles">
+                            Los Angeles (PST)
+                          </option>
+                          <option value="America/Chicago">Chicago (CST)</option>
+                          <option value="America/Toronto">Toronto (EST)</option>
+                          <option value="America/Sao_Paulo">
+                            São Paulo (BRT)
+                          </option>
+                        </optgroup>
+                        <optgroup label="Pacific">
+                          <option value="Australia/Sydney">
+                            Sydney (AEST)
+                          </option>
+                          <option value="Pacific/Auckland">
+                            Auckland (NZST)
+                          </option>
+                        </optgroup>
+                      </select>
+                    </div>
+
+                    <div class="setting-block">
+                      <label>Weather Location</label>
+                      <select
+                        id="citySelect"
+                        onchange="changeCity()"
+                        class="modern-select full-width"
+                      >
+                        <optgroup label="India">
+                          <option value="22.57,88.36,Kolkata" selected>
+                            Kolkata
+                          </option>
+                          <option value="28.61,77.21,New Delhi">
+                            New Delhi
+                          </option>
+                          <option value="19.08,72.88,Mumbai">Mumbai</option>
+                          <option value="13.08,80.27,Chennai">Chennai</option>
+                          <option value="12.97,77.59,Bangalore">
+                            Bangalore
+                          </option>
+                          <option value="17.39,78.49,Hyderabad">
+                            Hyderabad
+                          </option>
+                          <option value="23.02,72.57,Ahmedabad">
+                            Ahmedabad
+                          </option>
+                          <option value="26.85,80.95,Lucknow">Lucknow</option>
+                          <option value="18.52,73.86,Pune">Pune</option>
+                        </optgroup>
+                        <optgroup label="World">
+                          <option value="40.71,-74.01,New York">
+                            New York
+                          </option>
+                          <option value="51.51,-0.13,London">London</option>
+                          <option value="35.68,139.69,Tokyo">Tokyo</option>
+                          <option value="48.86,2.35,Paris">Paris</option>
+                          <option value="1.35,103.82,Singapore">
+                            Singapore
+                          </option>
+                          <option value="25.20,55.27,Dubai">Dubai</option>
+                          <option value="-33.87,151.21,Sydney">Sydney</option>
+                          <option value="55.76,37.62,Moscow">Moscow</option>
+                        </optgroup>
+                      </select>
+                    </div>
+
+                    <div class="setting-info" id="weatherDisplay">
+                      Loading weather...
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Advanced Section -->
+              <div class="accordion-item" data-section="advanced">
+                <button
+                  class="accordion-header"
+                  onclick="toggleAccordion('advanced')"
+                >
+                  <span class="accordion-title">
+                    <span class="icon">⚙️</span> Advanced
+                  </span>
+                  <span class="accordion-chevron">▼</span>
+                </button>
+                <div class="accordion-content">
+                  <div class="accordion-body">
+                    <div class="setting-row">
+                      <div class="label-group">
+                        <span>ESP Refresh</span>
+                        <small id="espRefreshValue">3.0s</small>
+                      </div>
+                      <input
+                        type="range"
+                        class="mini-slider"
+                        id="espRefreshSlider"
+                        min="500"
+                        max="10000"
+                        step="500"
+                        value="3000"
+                        oninput="updateEspRefresh(this.value)"
+                      />
+                    </div>
+
+                    <div class="setting-row danger-zone">
+                      <div class="label-group">
+                        <span>Reset Display</span>
+                        <small>Clears current content</small>
+                      </div>
+                      <button
+                        class="btn btn-danger btn-sm"
+                        onclick="resetSystem()"
+                      >
+                        Reset
                       </button>
                     </div>
                   </div>
-                  <div class="bcd-toggle-row">
-                    <span>Seconds</span>
-                    <button
-                      class="toggle-switch active"
-                      id="bcdSecondsToggle"
-                      onclick="toggleBCDSeconds()"
-                    >
-                      <span class="toggle-indicator"></span>
-                    </button>
-                  </div>
                 </div>
-              </div>
-
-              <div class="setting-row">
-                <div class="label-group">
-                  <span>🛰️ LED Beacon</span>
-                  <small id="ledBrightnessValue">50%</small>
-                </div>
-                <div class="beacon-controls">
-                  <button
-                    class="toggle-switch active"
-                    id="beaconToggle"
-                    onclick="toggleBeacon()"
-                    title="Toggle beacon on/off"
-                  >
-                    <span class="toggle-indicator"></span>
-                  </button>
-                  <input
-                    type="range"
-                    class="mini-slider beacon-slider"
-                    id="ledBrightnessSlider"
-                    min="10"
-                    max="100"
-                    step="5"
-                    value="50"
-                    oninput="updateLedBrightness(this.value)"
-                  />
-                </div>
-              </div>
-
-              <div class="setting-block led-effects-block">
-                <label>🎨 LED Effect Mode</label>
-                <div class="effect-buttons" id="ledEffectButtons">
-                  <button
-                    class="effect-btn active"
-                    data-effect="auto"
-                    onclick="setLedEffect('auto')"
-                  >
-                    Auto
-                  </button>
-                  <button
-                    class="effect-btn"
-                    data-effect="static"
-                    onclick="setLedEffect('static')"
-                  >
-                    Static
-                  </button>
-                  <button
-                    class="effect-btn"
-                    data-effect="flash"
-                    onclick="setLedEffect('flash')"
-                  >
-                    Flash
-                  </button>
-                  <button
-                    class="effect-btn"
-                    data-effect="pulse"
-                    onclick="setLedEffect('pulse')"
-                  >
-                    Pulse
-                  </button>
-                  <button
-                    class="effect-btn"
-                    data-effect="rainbow"
-                    onclick="setLedEffect('rainbow')"
-                  >
-                    Rainbow
-                  </button>
-                </div>
-
-                <div
-                  class="led-color-row"
-                  id="ledColorRow"
-                  style="display: none"
-                >
-                  <label>Color</label>
-                  <div class="color-presets">
-                    <button
-                      class="color-preset"
-                      style="background: #ff0000"
-                      onclick="setLedColor('#FF0000')"
-                      title="Red"
-                    ></button>
-                    <button
-                      class="color-preset"
-                      style="background: #00ff00"
-                      onclick="setLedColor('#00FF00')"
-                      title="Green"
-                    ></button>
-                    <button
-                      class="color-preset"
-                      style="background: #0064ff"
-                      onclick="setLedColor('#0064FF')"
-                      title="Blue"
-                    ></button>
-                    <button
-                      class="color-preset"
-                      style="background: #ff6600"
-                      onclick="setLedColor('#FF6600')"
-                      title="Orange"
-                    ></button>
-                    <button
-                      class="color-preset"
-                      style="background: #ff00ff"
-                      onclick="setLedColor('#FF00FF')"
-                      title="Magenta"
-                    ></button>
-                    <button
-                      class="color-preset"
-                      style="background: #00ffff"
-                      onclick="setLedColor('#00FFFF')"
-                      title="Cyan"
-                    ></button>
-                  </div>
-                  <input
-                    type="color"
-                    id="ledColorPicker"
-                    value="#0064FF"
-                    onchange="setLedColor(this.value)"
-                    title="Custom color"
-                  />
-                </div>
-
-                <div
-                  class="led-rgb-sliders"
-                  id="ledRgbSliders"
-                  style="display: none"
-                >
-                  <div class="rgb-slider-row">
-                    <label style="color: #ff6666">R</label>
-                    <input
-                      type="range"
-                      class="rgb-slider slider-red"
-                      id="ledSliderR"
-                      min="0"
-                      max="255"
-                      value="0"
-                      oninput="updateRgbSlider()"
-                    />
-                    <input
-                      type="number"
-                      class="rgb-value"
-                      id="ledValueR"
-                      min="0"
-                      max="255"
-                      value="0"
-                      oninput="updateRgbValue()"
-                    />
-                  </div>
-                  <div class="rgb-slider-row">
-                    <label style="color: #66ff66">G</label>
-                    <input
-                      type="range"
-                      class="rgb-slider slider-green"
-                      id="ledSliderG"
-                      min="0"
-                      max="255"
-                      value="100"
-                      oninput="updateRgbSlider()"
-                    />
-                    <input
-                      type="number"
-                      class="rgb-value"
-                      id="ledValueG"
-                      min="0"
-                      max="255"
-                      value="100"
-                      oninput="updateRgbValue()"
-                    />
-                  </div>
-                  <div class="rgb-slider-row">
-                    <label style="color: #6699ff">B</label>
-                    <input
-                      type="range"
-                      class="rgb-slider slider-blue"
-                      id="ledSliderB"
-                      min="0"
-                      max="255"
-                      value="255"
-                      oninput="updateRgbSlider()"
-                    />
-                    <input
-                      type="number"
-                      class="rgb-value"
-                      id="ledValueB"
-                      min="0"
-                      max="255"
-                      value="255"
-                      oninput="updateRgbValue()"
-                    />
-                  </div>
-                  <div class="rgb-preview-row">
-                    <div
-                      class="rgb-preview-swatch"
-                      id="rgbPreviewSwatch"
-                      style="background: #0064ff"
-                    ></div>
-                    <input
-                      type="text"
-                      class="rgb-hex-input"
-                      id="rgbHexInput"
-                      value="#0064FF"
-                      maxlength="7"
-                      placeholder="#RRGGBB"
-                      onchange="updateFromHexInput()"
-                      onkeyup="if(event.key==='Enter') updateFromHexInput()"
-                    />
-                  </div>
-                </div>
-
-                <div
-                  class="led-speed-row"
-                  id="ledSpeedRow"
-                  style="display: none"
-                >
-                  <label>Speed <span id="ledSpeedValue">500ms</span></label>
-                  <input
-                    type="range"
-                    class="mini-slider"
-                    id="ledSpeedSlider"
-                    min="100"
-                    max="2000"
-                    step="100"
-                    value="500"
-                    oninput="updateLedSpeed(this.value)"
-                  />
-                </div>
-              </div>
-
-              <div class="setting-row">
-                <div class="label-group">
-                  <span>ESP Refresh</span>
-                  <small id="espRefreshValue">3.0s</small>
-                </div>
-                <input
-                  type="range"
-                  class="mini-slider"
-                  id="espRefreshSlider"
-                  min="500"
-                  max="10000"
-                  step="500"
-                  value="3000"
-                  oninput="updateEspRefresh(this.value)"
-                />
-              </div>
-
-              <div class="setting-block">
-                <label>Timezone</label>
-                <select
-                  id="timezoneSelect"
-                  onchange="updateTimezone()"
-                  class="modern-select full-width"
-                >
-                  <optgroup label="Popular">
-                    <option value="Asia/Kolkata" selected>India (IST)</option>
-                    <option value="UTC">UTC</option>
-                    <option value="America/New_York">New York</option>
-                    <option value="Europe/London">London</option>
-                  </optgroup>
-                  <optgroup label="Asia">
-                    <option value="Asia/Tokyo">Japan (JST)</option>
-                    <option value="Asia/Shanghai">China (CST)</option>
-                    <option value="Asia/Singapore">Singapore (SGT)</option>
-                    <option value="Asia/Dubai">Dubai (GST)</option>
-                    <option value="Asia/Hong_Kong">Hong Kong (HKT)</option>
-                    <option value="Asia/Seoul">South Korea (KST)</option>
-                  </optgroup>
-                  <optgroup label="Europe">
-                    <option value="Europe/Paris">Paris (CET)</option>
-                    <option value="Europe/Berlin">Berlin (CET)</option>
-                    <option value="Europe/Moscow">Moscow (MSK)</option>
-                  </optgroup>
-                  <optgroup label="Americas">
-                    <option value="America/Los_Angeles">
-                      Los Angeles (PST)
-                    </option>
-                    <option value="America/Chicago">Chicago (CST)</option>
-                    <option value="America/Toronto">Toronto (EST)</option>
-                    <option value="America/Sao_Paulo">São Paulo (BRT)</option>
-                  </optgroup>
-                  <optgroup label="Pacific">
-                    <option value="Australia/Sydney">Sydney (AEST)</option>
-                    <option value="Pacific/Auckland">Auckland (NZST)</option>
-                  </optgroup>
-                </select>
-              </div>
-
-              <div class="setting-block">
-                <label>Weather Location</label>
-                <select
-                  id="citySelect"
-                  onchange="changeCity()"
-                  class="modern-select full-width"
-                >
-                  <optgroup label="India">
-                    <option value="22.57,88.36,Kolkata" selected>
-                      Kolkata
-                    </option>
-                    <option value="28.61,77.21,New Delhi">New Delhi</option>
-                    <option value="19.08,72.88,Mumbai">Mumbai</option>
-                    <option value="13.08,80.27,Chennai">Chennai</option>
-                    <option value="12.97,77.59,Bangalore">Bangalore</option>
-                    <option value="17.39,78.49,Hyderabad">Hyderabad</option>
-                    <option value="23.02,72.57,Ahmedabad">Ahmedabad</option>
-                    <option value="26.85,80.95,Lucknow">Lucknow</option>
-                    <option value="18.52,73.86,Pune">Pune</option>
-                  </optgroup>
-                  <optgroup label="World">
-                    <option value="40.71,-74.01,New York">New York</option>
-                    <option value="51.51,-0.13,London">London</option>
-                    <option value="35.68,139.69,Tokyo">Tokyo</option>
-                    <option value="48.86,2.35,Paris">Paris</option>
-                    <option value="1.35,103.82,Singapore">Singapore</option>
-                    <option value="25.20,55.27,Dubai">Dubai</option>
-                    <option value="-33.87,151.21,Sydney">Sydney</option>
-                    <option value="55.76,37.62,Moscow">Moscow</option>
-                  </optgroup>
-                </select>
-              </div>
-
-              <div class="setting-info" id="weatherDisplay">
-                Loading weather...
-              </div>
-
-              <div class="setting-row danger-zone">
-                <div class="label-group">
-                  <span>Reset Display</span>
-                  <small>Clears current content</small>
-                </div>
-                <button class="btn btn-danger btn-sm" onclick="resetSystem()">
-                  Reset
-                </button>
               </div>
             </div>
           </section>
@@ -1039,6 +1132,7 @@
     <script src="js/texthelper.js"></script>
     <script src="js/pomodoro.js"></script>
     <script src="js/qrcode.js"></script>
+    <script src="js/accordion.js"></script>
     <script src="js/app.js"></script>
 
     <script>

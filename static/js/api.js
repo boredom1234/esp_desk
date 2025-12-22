@@ -195,7 +195,7 @@ function sendMarquee() {
   })
     .then((res) => res.json())
     .then((data) => {
-      console.log(`Marquee started: ${data.frameCount} frames`);
+      //(`Marquee started: ${data.frameCount} frames`);
       loadSettings();
       // Start auto-play for frontend preview (matches GIF upload behavior)
       startAutoPlay();
@@ -228,7 +228,7 @@ function resetSystem() {
       // Stop auto-play
       stopAutoPlay();
 
-      console.log("System reset to defaults");
+      //("System reset to defaults");
     })
     .catch((err) => {
       if (err.message !== "Unauthorized") {

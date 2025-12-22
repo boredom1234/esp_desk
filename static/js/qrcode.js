@@ -18,7 +18,7 @@ async function displayQRNow() {
     });
 
     if (response.ok) {
-      console.log("QR code displayed on ESP32");
+      //("QR code displayed on ESP32");
       // Optionally hide the config panel
       document.getElementById("qrItemConfig").style.display = "none";
       document.getElementById("qrDataInput").value = "";

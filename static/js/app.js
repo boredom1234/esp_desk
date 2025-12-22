@@ -214,7 +214,7 @@ function updateTimezone() {
     .then((res) => res.json())
     .then((data) => {
       if (data.status === "updated") {
-        console.log(`Timezone updated to ${data.timezone}`);
+        //(`Timezone updated to ${data.timezone}`);
       }
     })
     .catch((err) => {

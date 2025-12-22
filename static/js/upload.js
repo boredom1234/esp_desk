@@ -13,7 +13,8 @@ function uploadFile(file) {
   formData.append("file", file);
 
   // Get max frames setting for GIFs
-  const maxFrames = parseInt(document.getElementById("gifMaxFramesSlider").value) || 10;
+  const maxFrames =
+    parseInt(document.getElementById("gifMaxFramesSlider").value) || 10;
   formData.append("maxFrames", maxFrames.toString());
 
   // Update UI
@@ -30,7 +31,7 @@ function uploadFile(file) {
       return res.json();
     })
     .then((data) => {
-      console.log(`Upload successful: ${data.frameCount} frame(s)`);
+      //(`Upload successful: ${data.frameCount} frame(s)`);
       setUploadStatus("success", `${data.frameCount} frame(s)`);
       clearUploadPreview();
       loadSettings();

@@ -145,7 +145,7 @@ function savePomodoroSettings() {
         pomodoroSession = data.session;
       }
       renderPomodoroUI();
-      console.log("🍅 Pomodoro settings saved");
+      //("🍅 Pomodoro settings saved");
     })
     .catch((err) => {
       if (err.message !== "Unauthorized") {

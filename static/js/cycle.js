@@ -51,7 +51,7 @@ function renderCycleItems(items, updateLocalState = true) {
     });
 
     checkbox.addEventListener("change", (e) => {
-      console.log("Checkbox change event fired for:", item.id);
+      //("Checkbox change event fired for:", item.id);
       toggleCycleItem(item.id);
     });
 
@@ -107,12 +107,12 @@ function truncate(str, len) {
 
 // Toggle item enabled state
 function toggleCycleItem(id) {
-  console.log("toggleCycleItem called for:", id);
+  //("toggleCycleItem called for:", id);
   const item = cycleItems.find((i) => i.id === id);
   if (item) {
-    console.log("Item found, current enabled:", item.enabled);
+    //("Item found, current enabled:", item.enabled);
     item.enabled = !item.enabled;
-    console.log("Item toggled, new enabled:", item.enabled);
+    //("Item toggled, new enabled:", item.enabled);
     // Update the checkbox visually immediately (without re-render)
     const checkbox = document.querySelector(
       `.cycle-item[data-id="${CSS.escape(id)}"] input[type="checkbox"]`
@@ -246,9 +246,9 @@ function confirmAddText() {
 // Save cycle items to server
 function saveCycleItems() {
   pendingSaveCount++;
-  console.log("=== SAVING CYCLE ITEMS ===");
-  console.log("Pending saves:", pendingSaveCount);
-  console.log("Items to save:", cycleItems);
+  //("=== SAVING CYCLE ITEMS ===");
+  //("Pending saves:", pendingSaveCount);
+  //("Items to save:", cycleItems);
 
   // Issue 1: Use authFetch for protected endpoint
   authFetch("/api/settings", {
@@ -257,13 +257,13 @@ function saveCycleItems() {
     body: JSON.stringify({ cycleItems: cycleItems }),
   })
     .then((res) => {
-      console.log("Save response status:", res.status);
+      //("Save response status:", res.status);
       return res.json();
     })
     .then((data) => {
       lastSaveTimestamp = Date.now();
-      console.log("✓ Cycle items saved successfully");
-      console.log("Server response:", data);
+      //("✓ Cycle items saved successfully");
+      //("Server response:", data);
     })
     .catch((err) => {
       if (err.message !== "Unauthorized") {
@@ -273,7 +273,7 @@ function saveCycleItems() {
     .finally(() => {
       pendingSaveCount--;
       if (pendingSaveCount < 0) pendingSaveCount = 0;
-      console.log("Save complete, pending now:", pendingSaveCount);
+      //("Save complete, pending now:", pendingSaveCount);
     });
 }
 
@@ -282,7 +282,7 @@ function updateDisplayCycleUI(items) {
   // Don't overwrite local state if we're in the middle of saving
   // Also add a 5-second grace period after last save to ensure we don't fetch stale data
   if (pendingSaveCount > 0 || Date.now() - lastSaveTimestamp < 5000) {
-    // console.log("Skipping UI update - save in progress or recent");
+    // //("Skipping UI update - save in progress or recent");
     return;
   }
   renderCycleItems(items, true);

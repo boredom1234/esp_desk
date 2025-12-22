@@ -106,7 +106,7 @@ async function saveLedSettings() {
         ledPulseSpeed: ledPulseSpeed,
       }),
     });
-    console.log(
+    //(
       "🎨 LED settings saved:",
       ledEffectMode,
       ledCustomColor,
@@ -189,7 +189,7 @@ function initLedSettings(
   // Sync RGB sliders with the loaded color
   syncRgbSlidersFromHex(ledCustomColor);
 
-  console.log("🎨 LED settings initialized:", ledEffectMode, ledCustomColor);
+  //("🎨 LED settings initialized:", ledEffectMode, ledCustomColor);
 }
 
 // ==========================================
