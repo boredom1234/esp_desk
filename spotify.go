@@ -55,6 +55,7 @@ const (
 var (
 	spotifyCredentials  SpotifyCredentials
 	spotifyEnabled      bool
+	spotifyCredsFromEnv bool // True if credentials came from environment variables
 	spotifyLastTrack    *SpotifyTrack
 	spotifyAlbumArt     []int // Cached 1-bit album art bitmap
 	spotifyAlbumArtURL  string
@@ -62,6 +63,12 @@ var (
 	spotifyFetchError   error             // Last error from API
 	spotifyFetching     bool              // Currently fetching
 	spotifyPollInterval = 5 * time.Second // How often to poll Spotify
+
+	// Scroll state for long text (marquee effect)
+	spotifySongScrollPos   int    // Current scroll position for song name
+	spotifyArtistScrollPos int    // Current scroll position for artist name
+	spotifyLastSongName    string // Track song changes to reset scroll
+	spotifyLastArtistName  string // Track artist changes to reset scroll
 )
 
 // startSpotifyPoller starts background polling for Spotify data
@@ -445,9 +452,9 @@ func generateSpotifyFrame(duration int) Frame {
 
 	if !enabled || track == nil {
 		// Show "Not Playing" state
-		msg := "♪ Not Playing"
+		msg := "~ Not Playing"
 		if !enabled {
-			msg = "♪ Connect Spotify"
+			msg = "~ Connect Spotify"
 		}
 		textSize := getScaledTextSize(1)
 		yPos := 28
@@ -487,14 +494,41 @@ func generateSpotifyFrame(duration int) Frame {
 	// Text position (to the right of album art)
 	textX := artX + 36
 	textSize := getScaledTextSize(1)
+	maxDisplayWidth := 128 - textX - 2 // Available width for text
+	charWidth := 6 * textSize          // Approx pixels per character
+	maxChars := maxDisplayWidth / charWidth
 
-	// Truncate text to fit
-	maxChars := 13 // Approx chars that fit in remaining width
-	songName := truncateText(track.Name, maxChars)
-	artistName := truncateText(track.Artist, maxChars)
+	// Reset scroll positions if track changed
+	if track.Name != spotifyLastSongName {
+		spotifySongScrollPos = 0
+		spotifyLastSongName = track.Name
+	}
+	if track.Artist != spotifyLastArtistName {
+		spotifyArtistScrollPos = 0
+		spotifyLastArtistName = track.Artist
+	}
 
-	// Song name
+	// Song name - use scrolling if too long
 	songY := artY + 4
+	songName := track.Name
+	songRunes := []rune(songName)
+	if len(songRunes) > maxChars {
+		// Create scrolling window with wrap-around padding
+		paddedSong := songName + "   " + songName // Add spacing for smooth loop
+		paddedRunes := []rune(paddedSong)
+		totalLen := len([]rune(songName)) + 3 // Original + spacing
+
+		// Extract visible portion
+		startIdx := spotifySongScrollPos % totalLen
+		endIdx := startIdx + maxChars
+		if endIdx > len(paddedRunes) {
+			endIdx = len(paddedRunes)
+		}
+		songName = string(paddedRunes[startIdx:endIdx])
+
+		// Advance scroll position for next frame
+		spotifySongScrollPos++
+	}
 	elements = append(elements, Element{
 		Type:  "text",
 		X:     textX,
@@ -503,8 +537,26 @@ func generateSpotifyFrame(duration int) Frame {
 		Value: songName,
 	})
 
-	// Artist name
+	// Artist name - use scrolling if too long
 	artistY := songY + 12
+	artistName := track.Artist
+	artistRunes := []rune(artistName)
+	if len(artistRunes) > maxChars {
+		// Create scrolling window with wrap-around padding
+		paddedArtist := artistName + "   " + artistName
+		paddedRunes := []rune(paddedArtist)
+		totalLen := len([]rune(artistName)) + 3
+
+		startIdx := spotifyArtistScrollPos % totalLen
+		endIdx := startIdx + maxChars
+		if endIdx > len(paddedRunes) {
+			endIdx = len(paddedRunes)
+		}
+		artistName = string(paddedRunes[startIdx:endIdx])
+
+		// Advance scroll position for next frame
+		spotifyArtistScrollPos++
+	}
 	elements = append(elements, Element{
 		Type:  "text",
 		X:     textX,
@@ -521,9 +573,9 @@ func generateSpotifyFrame(duration int) Frame {
 		filledWidth := int(progress * float64(barWidth))
 
 		// Play icon or pause
-		playIcon := "▶"
+		playIcon := ">"
 		if !track.IsPlaying {
-			playIcon = "⏸"
+			playIcon = "||"
 		}
 		elements = append(elements, Element{
 			Type:  "text",
@@ -585,6 +637,7 @@ func handleSpotifySettings(w http.ResponseWriter, r *http.Request) {
 			"enabled":        spotifyEnabled,
 			"hasCredentials": spotifyCredentials.ClientID != "",
 			"isConnected":    spotifyCredentials.RefreshToken != "",
+			"credsFromEnv":   spotifyCredsFromEnv,
 			"currentTrack":   spotifyLastTrack,
 		}
 		mutex.Unlock()

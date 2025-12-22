@@ -338,12 +338,23 @@ func loadConfig() {
 	// Analog Clock settings
 	analogShowSeconds = config.AnalogShowSeconds
 	analogShowRoman = config.AnalogShowRoman
-	// Spotify settings
-	if config.SpotifyClientID != "" {
+	// Spotify settings - Check environment variables first (preferred for production)
+	envClientID := os.Getenv("SPOTIFY_CLIENT_ID")
+	envClientSecret := os.Getenv("SPOTIFY_CLIENT_SECRET")
+	if envClientID != "" && envClientSecret != "" {
+		spotifyCredentials.ClientID = envClientID
+		spotifyCredentials.ClientSecret = envClientSecret
+		spotifyCredsFromEnv = true
+		log.Println("Spotify credentials loaded from environment variables")
+	} else if config.SpotifyClientID != "" {
+		// Fall back to config.json
 		spotifyCredentials.ClientID = config.SpotifyClientID
 		spotifyCredentials.ClientSecret = config.SpotifyClientSecret
+	}
+	// Load refresh token from config regardless (this is session-specific)
+	if config.SpotifyRefreshToken != "" {
 		spotifyCredentials.RefreshToken = config.SpotifyRefreshToken
-		if config.SpotifyRefreshToken != "" {
+		if spotifyCredentials.ClientID != "" {
 			spotifyEnabled = true
 		}
 	}

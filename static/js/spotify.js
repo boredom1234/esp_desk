@@ -29,70 +29,31 @@ function updateSpotifyUI() {
   const statusEl = document.getElementById("spotifyStatus");
   const connectBtn = document.getElementById("spotifyConnectBtn");
   const disconnectBtn = document.getElementById("spotifyDisconnectBtn");
-  const configSection = document.getElementById("spotifyConfigSection");
+  const envNotice = document.getElementById("spotifyEnvNotice");
 
   if (!statusEl) return;
+
+  // Show/hide env notice if credentials are from environment variables
+  if (envNotice) {
+    envNotice.style.display = spotifyStatus.credsFromEnv ? "block" : "none";
+  }
 
   if (spotifyStatus.isConnected) {
     statusEl.textContent = "✅ Connected";
     statusEl.className = "spotify-status connected";
     if (connectBtn) connectBtn.style.display = "none";
     if (disconnectBtn) disconnectBtn.style.display = "inline-block";
-    if (configSection) configSection.style.display = "none";
   } else if (spotifyStatus.hasCredentials) {
     statusEl.textContent = "🔗 Ready to connect";
     statusEl.className = "spotify-status ready";
     if (connectBtn) connectBtn.style.display = "inline-block";
     if (disconnectBtn) disconnectBtn.style.display = "none";
-    if (configSection) configSection.style.display = "block";
   } else {
-    statusEl.textContent = "⚙️ Not configured";
+    statusEl.textContent = "⚙️ Keys Missing (Check Env Vars)";
     statusEl.className = "spotify-status";
     if (connectBtn) connectBtn.style.display = "none";
     if (disconnectBtn) disconnectBtn.style.display = "none";
-    if (configSection) configSection.style.display = "block";
   }
-}
-
-// Toggle config section visibility
-function toggleSpotifyConfig() {
-  const configSection = document.getElementById("spotifyConfigSection");
-  if (configSection) {
-    configSection.style.display =
-      configSection.style.display === "none" ? "block" : "none";
-  }
-}
-
-// Save Spotify credentials
-function saveSpotifyCredentials() {
-  const clientId = document.getElementById("spotifyClientId").value.trim();
-  const clientSecret = document
-    .getElementById("spotifyClientSecret")
-    .value.trim();
-
-  if (!clientId || !clientSecret) {
-    alert("Please enter both Client ID and Client Secret");
-    return;
-  }
-
-  authFetch("/api/settings/spotify", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ clientId, clientSecret }),
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      spotifyStatus = data;
-      updateSpotifyUI();
-      // Clear the input fields for security
-      document.getElementById("spotifyClientSecret").value = "";
-    })
-    .catch((err) => {
-      if (err.message !== "Unauthorized") {
-        console.error("saveSpotifyCredentials error:", err);
-        alert("Failed to save credentials");
-      }
-    });
 }
 
 // Connect to Spotify (opens OAuth flow in new window)

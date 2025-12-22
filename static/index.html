@@ -1013,51 +1013,15 @@
                         >
                           Disconnect
                         </button>
-                        <button
-                          class="btn btn-secondary btn-sm"
-                          onclick="toggleSpotifyConfig()"
-                        >
-                          ⚙️
-                        </button>
                       </div>
                     </div>
 
                     <div
-                      class="setting-block spotify-config"
-                      id="spotifyConfigSection"
+                      class="env-notice"
+                      id="spotifyEnvNotice"
                       style="display: none"
                     >
-                      <label>Spotify App Credentials</label>
-                      <small class="config-hint">
-                        Get these from
-                        <a
-                          href="https://developer.spotify.com/dashboard"
-                          target="_blank"
-                          >developer.spotify.com</a
-                        >
-                      </small>
-                      <div class="input-group">
-                        <input
-                          type="text"
-                          id="spotifyClientId"
-                          placeholder="Client ID"
-                          class="full-width"
-                        />
-                      </div>
-                      <div class="input-group">
-                        <input
-                          type="password"
-                          id="spotifyClientSecret"
-                          placeholder="Client Secret"
-                          class="full-width"
-                        />
-                      </div>
-                      <button
-                        class="btn btn-primary btn-sm"
-                        onclick="saveSpotifyCredentials()"
-                      >
-                        Save Credentials
-                      </button>
+                      ✅ Credentials configured via environment variables
                     </div>
                   </div>
                 </div>
