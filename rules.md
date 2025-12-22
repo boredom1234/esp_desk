@@ -280,14 +280,284 @@ If you treat it like this, your system will stay clean, scalable, and impressive
 
 ---
 
-## 🚀 Want a Next Step Template?
+---
 
-I can give you:
+# 📦 BACKEND-ONLY FEATURE GUIDE
 
-- A **feature-addition checklist**
-- A **JSON schema**
-- A **bar / graph implementation**
-- A **WebSocket version**
-- A **multi-device backend**
+**Goal**: Add new features by modifying ONLY backend (Go) and frontend (HTML/JS) — WITHOUT touching `main.ino`
 
-Tell me what you want to add next — and we’ll do it _without breaking anything_ 💪
+---
+
+## 🔧 What the ESP32 Already Supports (Use These!)
+
+The firmware already renders these element types. **Reuse them** instead of creating new ones:
+
+| Element Type | Fields                        | Use For                                    |
+| ------------ | ----------------------------- | ------------------------------------------ |
+| `text`       | `x, y, size, value`           | Any text display (time, labels, values)    |
+| `bitmap`     | `x, y, width, height, bitmap` | Images, QR codes, icons, graphs            |
+| `line`       | `x, y, width, height`         | Frames, borders, separators, progress bars |
+
+**Key insight**: If you can express your feature using text + lines + bitmaps, you don't need to modify `main.ino`!
+
+---
+
+## ✅ Checklist for Adding a New Cycle Item Type
+
+### Step 1: Backend Data Model (`types.go`)
+
+Add new fields to `CycleItem` struct:
+
+```go
+// Example: Adding a "quote" type
+Quote       string `json:"quote,omitempty"`       // For quote: the quote text
+QuoteAuthor string `json:"quoteAuthor,omitempty"` // For quote: attribution
+```
+
+**Rules**:
+
+- Use `omitempty` to keep JSON clean
+- Use clear, descriptive field names
+- Document with comments
+
+---
+
+### Step 2: Backend Frame Generation (`background.go`)
+
+Add a new `case` in the `switch item.Type` block inside `updateLoop()`:
+
+```go
+case "quote":
+    if item.Quote != "" {
+        elements := []Element{
+            {Type: "text", X: 4, Y: 20, Size: 1, Value: item.Quote},
+        }
+        if item.QuoteAuthor != "" {
+            elements = append(elements, Element{
+                Type: "text", X: 60, Y: 50, Size: 1, Value: "— " + item.QuoteAuthor,
+            })
+        }
+        frames = append(frames, Frame{
+            Version: 1, Duration: duration, Clear: true, Elements: elements,
+        })
+    }
+```
+
+**Rules**:
+
+- Build frames using only `text`, `bitmap`, and `line` elements
+- Always check for empty/nil data
+- Use `calcCenteredX()` for centered text
+- Set reasonable default duration
+
+---
+
+### Step 3: Frontend Dropdown (`index.html`)
+
+Add option to the cycle widget selector:
+
+```html
+<option value="quote">💬 Quote</option>
+```
+
+---
+
+### Step 4: Frontend Config Panel (`index.html`)
+
+Add a hidden configuration panel:
+
+```html
+<div class="quote-item-config" id="quoteItemConfig" style="display: none">
+  <input type="text" id="quoteText" placeholder="Enter quote..." />
+  <input type="text" id="quoteAuthor" placeholder="Author (optional)" />
+  <button onclick="confirmAddQuote()">Save</button>
+</div>
+```
+
+---
+
+### Step 5: Frontend JavaScript (`cycle.js` or new file)
+
+1. Update `getTypeIcon()`:
+
+```javascript
+quote: "💬",
+```
+
+2. Update `addCycleItem()`:
+
+```javascript
+if (type === "quote") {
+  document.getElementById("quoteItemConfig").style.display = "block";
+  return;
+}
+```
+
+3. Add `confirmAdd[Type]()` function:
+
+```javascript
+function confirmAddQuote() {
+  const quote = document.getElementById("quoteText").value.trim();
+  const author = document.getElementById("quoteAuthor").value.trim();
+
+  cycleItems.push({
+    id: `quote-${Date.now()}`,
+    type: "quote",
+    label: "💬 Quote",
+    quote: quote,
+    quoteAuthor: author,
+    enabled: true,
+    duration: 5000,
+  });
+
+  saveCycleItems();
+  renderCycleItems(cycleItems);
+  // Reset and hide panel
+}
+```
+
+---
+
+## 🖼️ Adding Bitmap-Based Features
+
+For graphics, charts, QR codes, icons:
+
+1. **Generate bitmap on backend** (Go):
+
+```go
+func generateMyFeatureBitmap(data interface{}) ([]int, int, int, error) {
+    // Create image using Go's image package
+    // Convert to 1-bit monochrome ([]int where each int is 0 or 1)
+    // Return bitmap, width, height, error
+}
+```
+
+2. **Use existing bitmap element**:
+
+```go
+{Type: "bitmap", X: offsetX, Y: offsetY, Width: w, Height: h, Bitmap: bitmap}
+```
+
+---
+
+## 📊 Progress Bars (Using Lines)
+
+Create horizontal progress bars with `line` elements:
+
+```go
+// Background bar
+{Type: "line", X: 4, Y: 32, Width: 120, Height: 8},
+// Fill bar (width based on percentage)
+{Type: "line", X: 5, Y: 33, Width: int(118 * percentage), Height: 6},
+```
+
+---
+
+## 🚨 Adding "Display Now" Features
+
+For immediate display (bypassing cycle):
+
+1. **Create API endpoint** (`your_feature.go`):
+
+```go
+func handleYourFeature(w http.ResponseWriter, r *http.Request) {
+    // Parse request
+    // Generate frame
+    mutex.Lock()
+    isCustomMode = true
+    isGifMode = false
+    frames = []Frame{frame}
+    index = 0
+    mutex.Unlock()
+    // Return success
+}
+```
+
+2. **Register endpoint** (`main.go`):
+
+```go
+http.HandleFunc("/api/yourfeature", loggingMiddleware(authMiddleware(handleYourFeature)))
+```
+
+3. **Call from frontend**:
+
+```javascript
+await authFetch("/api/yourfeature", { method: "POST", ... });
+```
+
+---
+
+## 📏 Display Constraints
+
+Always remember:
+
+- OLED is **128×64 pixels**
+- Font size 1 = ~6×8 pixels per character (~21 chars per line)
+- Font size 2 = ~12×16 pixels per character (~10 chars per line)
+- Bitmap maximum = 1024 bytes (128×64 / 8)
+
+---
+
+## 🔍 Debugging Tips
+
+1. **Check logs**: `go run .` shows all backend activity
+2. **Browser console**: F12 → Console for JS errors
+3. **Test API first**: Use Invoke-RestMethod before UI:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/api/settings" -Method Get
+```
+
+4. **Verify frame generation**: Add `log.Printf` in `background.go`
+
+---
+
+## 📁 File Reference
+
+| File            | Purpose          | When to Modify                |
+| --------------- | ---------------- | ----------------------------- |
+| `types.go`      | Data structures  | Add new CycleItem fields      |
+| `background.go` | Frame generation | Add new frame rendering logic |
+| `main.go`       | API routes       | Register new endpoints        |
+| `[feature].go`  | Feature logic    | Create for complex features   |
+| `index.html`    | UI structure     | Add config panels, dropdowns  |
+| `cycle.js`      | Cycle management | Handle new item types         |
+| `[feature].js`  | Feature UI       | Create for complex UI logic   |
+
+---
+
+## ✅ Quick Reference: What's Safe vs. Dangerous
+
+### ✅ SAFE (Backend-Only)
+
+- New cycle item types using text/bitmap/line
+- New API endpoints
+- New frontend panels and controls
+- Data fetched from external APIs
+- Complex calculations and logic
+- Animated content (pre-generated frames)
+
+### ❌ REQUIRES FIRMWARE CHANGE
+
+- New element types (e.g., `circle`, `arc`)
+- New rendering methods
+- Hardware changes (new pins, sensors)
+- New LED effects beyond existing modes
+- WebSocket instead of polling
+
+---
+
+## 🎯 Feature Ideas (Backend-Only)
+
+| Feature         | Uses              | Complexity |
+| --------------- | ----------------- | ---------- |
+| Quotes widget   | text              | ⭐         |
+| Countdown       | text + math       | ⭐⭐       |
+| QR codes        | bitmap            | ⭐⭐       |
+| Progress bars   | line elements     | ⭐⭐       |
+| Crypto prices   | text + API        | ⭐⭐       |
+| Stock ticker    | text + API        | ⭐⭐       |
+| RSS headlines   | marquee frames    | ⭐⭐⭐     |
+| Calendar events | text + OAuth      | ⭐⭐⭐     |
+| Simple graphs   | bitmap generation | ⭐⭐⭐     |
+| System stats    | text + monitoring | ⭐⭐⭐     |

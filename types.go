@@ -44,6 +44,7 @@ type Settings struct {
 	LedCustomColor     string      `json:"ledCustomColor"`   // Hex color e.g. "#FF5500"
 	LedFlashSpeed      int         `json:"ledFlashSpeed"`    // Flash interval ms
 	LedPulseSpeed      int         `json:"ledPulseSpeed"`    // Pulse cycle duration ms
+	DisplayScale       string      `json:"displayScale"`     // "compact", "normal", "large"
 }
 
 // CycleItem represents a single item in the display cycle
@@ -120,6 +121,7 @@ type PersistentConfig struct {
 	LedCustomColor     string      `json:"ledCustomColor"`   // Hex color
 	LedFlashSpeed      int         `json:"ledFlashSpeed"`    // Flash interval ms
 	LedPulseSpeed      int         `json:"ledPulseSpeed"`    // Pulse cycle ms
+	DisplayScale       string      `json:"displayScale"`     // "compact", "normal", "large"
 	// Pomodoro settings
 	PomodoroWorkDuration  int  `json:"pomodoroWorkDuration"`  // seconds
 	PomodoroBreakDuration int  `json:"pomodoroBreakDuration"` // seconds

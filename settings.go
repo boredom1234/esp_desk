@@ -35,6 +35,7 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			LedCustomColor:     ledCustomColor,
 			LedFlashSpeed:      ledFlashSpeed,
 			LedPulseSpeed:      ledPulseSpeed,
+			DisplayScale:       displayScale,
 		}
 		mutex.Unlock()
 		json.NewEncoder(w).Encode(settings)
@@ -56,6 +57,7 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			LedCustomColor     *string     `json:"ledCustomColor,omitempty"`
 			LedFlashSpeed      *int        `json:"ledFlashSpeed,omitempty"`
 			LedPulseSpeed      *int        `json:"ledPulseSpeed,omitempty"`
+			DisplayScale       *string     `json:"displayScale,omitempty"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			jsonError(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
@@ -162,6 +164,14 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			}
 			changes = append(changes, fmt.Sprintf("ledPulseSpeed=%dms", ledPulseSpeed))
 		}
+		if req.DisplayScale != nil {
+			// Validate scale value
+			validScales := map[string]bool{"compact": true, "normal": true, "large": true}
+			if validScales[*req.DisplayScale] {
+				displayScale = *req.DisplayScale
+				changes = append(changes, fmt.Sprintf("displayScale=%s", displayScale))
+			}
+		}
 		settings := Settings{
 			AutoPlay:           autoPlay,
 			FrameDuration:      frameDuration,
@@ -178,6 +188,7 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			LedCustomColor:     ledCustomColor,
 			LedFlashSpeed:      ledFlashSpeed,
 			LedPulseSpeed:      ledPulseSpeed,
+			DisplayScale:       displayScale,
 		}
 		mutex.Unlock()
 
@@ -299,6 +310,13 @@ func loadConfig() {
 	if config.LedPulseSpeed >= 500 && config.LedPulseSpeed <= 3000 {
 		ledPulseSpeed = config.LedPulseSpeed
 	}
+	// Display scale
+	if config.DisplayScale != "" {
+		validScales := map[string]bool{"compact": true, "normal": true, "large": true}
+		if validScales[config.DisplayScale] {
+			displayScale = config.DisplayScale
+		}
+	}
 	// Pomodoro settings
 	if config.PomodoroWorkDuration > 0 {
 		pomodoroSettings.WorkDuration = config.PomodoroWorkDuration
@@ -341,6 +359,7 @@ func saveConfig() {
 		LedCustomColor:        ledCustomColor,
 		LedFlashSpeed:         ledFlashSpeed,
 		LedPulseSpeed:         ledPulseSpeed,
+		DisplayScale:          displayScale,
 		PomodoroWorkDuration:  pomodoroSettings.WorkDuration,
 		PomodoroBreakDuration: pomodoroSettings.BreakDuration,
 		PomodoroLongBreak:     pomodoroSettings.LongBreak,

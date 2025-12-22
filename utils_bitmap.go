@@ -101,6 +101,68 @@ var font5x7 = map[rune][]byte{
 	'"':  {0x00, 0x07, 0x00, 0x07, 0x00},
 }
 
+// ==========================================
+// DISPLAY SCALE HELPERS
+// ==========================================
+
+// getScaledTextSize returns the text size adjusted for the current display scale
+// Input baseSize is typically 1 or 2, output is clamped to 1-3 (ESP32 font limits)
+func getScaledTextSize(baseSize int) int {
+	switch displayScale {
+	case "compact":
+		// Reduce size by 1, minimum 1
+		if baseSize <= 1 {
+			return 1
+		}
+		return baseSize - 1
+	case "large":
+		// Increase size by 1, maximum 3
+		if baseSize >= 3 {
+			return 3
+		}
+		return baseSize + 1
+	default: // "normal"
+		return baseSize
+	}
+}
+
+// getScaleMultiplier returns the scale factor for bitmaps
+// Returns: 0.75 for compact, 1.0 for normal, 1.5 for large
+func getScaleMultiplier() float64 {
+	switch displayScale {
+	case "compact":
+		return 0.75
+	case "large":
+		return 1.5
+	default:
+		return 1.0
+	}
+}
+
+// getScaledBitmapSize returns the target bitmap dimensions adjusted for scale
+// Ensures the result fits within OLED bounds (128x64)
+func getScaledBitmapSize(baseWidth, baseHeight int) (int, int) {
+	mult := getScaleMultiplier()
+	newWidth := int(float64(baseWidth) * mult)
+	newHeight := int(float64(baseHeight) * mult)
+
+	// Clamp to OLED dimensions
+	if newWidth > 128 {
+		newWidth = 128
+	}
+	if newHeight > 64 {
+		newHeight = 64
+	}
+	// Minimum size
+	if newWidth < 8 {
+		newWidth = 8
+	}
+	if newHeight < 8 {
+		newHeight = 8
+	}
+	return newWidth, newHeight
+}
+
 // calcCenteredX calculates the X position to center text on a 128-pixel wide OLED
 // Text width = charCount * 5 * size + (charCount - 1) * size (no trailing space)
 func calcCenteredX(text string, size int) int {

@@ -30,6 +30,7 @@ var (
 	ledCustomColor     string = "#0064FF" // Hex color for static/flash/pulse modes
 	ledFlashSpeed      int    = 500       // Flash interval in ms (100-2000)
 	ledPulseSpeed      int    = 1000      // Breathing cycle duration in ms (500-3000)
+	displayScale       string = "normal"  // "compact", "normal", "large" - global display scale
 
 	// Display cycle items - flexible list of what to display
 	cycleItems = []CycleItem{

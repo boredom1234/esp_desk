@@ -987,3 +987,60 @@ input[type="range"]::-moz-range-thumb {
   color: var(--text-dim);
   text-transform: none;
 }
+
+/* ============================================
+   DISPLAY SCALE CONTROLS
+   ============================================ */
+
+.scale-buttons {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.scale-btn {
+  padding: 0.375rem 0.625rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  background: var(--bg-element);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.scale-btn:hover {
+  border-color: var(--primary);
+  color: var(--text-main);
+}
+
+.scale-btn.active {
+  background: var(--gradient-primary);
+  border-color: transparent;
+  color: white;
+  box-shadow: 0 2px 8px var(--primary-glow);
+}
+
+/* Config panels for countdown and QR */
+.countdown-item-config,
+.qr-item-config {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: var(--bg-element);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.countdown-item-config input[type="date"] {
+  padding: 0.5rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+}
+
+.action-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}

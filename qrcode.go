@@ -30,8 +30,15 @@ func generateQRBitmap(data string) ([]int, int, int, error) {
 	qrBitmap := qr.Bitmap()
 	qrSize := len(qrBitmap)
 
-	// Target size for OLED (64x64 for the QR, leaving width for label)
-	targetSize := 64
+	// Base target size for OLED (64x64 for the QR, leaving width for label)
+	baseTargetSize := 64
+
+	// Apply global display scale
+	scaledWidth, scaledHeight := getScaledBitmapSize(baseTargetSize, baseTargetSize)
+	targetSize := scaledWidth
+	if scaledHeight < targetSize {
+		targetSize = scaledHeight
+	}
 
 	// Calculate scale factor
 	scale := targetSize / qrSize

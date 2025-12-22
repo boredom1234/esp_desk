@@ -94,6 +94,11 @@ function loadSettings() {
           data.ledPulseSpeed || 1000
         );
       }
+
+      // Update display scale settings
+      if (typeof updateDisplayScaleUI === "function") {
+        updateDisplayScaleUI(data.displayScale || "normal");
+      }
     })
     .catch((err) => {
       if (err.message !== "Unauthorized") {

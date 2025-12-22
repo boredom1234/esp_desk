@@ -66,17 +66,19 @@ func updateLoop() {
 			// Time frame
 			// Get timezone abbreviation from current time in selected location
 			tzAbbrev, _ := now.Zone()
+			timeMainSize := getScaledTextSize(2) // Main time text
+			headerSize := getScaledTextSize(1)   // Headers/labels
 			timeElements := []Element{
-				{Type: "text", X: calcCenteredX(currentTime, 2), Y: 22, Size: 2, Value: currentTime},
+				{Type: "text", X: calcCenteredX(currentTime, timeMainSize), Y: 22, Size: timeMainSize, Value: currentTime},
 			}
 			if showHeaders {
 				timeHeaderText := "= TIME ="
 				timeElements = append([]Element{
-					{Type: "text", X: calcCenteredX(timeHeaderText, 1), Y: 2, Size: 1, Value: timeHeaderText},
+					{Type: "text", X: calcCenteredX(timeHeaderText, headerSize), Y: 2, Size: headerSize, Value: timeHeaderText},
 					{Type: "line", X: 0, Y: 12, Width: 128, Height: 1},
 				}, timeElements...)
 				timeElements = append(timeElements, Element{Type: "line", X: 0, Y: 52, Width: 128, Height: 1})
-				timeElements = append(timeElements, Element{Type: "text", X: calcCenteredX(tzAbbrev, 1), Y: 55, Size: 1, Value: tzAbbrev})
+				timeElements = append(timeElements, Element{Type: "text", X: calcCenteredX(tzAbbrev, headerSize), Y: 55, Size: headerSize, Value: tzAbbrev})
 			}
 			frameMap["time"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: timeElements}
 
@@ -87,42 +89,45 @@ func updateLoop() {
 				aqiDisplay = fmt.Sprintf("AQI:%d", weatherData.AQI)
 			}
 
+			weatherMainSize := getScaledTextSize(2)
+			weatherLabelSize := getScaledTextSize(1)
 			weatherElements := []Element{
-				{Type: "text", X: calcCenteredX(weatherData.Temperature, 2), Y: 20, Size: 2, Value: weatherData.Temperature},
+				{Type: "text", X: calcCenteredX(weatherData.Temperature, weatherMainSize), Y: 20, Size: weatherMainSize, Value: weatherData.Temperature},
 			}
 			if showHeaders {
 				weatherHeaderText := "= WEATHER ="
 				weatherElements = append([]Element{
-					{Type: "text", X: calcCenteredX(weatherHeaderText, 1), Y: 2, Size: 1, Value: weatherHeaderText},
+					{Type: "text", X: calcCenteredX(weatherHeaderText, weatherLabelSize), Y: 2, Size: weatherLabelSize, Value: weatherHeaderText},
 					{Type: "line", X: 0, Y: 12, Width: 128, Height: 1},
 				}, weatherElements...)
 				// Condition and AQI on same line if both fit
 				if aqiDisplay != "" {
 					// Show condition + AQI side by side
-					weatherElements = append(weatherElements, Element{Type: "text", X: 5, Y: 42, Size: 1, Value: weatherData.Condition})
-					weatherElements = append(weatherElements, Element{Type: "text", X: 75, Y: 42, Size: 1, Value: aqiDisplay})
+					weatherElements = append(weatherElements, Element{Type: "text", X: 5, Y: 42, Size: weatherLabelSize, Value: weatherData.Condition})
+					weatherElements = append(weatherElements, Element{Type: "text", X: 75, Y: 42, Size: weatherLabelSize, Value: aqiDisplay})
 				} else {
-					weatherElements = append(weatherElements, Element{Type: "text", X: calcCenteredX(weatherData.Condition, 1), Y: 42, Size: 1, Value: weatherData.Condition})
+					weatherElements = append(weatherElements, Element{Type: "text", X: calcCenteredX(weatherData.Condition, weatherLabelSize), Y: 42, Size: weatherLabelSize, Value: weatherData.Condition})
 				}
 				weatherElements = append(weatherElements, Element{Type: "line", X: 0, Y: 53, Width: 128, Height: 1})
-				weatherElements = append(weatherElements, Element{Type: "text", X: calcCenteredX(weatherData.City, 1), Y: 56, Size: 1, Value: weatherData.City})
+				weatherElements = append(weatherElements, Element{Type: "text", X: calcCenteredX(weatherData.City, weatherLabelSize), Y: 56, Size: weatherLabelSize, Value: weatherData.City})
 			} else {
 				// Without headers, show compact info
-				weatherElements = append(weatherElements, Element{Type: "text", X: calcCenteredX(weatherData.Condition, 1), Y: 42, Size: 1, Value: weatherData.Condition})
+				weatherElements = append(weatherElements, Element{Type: "text", X: calcCenteredX(weatherData.Condition, weatherLabelSize), Y: 42, Size: weatherLabelSize, Value: weatherData.Condition})
 				if aqiDisplay != "" {
-					weatherElements = append(weatherElements, Element{Type: "text", X: calcCenteredX(aqiDisplay, 1), Y: 52, Size: 1, Value: aqiDisplay})
+					weatherElements = append(weatherElements, Element{Type: "text", X: calcCenteredX(aqiDisplay, weatherLabelSize), Y: 52, Size: weatherLabelSize, Value: aqiDisplay})
 				}
 			}
 			frameMap["weather"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: weatherElements}
 
 			// Uptime frame
+			uptimeSize := getScaledTextSize(1)
 			uptimeElements := []Element{
-				{Type: "text", X: calcCenteredX(uptime, 1), Y: 28, Size: 1, Value: uptime},
+				{Type: "text", X: calcCenteredX(uptime, uptimeSize), Y: 28, Size: uptimeSize, Value: uptime},
 			}
 			if showHeaders {
 				uptimeHeaderText := "= UPTIME ="
 				uptimeElements = append([]Element{
-					{Type: "text", X: calcCenteredX(uptimeHeaderText, 1), Y: 2, Size: 1, Value: uptimeHeaderText},
+					{Type: "text", X: calcCenteredX(uptimeHeaderText, headerSize), Y: 2, Size: headerSize, Value: uptimeHeaderText},
 					{Type: "line", X: 0, Y: 12, Width: 128, Height: 1},
 				}, uptimeElements...)
 			}

@@ -170,3 +170,45 @@ function updateBeaconUI(brightness, enabled) {
   }
   if (valueDisplay) valueDisplay.textContent = `${ledBrightness}%`;
 }
+
+// ===== Display Scale Controls =====
+let currentDisplayScale = "normal";
+
+function setDisplayScale(scale) {
+  if (!["compact", "normal", "large"].includes(scale)) {
+    return;
+  }
+  currentDisplayScale = scale;
+  updateDisplayScaleUI(scale);
+
+  // Save to backend API
+  authFetch("/api/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ displayScale: scale }),
+  }).catch((err) => {
+    if (err.message !== "Unauthorized") {
+      console.error("setDisplayScale error:", err);
+    }
+  });
+
+  console.log("📐 Display Scale:", scale);
+}
+
+function updateDisplayScaleUI(scale) {
+  currentDisplayScale = scale;
+
+  // Update button states
+  document
+    .querySelectorAll("#displayScaleButtons .scale-btn")
+    .forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.scale === scale);
+    });
+
+  // Update label
+  const label = document.getElementById("displayScaleValue");
+  if (label) {
+    const labels = { compact: "Compact", normal: "Normal", large: "Large" };
+    label.textContent = labels[scale] || "Normal";
+  }
+}

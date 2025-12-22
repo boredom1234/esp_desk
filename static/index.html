@@ -626,6 +626,36 @@
 
               <div class="setting-row">
                 <div class="label-group">
+                  <span>📐 Display Scale</span>
+                  <small id="displayScaleValue">Normal</small>
+                </div>
+                <div class="scale-buttons" id="displayScaleButtons">
+                  <button
+                    class="scale-btn"
+                    data-scale="compact"
+                    onclick="setDisplayScale('compact')"
+                  >
+                    Compact
+                  </button>
+                  <button
+                    class="scale-btn active"
+                    data-scale="normal"
+                    onclick="setDisplayScale('normal')"
+                  >
+                    Normal
+                  </button>
+                  <button
+                    class="scale-btn"
+                    data-scale="large"
+                    onclick="setDisplayScale('large')"
+                  >
+                    Large
+                  </button>
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div class="label-group">
                   <span>🛰️ LED Beacon</span>
                   <small id="ledBrightnessValue">50%</small>
                 </div>
