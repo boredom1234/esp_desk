@@ -65,10 +65,10 @@ var (
 	spotifyPollInterval = 5 * time.Second // How often to poll Spotify
 
 	// Scroll state for long text (marquee effect)
-	spotifySongScrollPos   int    // Current scroll position for song name
-	spotifyArtistScrollPos int    // Current scroll position for artist name
-	spotifyLastSongName    string // Track song changes to reset scroll
-	spotifyLastArtistName  string // Track artist changes to reset scroll
+	spotifySongScrollStartTime   time.Time // Start time for song name scrolling
+	spotifyArtistScrollStartTime time.Time // Start time for artist name scrolling
+	spotifyLastSongName          string    // Track song changes to reset scroll
+	spotifyLastArtistName        string    // Track artist changes to reset scroll
 )
 
 // startSpotifyPoller starts background polling for Spotify data
@@ -401,29 +401,58 @@ func fetchAlbumArt(urlStr string, width, height int) ([]int, error) {
 	return convertImageTo1Bit(img, width, height), nil
 }
 
-// convertImageTo1Bit converts an image to 1-bit bitmap for OLED
+// convertImageTo1Bit converts an image to 1-bit bitmap using Floyd-Steinberg dithering
 func convertImageTo1Bit(img image.Image, targetWidth, targetHeight int) []int {
 	bounds := img.Bounds()
 	srcWidth := bounds.Dx()
 	srcHeight := bounds.Dy()
 
-	bitmap := make([]int, targetWidth*targetHeight)
+	// 1. Create a grayscale buffer
+	grayBuffer := make([]float64, targetWidth*targetHeight)
 
 	for y := 0; y < targetHeight; y++ {
 		for x := 0; x < targetWidth; x++ {
-			// Map target coordinates to source coordinates
+			// Nearest neighbor sampling
 			srcX := bounds.Min.X + x*srcWidth/targetWidth
 			srcY := bounds.Min.Y + y*srcHeight/targetHeight
 
 			c := img.At(srcX, srcY)
 			r, g, b, _ := c.RGBA()
 
-			// Convert to grayscale and threshold
-			gray := (r*299 + g*587 + b*114) / 1000
-			if gray > 32768 { // Middle threshold
-				bitmap[y*targetWidth+x] = 1
+			// Convert to grayscale (0-255 range)
+			gray := float64(r*299+g*587+b*114) / 65535.0 / 1000.0 * 255.0
+			grayBuffer[y*targetWidth+x] = gray
+		}
+	}
+
+	// 2. Apply Floyd-Steinberg dithering
+	bitmap := make([]int, targetWidth*targetHeight)
+
+	for y := 0; y < targetHeight; y++ {
+		for x := 0; x < targetWidth; x++ {
+			oldPixel := grayBuffer[y*targetWidth+x]
+			newPixel := 0.0
+			if oldPixel > 128 { // Threshold
+				newPixel = 255.0
+				bitmap[y*targetWidth+x] = 1 // ON
 			} else {
-				bitmap[y*targetWidth+x] = 0
+				bitmap[y*targetWidth+x] = 0 // OFF
+			}
+
+			quantError := oldPixel - newPixel
+
+			// Distribute error to key neighbors
+			if x+1 < targetWidth {
+				grayBuffer[y*targetWidth+(x+1)] += quantError * 7.0 / 16.0
+			}
+			if x-1 >= 0 && y+1 < targetHeight {
+				grayBuffer[(y+1)*targetWidth+(x-1)] += quantError * 3.0 / 16.0
+			}
+			if y+1 < targetHeight {
+				grayBuffer[(y+1)*targetWidth+x] += quantError * 5.0 / 16.0
+			}
+			if x+1 < targetWidth && y+1 < targetHeight {
+				grayBuffer[(y+1)*targetWidth+(x+1)] += quantError * 1.0 / 16.0
 			}
 		}
 	}
@@ -472,8 +501,8 @@ func generateSpotifyFrame(duration int) Frame {
 		}
 	}
 
-	// Layout: Album art on left, text on right
-	artX := 4
+	// Layout: Album art on left (flush), text on right
+	artX := 0
 	artY := 16
 	if showHeaders {
 		artY = 20
@@ -491,43 +520,49 @@ func generateSpotifyFrame(duration int) Frame {
 		})
 	}
 
-	// Text position (to the right of album art)
-	textX := artX + 36
+	// Text position (starts right after album art)
+	textX := artX + 34
 	textSize := getScaledTextSize(1)
-	maxDisplayWidth := 128 - textX - 2 // Available width for text
-	charWidth := 6 * textSize          // Approx pixels per character
+	maxDisplayWidth := 128 - textX // Use full remaining width
+	charWidth := 6 * textSize      // Approx pixels per character
 	maxChars := maxDisplayWidth / charWidth
 
 	// Reset scroll positions if track changed
+	now := time.Now()
 	if track.Name != spotifyLastSongName {
-		spotifySongScrollPos = 0
+		spotifySongScrollStartTime = now
 		spotifyLastSongName = track.Name
 	}
 	if track.Artist != spotifyLastArtistName {
-		spotifyArtistScrollPos = 0
+		spotifyArtistScrollStartTime = now
 		spotifyLastArtistName = track.Artist
 	}
 
+	// Calculate scroll positions based on time (15 pixels per second)
+	// This ensures consistent speed even with variable network latency
+	pixelsPerSec := 15.0
+
 	// Song name - use scrolling if too long
-	songY := artY + 4
+	songY := artY + 2
 	songName := track.Name
 	songRunes := []rune(songName)
 	if len(songRunes) > maxChars {
 		// Create scrolling window with wrap-around padding
-		paddedSong := songName + "   " + songName // Add spacing for smooth loop
+		paddedSong := songName + "   " + songName
 		paddedRunes := []rune(paddedSong)
-		totalLen := len([]rune(songName)) + 3 // Original + spacing
+		totalLen := len([]rune(songName)) + 3
+
+		// Calculate position
+		elapsed := now.Sub(spotifySongScrollStartTime).Seconds()
+		scrollPos := int(elapsed * pixelsPerSec)
 
 		// Extract visible portion
-		startIdx := spotifySongScrollPos % totalLen
+		startIdx := scrollPos % totalLen
 		endIdx := startIdx + maxChars
 		if endIdx > len(paddedRunes) {
 			endIdx = len(paddedRunes)
 		}
 		songName = string(paddedRunes[startIdx:endIdx])
-
-		// Advance scroll position for next frame
-		spotifySongScrollPos++
 	}
 	elements = append(elements, Element{
 		Type:  "text",
@@ -538,24 +573,25 @@ func generateSpotifyFrame(duration int) Frame {
 	})
 
 	// Artist name - use scrolling if too long
-	artistY := songY + 12
+	artistY := songY + 10
 	artistName := track.Artist
 	artistRunes := []rune(artistName)
 	if len(artistRunes) > maxChars {
-		// Create scrolling window with wrap-around padding
+		// Create scrolling window
 		paddedArtist := artistName + "   " + artistName
 		paddedRunes := []rune(paddedArtist)
 		totalLen := len([]rune(artistName)) + 3
 
-		startIdx := spotifyArtistScrollPos % totalLen
+		// Calculate position
+		elapsed := now.Sub(spotifyArtistScrollStartTime).Seconds()
+		scrollPos := int(elapsed * pixelsPerSec)
+
+		startIdx := scrollPos % totalLen
 		endIdx := startIdx + maxChars
 		if endIdx > len(paddedRunes) {
 			endIdx = len(paddedRunes)
 		}
 		artistName = string(paddedRunes[startIdx:endIdx])
-
-		// Advance scroll position for next frame
-		spotifyArtistScrollPos++
 	}
 	elements = append(elements, Element{
 		Type:  "text",
@@ -565,12 +601,9 @@ func generateSpotifyFrame(duration int) Frame {
 		Value: artistName,
 	})
 
-	// Progress bar
+	// Progress bar - extend to fill width
 	if track.DurationMs > 0 {
-		barY := artistY + 14
-		barWidth := 50
-		progress := float64(track.ProgressMs) / float64(track.DurationMs)
-		filledWidth := int(progress * float64(barWidth))
+		barY := artistY + 12
 
 		// Play icon or pause
 		playIcon := ">"
@@ -585,20 +618,27 @@ func generateSpotifyFrame(duration int) Frame {
 			Value: playIcon,
 		})
 
+		// Wider progress bar
+		barX := textX + 10
+		barWidth := 128 - barX - 2 // Fill remaining width
+
+		progress := float64(track.ProgressMs) / float64(track.DurationMs)
+		filledWidth := int(progress * float64(barWidth))
+
 		// Progress bar background
 		elements = append(elements, Element{
 			Type:   "line",
-			X:      textX + 10,
+			X:      barX,
 			Y:      barY + 4,
 			Width:  barWidth,
 			Height: 2,
 		})
 
-		// Progress bar filled portion (using inverted filled rectangle)
+		// Progress bar filled portion
 		if filledWidth > 0 {
 			elements = append(elements, Element{
 				Type:   "line",
-				X:      textX + 10,
+				X:      barX,
 				Y:      barY + 2,
 				Width:  filledWidth,
 				Height: 6,
