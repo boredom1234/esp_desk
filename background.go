@@ -273,6 +273,65 @@ func updateLoop() {
 					frame := frameMap["pomodoro"]
 					frame.Duration = duration
 					frames = append(frames, frame)
+
+				case "countdown":
+					// Countdown timer to target date
+					if item.TargetDate != "" {
+						targetTime, err := time.Parse("2006-01-02", item.TargetDate)
+						if err == nil {
+							// Calculate time remaining
+							remaining := time.Until(targetTime)
+
+							var countdownStr string
+							if remaining <= 0 {
+								countdownStr = "Done!"
+							} else if remaining.Hours() >= 24 {
+								days := int(remaining.Hours() / 24)
+								hours := int(remaining.Hours()) % 24
+								countdownStr = fmt.Sprintf("%dd %dh", days, hours)
+							} else if remaining.Hours() >= 1 {
+								hours := int(remaining.Hours())
+								mins := int(remaining.Minutes()) % 60
+								countdownStr = fmt.Sprintf("%dh %dm", hours, mins)
+							} else {
+								mins := int(remaining.Minutes())
+								secs := int(remaining.Seconds()) % 60
+								countdownStr = fmt.Sprintf("%dm %ds", mins, secs)
+							}
+
+							// Build frame elements
+							label := item.TargetLabel
+							if label == "" {
+								label = "Countdown"
+							}
+
+							countdownElements := []Element{
+								{Type: "text", X: calcCenteredX(countdownStr, 2), Y: 24, Size: 2, Value: countdownStr},
+							}
+							if showHeaders {
+								headerText := fmt.Sprintf("= %s =", label)
+								countdownElements = append([]Element{
+									{Type: "text", X: calcCenteredX(headerText, 1), Y: 2, Size: 1, Value: headerText},
+									{Type: "line", X: 0, Y: 12, Width: 128, Height: 1},
+								}, countdownElements...)
+								countdownElements = append(countdownElements, Element{Type: "line", X: 0, Y: 52, Width: 128, Height: 1})
+								// Show target date at bottom
+								dateStr := targetTime.Format("Jan 2, 2006")
+								countdownElements = append(countdownElements, Element{Type: "text", X: calcCenteredX(dateStr, 1), Y: 55, Size: 1, Value: dateStr})
+							}
+
+							frames = append(frames, Frame{Version: 1, Duration: duration, Clear: true, Elements: countdownElements})
+						}
+					}
+
+				case "qr":
+					// QR code display
+					if item.QRData != "" {
+						qrFrame, err := generateQRFrame(item.QRData, duration)
+						if err == nil {
+							frames = append(frames, qrFrame)
+						}
+					}
 				}
 			}
 

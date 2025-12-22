@@ -92,6 +92,9 @@ function getTypeIcon(type) {
     uptime: "⏱",
     text: "💬",
     image: "🖼",
+    pomodoro: "🍅",
+    countdown: "⏳",
+    qr: "📱",
   };
   return icons[type] || "📋";
 }
@@ -158,6 +161,20 @@ function addCycleItem() {
     return;
   }
 
+  if (type === "countdown") {
+    // Show countdown input panel
+    document.getElementById("countdownItemConfig").style.display = "block";
+    document.getElementById("countdownLabel").focus();
+    return;
+  }
+
+  if (type === "qr") {
+    // Show QR input panel
+    document.getElementById("qrItemConfig").style.display = "block";
+    document.getElementById("qrDataInput").focus();
+    return;
+  }
+
   // Generate unique ID
   cycleItemIdCounter++;
   const id = `${type}-${Date.now()}-${cycleItemIdCounter}`;
@@ -168,6 +185,8 @@ function addCycleItem() {
     uptime: "⏱ Uptime",
     image: "🖼 Image",
     pomodoro: "🍅 Pomodoro",
+    countdown: "⏳ Countdown",
+    qr: "📱 QR Code",
   };
 
   const newItem = {

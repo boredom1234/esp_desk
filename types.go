@@ -47,19 +47,22 @@ type Settings struct {
 }
 
 // CycleItem represents a single item in the display cycle
-// Type can be: "time", "weather", "uptime", "text", "image"
+// Type can be: "time", "weather", "uptime", "text", "image", "countdown", "qr"
 type CycleItem struct {
-	ID       string `json:"id"`                 // Unique ID for the item
-	Type     string `json:"type"`               // "time", "weather", "uptime", "text", "image"
-	Label    string `json:"label"`              // Display label for UI
-	Text     string `json:"text,omitempty"`     // For text type: the message
-	Style    string `json:"style,omitempty"`    // For text: "normal", "centered", "framed"
-	Size     int    `json:"size,omitempty"`     // For text: font size
-	Duration int    `json:"duration,omitempty"` // Display duration in ms (0 = use default)
-	Bitmap   []int  `json:"bitmap,omitempty"`   // For image: bitmap data
-	Width    int    `json:"width,omitempty"`    // For image: width
-	Height   int    `json:"height,omitempty"`   // For image: height
-	Enabled  bool   `json:"enabled"`            // Whether this item is active
+	ID          string `json:"id"`                    // Unique ID for the item
+	Type        string `json:"type"`                  // "time", "weather", "uptime", "text", "image", "countdown", "qr"
+	Label       string `json:"label"`                 // Display label for UI
+	Text        string `json:"text,omitempty"`        // For text type: the message
+	Style       string `json:"style,omitempty"`       // For text: "normal", "centered", "framed"
+	Size        int    `json:"size,omitempty"`        // For text: font size
+	Duration    int    `json:"duration,omitempty"`    // Display duration in ms (0 = use default)
+	Bitmap      []int  `json:"bitmap,omitempty"`      // For image: bitmap data
+	Width       int    `json:"width,omitempty"`       // For image: width
+	Height      int    `json:"height,omitempty"`      // For image: height
+	Enabled     bool   `json:"enabled"`               // Whether this item is active
+	TargetDate  string `json:"targetDate,omitempty"`  // For countdown: ISO date string (e.g., "2024-12-25")
+	TargetLabel string `json:"targetLabel,omitempty"` // For countdown: event label (e.g., "Christmas")
+	QRData      string `json:"qrData,omitempty"`      // For qr: text/URL to encode as QR code
 }
 
 type WeatherResponse struct {

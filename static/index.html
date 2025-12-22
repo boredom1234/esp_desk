@@ -147,6 +147,8 @@
                   <option value="text">💬 Text</option>
                   <option value="image">🖼 Image</option>
                   <option value="pomodoro">🍅 Pomodoro</option>
+                  <option value="countdown">⏳ Countdown</option>
+                  <option value="qr">📱 QR Code</option>
                 </select>
                 <button
                   class="btn btn-secondary btn-sm"
@@ -197,6 +199,59 @@
                     onclick="setNewItemStyle('framed')"
                   >
                     Framed
+                  </button>
+                </div>
+              </div>
+
+              <!-- Countdown Config Panel -->
+              <div
+                class="countdown-item-config"
+                id="countdownItemConfig"
+                style="display: none"
+              >
+                <div class="input-with-action">
+                  <input
+                    type="text"
+                    id="countdownLabel"
+                    placeholder="Event name (e.g., New Year)..."
+                    maxlength="20"
+                  />
+                  <input type="date" id="countdownDate" />
+                  <button
+                    class="btn btn-primary btn-sm"
+                    onclick="confirmAddCountdown()"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+
+              <!-- QR Code Config Panel -->
+              <div
+                class="qr-item-config"
+                id="qrItemConfig"
+                style="display: none"
+              >
+                <div class="input-group">
+                  <textarea
+                    id="qrDataInput"
+                    placeholder="Enter URL, text, WiFi config..."
+                    rows="2"
+                    maxlength="300"
+                  ></textarea>
+                </div>
+                <div class="action-row">
+                  <button
+                    class="btn btn-secondary btn-sm"
+                    onclick="displayQRNow()"
+                  >
+                    Display Now
+                  </button>
+                  <button
+                    class="btn btn-primary btn-sm"
+                    onclick="confirmAddQR()"
+                  >
+                    Save to Cycle
                   </button>
                 </div>
               </div>
@@ -917,6 +972,7 @@
     <script src="js/auth.js"></script>
     <script src="js/texthelper.js"></script>
     <script src="js/pomodoro.js"></script>
+    <script src="js/qrcode.js"></script>
     <script src="js/app.js"></script>
 
     <script>
