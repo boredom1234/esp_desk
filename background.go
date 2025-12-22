@@ -337,6 +337,11 @@ func updateLoop() {
 							frames = append(frames, qrFrame)
 						}
 					}
+
+				case "bcd":
+					// BCD (Binary-Coded Decimal) clock display
+					bcdFrame := generateBCDFrame(duration)
+					frames = append(frames, bcdFrame)
 				}
 			}
 

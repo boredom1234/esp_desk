@@ -48,7 +48,7 @@ type Settings struct {
 }
 
 // CycleItem represents a single item in the display cycle
-// Type can be: "time", "weather", "uptime", "text", "image", "countdown", "qr"
+// Type can be: "time", "weather", "uptime", "text", "image", "countdown", "qr", "bcd"
 type CycleItem struct {
 	ID          string `json:"id"`                    // Unique ID for the item
 	Type        string `json:"type"`                  // "time", "weather", "uptime", "text", "image", "countdown", "qr"
@@ -122,6 +122,9 @@ type PersistentConfig struct {
 	LedFlashSpeed      int         `json:"ledFlashSpeed"`    // Flash interval ms
 	LedPulseSpeed      int         `json:"ledPulseSpeed"`    // Pulse cycle ms
 	DisplayScale       string      `json:"displayScale"`     // "compact", "normal", "large"
+	// BCD Clock settings
+	BCD24HourMode  bool `json:"bcd24HourMode"`  // true = 24-hour, false = 12-hour
+	BCDShowSeconds bool `json:"bcdShowSeconds"` // true = show seconds, false = hide
 	// Pomodoro settings
 	PomodoroWorkDuration  int  `json:"pomodoroWorkDuration"`  // seconds
 	PomodoroBreakDuration int  `json:"pomodoroBreakDuration"` // seconds

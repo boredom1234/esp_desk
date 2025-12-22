@@ -142,6 +142,7 @@
               <div class="add-row">
                 <select id="addItemType" class="modern-select">
                   <option value="time">🕐 Time</option>
+                  <option value="bcd">🔢 BCD Clock</option>
                   <option value="weather">🌤 Weather</option>
                   <option value="uptime">⏱ Uptime</option>
                   <option value="text">💬 Text</option>
@@ -651,6 +652,41 @@
                   >
                     Large
                   </button>
+                </div>
+              </div>
+
+              <div class="setting-block bcd-settings-block">
+                <label>🔢 BCD Clock</label>
+                <div class="bcd-toggles">
+                  <div class="bcd-toggle-row">
+                    <span>Format</span>
+                    <div class="toggle-group">
+                      <button
+                        class="toggle-opt"
+                        id="bcd12hr"
+                        onclick="setBCDFormat(false)"
+                      >
+                        12hr
+                      </button>
+                      <button
+                        class="toggle-opt active"
+                        id="bcd24hr"
+                        onclick="setBCDFormat(true)"
+                      >
+                        24hr
+                      </button>
+                    </div>
+                  </div>
+                  <div class="bcd-toggle-row">
+                    <span>Seconds</span>
+                    <button
+                      class="toggle-switch active"
+                      id="bcdSecondsToggle"
+                      onclick="toggleBCDSeconds()"
+                    >
+                      <span class="toggle-indicator"></span>
+                    </button>
+                  </div>
                 </div>
               </div>
 

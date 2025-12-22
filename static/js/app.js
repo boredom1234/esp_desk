@@ -54,6 +54,7 @@ function initAfterAuth() {
   loadCurrent();
   loadWeather();
   loadTimezone(); // Issue 13: Load timezone setting
+  loadBCDSettings(); // Load BCD clock settings
   initPomodoro(); // Initialize Pomodoro timer
 
   // Start polling only after auth verified
@@ -110,7 +111,7 @@ function loadCurrentWithChangeDetection() {
         showRefreshIndicator();
       }
     })
-    .catch(() => { });
+    .catch(() => {});
 }
 
 // Visual indicator when new data is received
@@ -158,7 +159,7 @@ const saveGifFpsDebounced = debounce((fps) => {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ gifFps: fps }),
-  }).catch(() => { });
+  }).catch(() => {});
 }, 300);
 
 function updateGifFps(value) {
@@ -179,7 +180,7 @@ function resetGifFps() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ gifFps: 0 }),
-  }).catch(() => { });
+  }).catch(() => {});
 }
 
 // ==========================================
@@ -196,7 +197,7 @@ function loadTimezone() {
         }
       }
     })
-    .catch(() => { });
+    .catch(() => {});
 }
 
 function updateTimezone() {

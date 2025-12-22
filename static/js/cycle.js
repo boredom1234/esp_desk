@@ -88,6 +88,7 @@ function renderCycleItems(items, updateLocalState = true) {
 function getTypeIcon(type) {
   const icons = {
     time: "🕐",
+    bcd: "🔢",
     weather: "🌤",
     uptime: "⏱",
     text: "💬",
@@ -181,6 +182,7 @@ function addCycleItem() {
 
   const labelMap = {
     time: "🕐 Time",
+    bcd: "🔢 BCD Clock",
     weather: "🌤 Weather",
     uptime: "⏱ Uptime",
     image: "🖼 Image",

@@ -332,6 +332,9 @@ func loadConfig() {
 		pomodoroSettings.CyclesUntilLong = config.PomodoroCyclesUntil
 	}
 	pomodoroSettings.ShowInCycle = config.PomodoroShowInCycle
+	// BCD Clock settings
+	bcd24HourMode = config.BCD24HourMode
+	bcdShowSeconds = config.BCDShowSeconds
 	mutex.Unlock()
 
 	log.Println("Loaded settings from config.json")
@@ -365,6 +368,8 @@ func saveConfig() {
 		PomodoroLongBreak:     pomodoroSettings.LongBreak,
 		PomodoroCyclesUntil:   pomodoroSettings.CyclesUntilLong,
 		PomodoroShowInCycle:   pomodoroSettings.ShowInCycle,
+		BCD24HourMode:         bcd24HourMode,
+		BCDShowSeconds:        bcdShowSeconds,
 	}
 	mutex.Unlock()
 
@@ -475,13 +480,15 @@ func handleReset(w http.ResponseWriter, r *http.Request) {
 	gifFps = 0
 	cycleItems = []CycleItem{
 		{ID: "time-1", Type: "time", Label: "🕐 Time", Enabled: true, Duration: 3000},
+		{ID: "bcd-1", Type: "bcd", Label: "🔢 BCD Clock", Enabled: true, Duration: 3000},
 		{ID: "weather-1", Type: "weather", Label: "🌤 Weather", Enabled: true, Duration: 3000},
-		{ID: "uptime-1", Type: "uptime", Label: "⏱ Uptime", Enabled: true, Duration: 3000},
 	}
 	cycleItemCounter = 3
-	currentCity = "Kolkata"
-	cityLat = 22.57
-	cityLng = 88.36
+	bcd24HourMode = true
+	bcdShowSeconds = true
+	currentCity = "Bangalore"
+	cityLat = 12.96
+	cityLng = 77.57
 	index = 0
 	mutex.Unlock()
 
@@ -492,4 +499,72 @@ func handleReset(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "reset_complete"})
+}
+
+// ==========================================
+// BCD CLOCK SETTINGS
+// ==========================================
+
+// handleBCDSettings handles BCD clock configuration get/set
+func handleBCDSettings(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == http.MethodGet {
+		mutex.Lock()
+		response := map[string]interface{}{
+			"bcd24HourMode":  bcd24HourMode,
+			"bcdShowSeconds": bcdShowSeconds,
+		}
+		mutex.Unlock()
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		var req struct {
+			BCD24HourMode  *bool `json:"bcd24HourMode,omitempty"`
+			BCDShowSeconds *bool `json:"bcdShowSeconds,omitempty"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			jsonError(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		mutex.Lock()
+		var changes []string
+		if req.BCD24HourMode != nil {
+			bcd24HourMode = *req.BCD24HourMode
+			if bcd24HourMode {
+				changes = append(changes, "format=24hr")
+			} else {
+				changes = append(changes, "format=12hr")
+			}
+		}
+		if req.BCDShowSeconds != nil {
+			bcdShowSeconds = *req.BCDShowSeconds
+			if bcdShowSeconds {
+				changes = append(changes, "seconds=visible")
+			} else {
+				changes = append(changes, "seconds=hidden")
+			}
+		}
+		response := map[string]interface{}{
+			"bcd24HourMode":  bcd24HourMode,
+			"bcdShowSeconds": bcdShowSeconds,
+			"status":         "updated",
+		}
+		mutex.Unlock()
+
+		// Persist settings
+		go saveConfig()
+
+		if len(changes) > 0 {
+			log.Printf("🔢 BCD Clock settings updated: %s", strings.Join(changes, ", "))
+		}
+
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 }

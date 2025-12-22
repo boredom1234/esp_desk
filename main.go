@@ -109,6 +109,7 @@ func main() {
 	http.HandleFunc("/api/settings/timezone", loggingMiddleware(authMiddleware(handleTimezone)))
 	http.HandleFunc("/api/pomodoro", loggingMiddleware(authMiddleware(handlePomodoro)))
 	http.HandleFunc("/api/qrcode", loggingMiddleware(authMiddleware(handleQRCode)))
+	http.HandleFunc("/api/settings/bcd", loggingMiddleware(authMiddleware(handleBCDSettings)))
 
 	port := os.Getenv("PORT")
 	if port == "" {

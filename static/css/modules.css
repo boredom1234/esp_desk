@@ -76,6 +76,28 @@
   width: 70px;
 }
 
+/* BCD Clock Settings */
+.bcd-settings-block {
+  margin-top: 0.5rem;
+}
+
+.bcd-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.bcd-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bcd-toggle-row span {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
 /* Info Box */
 .setting-info {
   padding: 0.875rem 1rem;

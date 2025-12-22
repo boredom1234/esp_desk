@@ -18,13 +18,13 @@ var (
 	startTime          time.Time
 	isCustomMode       bool   = false
 	isGifMode          bool   = false // True when playing multi-frame GIF animation
-	showHeaders        bool   = true
+	showHeaders        bool   = false
 	autoPlay           bool   = true
 	frameDuration      int    = 200
 	espRefreshDuration int    = 3000      // Duration ESP32 waits before fetching next frame (ms)
 	gifFps             int    = 0         // 0 = use original timing, 5-30 = override FPS
 	displayRotation    int    = 0         // 0 = normal, 2 = 180 degrees (for upside-down mounting)
-	ledBrightness      int    = 50        // 0-100 percentage for RGB LED beacon
+	ledBrightness      int    = 100       // 0-100 percentage for RGB LED beacon
 	ledBeaconEnabled   bool   = true      // Enable/disable satellite beacon pulse
 	ledEffectMode      string = "auto"    // "auto", "static", "flash", "pulse", "rainbow"
 	ledCustomColor     string = "#0064FF" // Hex color for static/flash/pulse modes
@@ -32,18 +32,22 @@ var (
 	ledPulseSpeed      int    = 1000      // Breathing cycle duration in ms (500-3000)
 	displayScale       string = "normal"  // "compact", "normal", "large" - global display scale
 
+	// BCD Clock settings
+	bcd24HourMode  bool = true // true = 24-hour format, false = 12-hour format
+	bcdShowSeconds bool = true // true = show seconds (6 columns), false = hide (4 columns)
+
 	// Display cycle items - flexible list of what to display
 	cycleItems = []CycleItem{
 		{ID: "time-1", Type: "time", Label: "🕐 Time", Enabled: true, Duration: 3000},
+		{ID: "bcd-1", Type: "bcd", Label: "🔢 BCD Clock", Enabled: true, Duration: 3000},
 		{ID: "weather-1", Type: "weather", Label: "🌤 Weather", Enabled: true, Duration: 3000},
-		{ID: "uptime-1", Type: "uptime", Label: "⏱ Uptime", Enabled: true, Duration: 3000},
 	}
 	cycleItemCounter = 3 // For generating unique IDs
 
 	// Weather state
-	currentCity string  = "Kolkata"
-	cityLat     float64 = 22.57
-	cityLng     float64 = 88.36
+	currentCity string  = "Bangalore"
+	cityLat     float64 = 12.96
+	cityLng     float64 = 77.57
 	weatherData WeatherData
 
 	// Authentication state

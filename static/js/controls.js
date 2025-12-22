@@ -212,3 +212,76 @@ function updateDisplayScaleUI(scale) {
     label.textContent = labels[scale] || "Normal";
   }
 }
+
+// ===== BCD Clock Controls =====
+let bcd24HourMode = true;
+let bcdShowSeconds = true;
+
+function setBCDFormat(is24Hour) {
+  bcd24HourMode = is24Hour;
+  updateBCDFormatUI(is24Hour);
+
+  // Save to backend API
+  authFetch("/api/settings/bcd", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ bcd24HourMode: is24Hour }),
+  }).catch((err) => {
+    if (err.message !== "Unauthorized") {
+      console.error("setBCDFormat error:", err);
+    }
+  });
+
+  console.log("🔢 BCD Format:", is24Hour ? "24hr" : "12hr");
+}
+
+function toggleBCDSeconds() {
+  bcdShowSeconds = !bcdShowSeconds;
+  updateBCDSecondsUI(bcdShowSeconds);
+
+  // Save to backend API
+  authFetch("/api/settings/bcd", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ bcdShowSeconds: bcdShowSeconds }),
+  }).catch((err) => {
+    if (err.message !== "Unauthorized") {
+      console.error("toggleBCDSeconds error:", err);
+    }
+  });
+
+  console.log("🔢 BCD Seconds:", bcdShowSeconds ? "visible" : "hidden");
+}
+
+function updateBCDFormatUI(is24Hour) {
+  bcd24HourMode = is24Hour;
+  const btn12hr = document.getElementById("bcd12hr");
+  const btn24hr = document.getElementById("bcd24hr");
+  if (btn12hr) btn12hr.classList.toggle("active", !is24Hour);
+  if (btn24hr) btn24hr.classList.toggle("active", is24Hour);
+}
+
+function updateBCDSecondsUI(showSeconds) {
+  bcdShowSeconds = showSeconds;
+  const toggle = document.getElementById("bcdSecondsToggle");
+  if (toggle) toggle.classList.toggle("active", showSeconds);
+}
+
+function updateBCDSettingsUI(is24Hour, showSeconds) {
+  updateBCDFormatUI(is24Hour);
+  updateBCDSecondsUI(showSeconds);
+}
+
+// Load BCD settings from server (called on page load)
+function loadBCDSettings() {
+  authFetch("/api/settings/bcd")
+    .then((res) => res.json())
+    .then((data) => {
+      updateBCDSettingsUI(data.bcd24HourMode, data.bcdShowSeconds);
+    })
+    .catch((err) => {
+      if (err.message !== "Unauthorized") {
+        console.error("loadBCDSettings error:", err);
+      }
+    });
+}
