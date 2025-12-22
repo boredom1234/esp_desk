@@ -8,7 +8,19 @@ let ledFlashSpeed = 500;
 let ledPulseSpeed = 1000;
 
 // Debounced version for slider inputs
-const saveLedSettingsDebounced = debounce(() => {
+// Check if debounce exists (from utils.js), otherwise use simple timeout
+const safeDebounce =
+  typeof debounce === "function"
+    ? debounce
+    : (func, wait) => {
+        let timeout;
+        return function (...args) {
+          clearTimeout(timeout);
+          timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+      };
+
+const saveLedSettingsDebounced = safeDebounce(() => {
   saveLedSettings();
 }, 300);
 
@@ -106,12 +118,12 @@ async function saveLedSettings() {
         ledPulseSpeed: ledPulseSpeed,
       }),
     });
-    //(
+    /* console.log(
       "🎨 LED settings saved:",
       ledEffectMode,
       ledCustomColor,
       ledFlashSpeed + "ms"
-    );
+    ); */
   } catch (err) {
     console.error("Failed to save LED settings:", err);
   }
