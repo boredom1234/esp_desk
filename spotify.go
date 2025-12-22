@@ -126,8 +126,9 @@ func handleSpotifyAuth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build the callback URL dynamically
+	// Check X-Forwarded-Proto for reverse proxy environments (Render, Heroku, etc.)
 	scheme := "http"
-	if r.TLS != nil {
+	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
 		scheme = "https"
 	}
 	redirectURI := fmt.Sprintf("%s://%s%s", scheme, r.Host, spotifyCallbackURL)
@@ -158,8 +159,9 @@ func handleSpotifyCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build the callback URL dynamically
+	// Check X-Forwarded-Proto for reverse proxy environments (Render, Heroku, etc.)
 	scheme := "http"
-	if r.TLS != nil {
+	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
 		scheme = "https"
 	}
 	redirectURI := fmt.Sprintf("%s://%s%s", scheme, r.Host, spotifyCallbackURL)
