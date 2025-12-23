@@ -358,6 +358,16 @@ func loadConfig() {
 			spotifyEnabled = true
 		}
 	}
+	// Moon phase cached data
+	if config.MoonPhaseData.PhaseName != "" {
+		moonPhaseData = config.MoonPhaseData
+		// Parse the fetched time to check if cache is still valid
+		if fetchedAt, err := time.Parse(time.RFC3339, config.MoonPhaseData.FetchedAt); err == nil {
+			moonPhaseLastFetch = fetchedAt
+			log.Printf("Loaded cached moon phase: %s (%.0f%% illuminated)",
+				moonPhaseData.PhaseName, moonPhaseData.Illumination*100)
+		}
+	}
 	mutex.Unlock()
 
 	log.Println("Loaded settings from config.json")
@@ -398,6 +408,7 @@ func saveConfig() {
 		SpotifyClientID:       spotifyCredentials.ClientID,
 		SpotifyClientSecret:   spotifyCredentials.ClientSecret,
 		SpotifyRefreshToken:   spotifyCredentials.RefreshToken,
+		MoonPhaseData:         moonPhaseData,
 	}
 	mutex.Unlock()
 

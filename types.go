@@ -101,6 +101,16 @@ type WeatherData struct {
 	PM10        string `json:"pm10"`     // PM10 concentration
 }
 
+// MoonPhaseData stores cached moon phase information from Astronomy API
+type MoonPhaseData struct {
+	PhaseName     string  `json:"phaseName"`     // "Waxing Crescent", "Full Moon", etc.
+	PhaseAngle    float64 `json:"phaseAngle"`    // Phase angle in degrees
+	Illumination  float64 `json:"illumination"`  // 0.0-1.0 fraction
+	Constellation string  `json:"constellation"` // "Capricornus", "Aquarius", etc.
+	DistanceKM    string  `json:"distanceKm"`    // Distance from Earth in km
+	FetchedAt     string  `json:"fetchedAt"`     // ISO timestamp of last fetch
+}
+
 // PersistentConfig stores settings that survive server restarts (Issue 2)
 type PersistentConfig struct {
 	ShowHeaders        bool        `json:"showHeaders"`
@@ -138,6 +148,8 @@ type PersistentConfig struct {
 	SpotifyClientID     string `json:"spotifyClientId"`
 	SpotifyClientSecret string `json:"spotifyClientSecret"`
 	SpotifyRefreshToken string `json:"spotifyRefreshToken"`
+	// Moon phase cached data (from Astronomy API)
+	MoonPhaseData MoonPhaseData `json:"moonPhaseData"`
 }
 
 // LoginAttempt tracks rate limiting for auth (Issue 9)

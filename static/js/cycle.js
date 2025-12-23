@@ -98,6 +98,7 @@ function getTypeIcon(type) {
     pomodoro: "🍅",
     countdown: "⏳",
     qr: "📱",
+    moonphase: "🌙",
   };
   return icons[type] || "📋";
 }
@@ -193,6 +194,7 @@ function addCycleItem() {
     pomodoro: "🍅 Pomodoro",
     countdown: "⏳ Countdown",
     qr: "📱 QR Code",
+    moonphase: "🌙 Moon Phase",
   };
 
   const newItem = {

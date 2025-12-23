@@ -352,6 +352,11 @@ func updateLoop() {
 					// Spotify now playing display
 					spotifyFrame := generateSpotifyFrame(duration)
 					frames = append(frames, spotifyFrame)
+
+				case "moonphase":
+					// Moon phase display
+					moonFrame := generateMoonPhaseFrame(duration)
+					frames = append(frames, moonFrame)
 				}
 			}
 

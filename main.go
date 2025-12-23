@@ -79,6 +79,10 @@ func main() {
 	// Start Spotify background poller
 	startSpotifyPoller()
 
+	// Initialize and start moon phase fetcher
+	initMoonPhase()
+	startMoonPhaseFetcher()
+
 	frames = []Frame{{Duration: 1000, Clear: true, Elements: []Element{{Type: "text", X: 20, Y: 25, Size: 2, Value: "BOOTING..."}}}}
 
 	go updateLoop()
@@ -117,6 +121,7 @@ func main() {
 	http.HandleFunc("/api/settings/spotify", loggingMiddleware(authMiddleware(handleSpotifySettings)))
 	http.HandleFunc("/api/spotify/auth", loggingMiddleware(authMiddleware(handleSpotifyAuth)))
 	http.HandleFunc("/api/spotify/callback", loggingMiddleware(handleSpotifyCallback)) // No auth - OAuth callback
+	http.HandleFunc("/api/moonphase/refresh", loggingMiddleware(authMiddleware(handleMoonPhaseRefresh)))
 
 	port := os.Getenv("PORT")
 	if port == "" {

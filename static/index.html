@@ -152,6 +152,7 @@
                   <option value="pomodoro">🍅 Pomodoro</option>
                   <option value="countdown">⏳ Countdown</option>
                   <option value="qr">📱 QR Code</option>
+                  <option value="moonphase">🌙 Moon Phase</option>
                 </select>
                 <button
                   class="btn btn-secondary btn-sm"
@@ -977,6 +978,48 @@
                           value="500"
                           oninput="updateLedSpeed(this.value)"
                         />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Moon Phase Section -->
+              <div class="accordion-item" data-section="moonphase">
+                <button
+                  class="accordion-header"
+                  onclick="toggleAccordion('moonphase')"
+                >
+                  <span class="accordion-title">
+                    <span class="icon">🌙</span> Moon Phase
+                  </span>
+                  <span class="accordion-chevron">▼</span>
+                </button>
+                <div class="accordion-content">
+                  <div class="accordion-body">
+                    <div class="setting-row">
+                      <div class="label-group">
+                        <span>Current Phase</span>
+                        <small id="moonPhaseStatus">Loading...</small>
+                      </div>
+                      <button
+                        class="btn btn-secondary btn-sm"
+                        onclick="refreshMoonPhase()"
+                        id="moonRefreshBtn"
+                      >
+                        🔄 Refresh
+                      </button>
+                    </div>
+                    <div class="setting-row">
+                      <div class="label-group">
+                        <span>Constellation</span>
+                        <small id="moonConstellation">--</small>
+                      </div>
+                    </div>
+                    <div class="setting-row">
+                      <div class="label-group">
+                        <span>Data Source</span>
+                        <small id="moonDataSource">Calculated</small>
                       </div>
                     </div>
                   </div>

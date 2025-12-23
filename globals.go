@@ -55,6 +55,11 @@ var (
 	cityLng     float64 = 77.57
 	weatherData WeatherData
 
+	// Moon phase state (cached from Astronomy API)
+	moonPhaseData      MoonPhaseData
+	moonPhaseLastFetch time.Time
+	moonPhaseAPIKey    string // Loaded from ASTRONOMY_API_KEY env var
+
 	// Authentication state
 	dashboardPassword     string                       // Password from env (plain text)
 	dashboardPasswordHash string                       // Hashed password for secure comparison (Issue 5)

@@ -218,7 +218,7 @@ function resetSystem() {
       document.getElementById("imageUpload").value = "";
 
       // Reset city selector to default
-      document.getElementById("citySelect").value = "22.57,88.36,Kolkata";
+      document.getElementById("citySelect").value = "12.97,80.27,Bangalore";
 
       // Reload all state
       loadSettings();
@@ -245,4 +245,49 @@ function processAndUploadImage() {
   }
 
   uploadFile(fileInput.files[0]);
+}
+
+// ==========================================
+// Moon Phase Functions
+// ==========================================
+
+function refreshMoonPhase() {
+  const btn = document.getElementById("moonRefreshBtn");
+  const statusEl = document.getElementById("moonPhaseStatus");
+  const constEl = document.getElementById("moonConstellation");
+  const sourceEl = document.getElementById("moonDataSource");
+
+  // Disable button and show loading
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "⏳ Fetching...";
+  }
+  if (statusEl) statusEl.textContent = "Fetching from API...";
+
+  authFetch("/api/moonphase/refresh", { method: "POST" })
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.success) {
+        const illum = Math.round((data.illumination || 0) * 100);
+        if (statusEl) statusEl.textContent = `${data.phaseName} (${illum}%)`;
+        if (constEl) constEl.textContent = data.constellation || "--";
+        if (sourceEl) sourceEl.textContent = "✅ Astronomy API";
+      } else {
+        if (statusEl) statusEl.textContent = data.phaseName || "Error";
+        if (constEl) constEl.textContent = "--";
+        if (sourceEl) sourceEl.textContent = `⚠️ ${data.source || "Fallback"}`;
+        console.warn("Moon phase refresh failed:", data.error);
+      }
+    })
+    .catch((err) => {
+      if (statusEl) statusEl.textContent = "Error fetching";
+      if (sourceEl) sourceEl.textContent = "❌ Failed";
+      console.error("Moon phase refresh error:", err);
+    })
+    .finally(() => {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "🔄 Refresh";
+      }
+    });
 }
