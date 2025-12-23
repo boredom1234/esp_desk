@@ -441,9 +441,9 @@ func generateMoonPhaseFrame(duration int) Frame {
 	// Generate bitmap
 	bitmap, width, height := generateMoonBitmap(data.Illumination, data.PhaseName)
 
-	// Calculate positions
+	// Calculate positions - adjusted for 128x64 display
 	bitmapX := (128 - width) / 2
-	bitmapY := 2
+	bitmapY := 0 // Start at top
 
 	// Format illumination percentage
 	illuminationPct := int(data.Illumination * 100)
@@ -460,21 +460,10 @@ func generateMoonPhaseFrame(duration int) Frame {
 		elements = append(elements, Element{
 			Type:  "text",
 			X:     calcCenteredX(displayStr, 1),
-			Y:     52,
+			Y:     50,
 			Size:  1,
 			Value: displayStr,
 		})
-		// Constellation if available (small text)
-		if data.Constellation != "" {
-			constStr := "in " + data.Constellation
-			elements = append(elements, Element{
-				Type:  "text",
-				X:     calcCenteredX(constStr, 1),
-				Y:     60,
-				Size:  1,
-				Value: constStr,
-			})
-		}
 	}
 	// When headers are off, show only the moon bitmap (no text)
 

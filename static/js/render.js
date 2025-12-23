@@ -16,10 +16,6 @@ function drawFrame(frame) {
       let size = el.size || 1;
       let value = el.value || "";
 
-      // OLED displays ~10 characters per line at size 1
-      // Text automatically wraps on the actual OLED
-      const CHARS_PER_LINE = 10;
-
       if (size === 1) {
         ctx.font = "10px 'JetBrains Mono', monospace";
       } else if (size === 2) {
@@ -29,25 +25,7 @@ function drawFrame(frame) {
       }
 
       ctx.textBaseline = "top";
-
-      // Split text into lines if it exceeds character limit
-      // This mimics how the actual OLED display wraps text
-      const lines = [];
-      let currentLine = "";
-
-      for (let i = 0; i < value.length; i++) {
-        currentLine += value[i];
-        if (currentLine.length >= CHARS_PER_LINE || i === value.length - 1) {
-          lines.push(currentLine);
-          currentLine = "";
-        }
-      }
-
-      // Draw each line with proper vertical spacing
-      const lineHeight = size * 8 + 2; // Approximate line height
-      lines.forEach((line, index) => {
-        ctx.fillText(line, x, y + index * lineHeight);
-      });
+      ctx.fillText(value, x, y);
     } else if (el.type === "bitmap") {
       const x = el.x || 0;
       const y = el.y || 0;
