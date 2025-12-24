@@ -366,10 +366,12 @@ func getCurrentlyPlayingAsync() (*SpotifyTrack, error) {
 	}
 
 	// Get first artist name
-	artistName := ""
-	if len(playerResp.Item.Artists) > 0 {
-		artistName = playerResp.Item.Artists[0].Name
+	// Get all artist names
+	var artistNames []string
+	for _, artist := range playerResp.Item.Artists {
+		artistNames = append(artistNames, artist.Name)
 	}
+	artistName := strings.Join(artistNames, ", ")
 
 	return &SpotifyTrack{
 		Name:        playerResp.Item.Name,
@@ -446,7 +448,7 @@ func generateSpotifyFrame(duration int) Frame {
 
 	// Song name - with scrolling if too long
 	songY := iconY + 2
-	songName := track.Name
+	songName := normalizeText(track.Name)
 	songRunes := []rune(songName)
 	if len(songRunes) > maxChars {
 		// Create scrolling window with wrap-around padding
@@ -476,7 +478,7 @@ func generateSpotifyFrame(duration int) Frame {
 
 	// Artist name - below song, with scrolling if too long
 	artistY := songY + 10
-	artistName := track.Artist
+	artistName := normalizeText(track.Artist)
 	artistRunes := []rune(artistName)
 	if len(artistRunes) > maxChars {
 		// Create scrolling window
@@ -601,4 +603,28 @@ func handleSpotifySettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+}
+
+// normalizeText replaces accented characters with ASCII equivalents
+func normalizeText(s string) string {
+	replacements := map[string]string{
+		"Á": "A", "À": "A", "Â": "A", "Ã": "A", "Ä": "A",
+		"á": "a", "à": "a", "â": "a", "ã": "a", "ä": "a",
+		"É": "E", "È": "E", "Ê": "E", "Ë": "E",
+		"é": "e", "è": "e", "ê": "e", "ë": "e",
+		"Í": "I", "Ì": "I", "Î": "I", "Ï": "I",
+		"í": "i", "ì": "i", "î": "i", "ï": "i",
+		"Ó": "O", "Ò": "O", "Ô": "O", "Õ": "O", "Ö": "O",
+		"ó": "o", "ò": "o", "ô": "o", "õ": "o", "ö": "o",
+		"Ú": "U", "Ù": "U", "Û": "U", "Ü": "U",
+		"ú": "u", "ù": "u", "û": "u", "ü": "u",
+		"Ñ": "N", "ñ": "n", "Ç": "C", "ç": "c",
+		"Ý": "Y", "ý": "y", "ÿ": "y",
+		// Add more as needed
+	}
+
+	for old, new := range replacements {
+		s = strings.ReplaceAll(s, old, new)
+	}
+	return s
 }
