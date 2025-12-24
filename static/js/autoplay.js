@@ -1,6 +1,6 @@
-// ==========================================
-// ESP DESK_OS - Auto-Play Controls
-// ==========================================
+
+
+
 
 function toggleAutoPlay() {
   if (autoPlayEnabled) {
@@ -41,7 +41,7 @@ function updateAutoPlayButton() {
   }
 }
 
-// Debounced API call for speed setting
+
 const saveSpeedDebounced = debounce((speed) => {
   authFetch("/api/settings", {
     method: "POST",
@@ -59,9 +59,9 @@ function updateSpeed(value) {
   document.getElementById("speedValue").textContent = `${frameSpeed}ms`;
 
   if (autoPlayEnabled) {
-    startAutoPlay(); // Restart with new speed
+    startAutoPlay(); 
   }
 
-  // Debounced API call
+  
   saveSpeedDebounced(frameSpeed);
 }

@@ -1,8 +1,8 @@
-// ==========================================
-// ESP DESK_OS - QR Code Management
-// ==========================================
 
-// Display QR immediately (bypass cycle)
+
+
+
+
 async function displayQRNow() {
   const data = document.getElementById("qrDataInput").value.trim();
   if (!data) {
@@ -18,8 +18,8 @@ async function displayQRNow() {
     });
 
     if (response.ok) {
-      //("QR code displayed on ESP32");
-      // Optionally hide the config panel
+      
+      
       document.getElementById("qrItemConfig").style.display = "none";
       document.getElementById("qrDataInput").value = "";
     } else {
@@ -34,7 +34,7 @@ async function displayQRNow() {
   }
 }
 
-// Save QR to display cycle
+
 function confirmAddQR() {
   const data = document.getElementById("qrDataInput").value.trim();
   if (!data) {
@@ -51,19 +51,19 @@ function confirmAddQR() {
     label: "📱 QR Code",
     qrData: data,
     enabled: true,
-    duration: 5000, // Longer duration for scanning
+    duration: 5000, 
   };
 
   cycleItems.push(newItem);
   saveCycleItems();
   renderCycleItems(cycleItems);
 
-  // Reset and hide config
+  
   document.getElementById("qrDataInput").value = "";
   document.getElementById("qrItemConfig").style.display = "none";
 }
 
-// Add countdown to display cycle
+
 function confirmAddCountdown() {
   const label = document.getElementById("countdownLabel").value.trim();
   const date = document.getElementById("countdownDate").value;
@@ -94,7 +94,7 @@ function confirmAddCountdown() {
   saveCycleItems();
   renderCycleItems(cycleItems);
 
-  // Reset and hide config
+  
   document.getElementById("countdownLabel").value = "";
   document.getElementById("countdownDate").value = "";
   document.getElementById("countdownItemConfig").style.display = "none";

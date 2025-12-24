@@ -7,16 +7,16 @@ import (
 	"time"
 )
 
-// ==========================================
-// POMODORO TIMER HANDLER
-// ==========================================
 
-// handlePomodoro manages the Pomodoro timer state and settings
+
+
+
+
 func handlePomodoro(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == http.MethodGet {
-		// Return current Pomodoro state and settings
+		
 		mutex.Lock()
 		response := map[string]interface{}{
 			"session":  pomodoroSession,
@@ -29,7 +29,7 @@ func handlePomodoro(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		var req struct {
-			Action string `json:"action"` // "start", "pause", "resume", "reset", "skip"
+			Action string `json:"action"` 
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			jsonError(w, "Invalid request body", http.StatusBadRequest)
@@ -69,7 +69,7 @@ func handlePomodoro(w http.ResponseWriter, r *http.Request) {
 			log.Printf("🍅 Pomodoro reset")
 
 		case "skip":
-			// Skip to next phase
+			
 			if pomodoroSession.Mode == "work" {
 				pomodoroSession.CyclesCompleted++
 				if pomodoroSession.CyclesCompleted >= pomodoroSettings.CyclesUntilLong {
@@ -106,7 +106,7 @@ func handlePomodoro(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodPut {
-		// Update Pomodoro settings
+		
 		var req struct {
 			WorkDuration    *int  `json:"workDuration"`
 			BreakDuration   *int  `json:"breakDuration"`
@@ -136,7 +136,7 @@ func handlePomodoro(w http.ResponseWriter, r *http.Request) {
 			pomodoroSettings.ShowInCycle = *req.ShowInCycle
 		}
 
-		// Update session time if not active
+		
 		if !pomodoroSession.Active {
 			pomodoroSession.TimeRemaining = pomodoroSettings.WorkDuration
 		}

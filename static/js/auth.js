@@ -1,15 +1,15 @@
-// ==========================================
-// ESP DESK_OS - Authentication
-// ==========================================
 
-// Storage key for auth token
+
+
+
+
 const AUTH_TOKEN_KEY = "esp_desk_auth_token";
 
-// Restore token from localStorage on load
-let authToken = localStorage.getItem(AUTH_TOKEN_KEY);
-let authRequired = false; // Global flag to indicate if auth is enabled on the server
 
-// Check authentication status on page load
+let authToken = localStorage.getItem(AUTH_TOKEN_KEY);
+let authRequired = false; 
+
+
 async function checkAuth() {
   try {
     const res = await fetch("/api/auth/verify", {
@@ -20,48 +20,48 @@ async function checkAuth() {
     authRequired = data.authRequired;
 
     if (!data.authRequired) {
-      // Auth not enabled on server, show dashboard directly
+      
       showDashboard();
-      initAfterAuth(); // Initialize app after auth verified
+      initAfterAuth(); 
       return;
     }
 
     if (data.authenticated) {
       showDashboard();
-      initAfterAuth(); // Initialize app after auth verified
+      initAfterAuth(); 
     } else {
-      // Token invalid, clear it
+      
       authToken = null;
       localStorage.removeItem(AUTH_TOKEN_KEY);
       showLogin();
     }
   } catch (err) {
     console.error("Auth check failed:", err);
-    // On error, try to show dashboard (might work if no auth)
+    
     showDashboard();
     initAfterAuth();
   }
 }
 
-// Show login overlay
+
 function showLogin() {
   document.getElementById("loginOverlay").style.display = "flex";
   document.getElementById("mainContainer").classList.add("blur");
   document.getElementById("loginPassword").focus();
 }
 
-// Show dashboard (hide login)
+
 function showDashboard() {
   document.getElementById("loginOverlay").style.display = "none";
   document.getElementById("mainContainer").classList.remove("blur");
 
-  // Show logout button if auth is enabled
+  
   if (authRequired) {
     document.getElementById("logoutBtn").style.display = "block";
   }
 }
 
-// Handle login form submission
+
 async function handleLogin(event) {
   event.preventDefault();
 
@@ -69,11 +69,11 @@ async function handleLogin(event) {
   const loginBtn = document.getElementById("loginBtn");
   const errorDiv = document.getElementById("loginError");
 
-  // Clear previous error
+  
   errorDiv.textContent = "";
   errorDiv.style.display = "none";
 
-  // Show loading state
+  
   loginBtn.disabled = true;
   loginBtn.textContent = "Authenticating...";
 
@@ -88,9 +88,9 @@ async function handleLogin(event) {
 
     if (data.success) {
       authToken = data.token;
-      localStorage.setItem(AUTH_TOKEN_KEY, authToken); // Persist token
+      localStorage.setItem(AUTH_TOKEN_KEY, authToken); 
       showDashboard();
-      initAfterAuth(); // Initialize app after login
+      initAfterAuth(); 
     } else {
       errorDiv.textContent = data.error || "Invalid password";
       errorDiv.style.display = "block";
@@ -107,7 +107,7 @@ async function handleLogin(event) {
   }
 }
 
-// Handle logout
+
 async function handleLogout() {
   try {
     await fetch("/api/auth/logout", {
@@ -119,18 +119,18 @@ async function handleLogout() {
   }
 
   authToken = null;
-  localStorage.removeItem(AUTH_TOKEN_KEY); // Clear persisted token
+  localStorage.removeItem(AUTH_TOKEN_KEY); 
   showLogin();
 }
 
-// Add auth header to fetch requests
+
 function authFetch(url, options = {}) {
   if (authToken) {
     options.headers = options.headers || {};
     options.headers["Authorization"] = `Bearer ${authToken}`;
   }
   return fetch(url, options).then((res) => {
-    // If we get 401, show login
+    
     if (res.status === 401 && authRequired) {
       showLogin();
       throw new Error("Unauthorized");

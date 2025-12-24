@@ -7,12 +7,12 @@ import (
 	"net/http"
 )
 
-// ==========================================
-// WEATHER HANDLERS
-// ==========================================
+
+
+
 
 func getWeatherIcon(code int, isDay bool) string {
-	// WMO Weather interpretation codes
+	
 	switch {
 	case code == 0:
 		if isDay {
@@ -75,7 +75,7 @@ func getWeatherCondition(code int) string {
 	}
 }
 
-// getAQILevel returns a human-readable AQI level based on US AQI scale
+
 func getAQILevel(aqi int) string {
 	switch {
 	case aqi <= 50:
@@ -94,14 +94,14 @@ func getAQILevel(aqi int) string {
 }
 
 func fetchWeather() {
-	// Read coordinates with mutex to avoid race conditions
+	
 	mutex.Lock()
 	lat := cityLat
 	lng := cityLng
 	city := currentCity
 	mutex.Unlock()
 
-	// Fetch weather data from Open-Meteo
+	
 	weatherURL := fmt.Sprintf("https://api.open-meteo.com/v1/forecast?latitude=%.2f&longitude=%.2f&current_weather=true", lat, lng)
 	weatherResp, err := http.Get(weatherURL)
 	if err != nil {
@@ -130,7 +130,7 @@ func fetchWeather() {
 		PM10:        "N/A",
 	}
 
-	// Fetch air quality data from Open-Meteo Air Quality API
+	
 	aqiURL := fmt.Sprintf("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=%.2f&longitude=%.2f&current=pm2_5,pm10,european_aqi,us_aqi,european_aqi_pm2_5,european_aqi_pm10", lat, lng)
 	aqiResp, err := http.Get(aqiURL)
 	if err != nil {
@@ -149,7 +149,7 @@ func fetchWeather() {
 		}
 	}
 
-	// Write weather data with mutex protection
+	
 	mutex.Lock()
 	weatherData = newData
 	mutex.Unlock()
@@ -177,7 +177,7 @@ func handleWeather(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Validate coordinates (Issue 7)
+		
 		if req.Latitude < -90 || req.Latitude > 90 {
 			jsonError(w, "Invalid latitude: must be between -90 and 90", http.StatusBadRequest)
 			return
@@ -197,10 +197,10 @@ func handleWeather(w http.ResponseWriter, r *http.Request) {
 		cityLng = req.Longitude
 		mutex.Unlock()
 
-		// Persist settings (Issue 2)
+		
 		go saveConfig()
 
-		// Fetch weather for new location
+		
 		fetchWeather()
 
 		log.Printf("🌤️  Weather city changed: %s (%.2f, %.2f)", req.City, req.Latitude, req.Longitude)

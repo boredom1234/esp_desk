@@ -1,8 +1,6 @@
-/* ============================================
-   MODULES
-   ============================================ */
+ 
 
-/* Settings List */
+ 
 .settings-list {
   display: flex;
   flex-direction: column;
@@ -65,7 +63,7 @@
   width: 80px;
 }
 
-/* Beacon Controls */
+ 
 .beacon-controls {
   display: flex;
   align-items: center;
@@ -76,7 +74,7 @@
   width: 70px;
 }
 
-/* BCD Clock Settings */
+ 
 .bcd-settings-block {
   margin-top: 0.5rem;
 }
@@ -98,7 +96,7 @@
   color: var(--text-secondary);
 }
 
-/* Analog Clock Settings */
+ 
 .analog-settings-block {
   margin-top: 0.5rem;
 }
@@ -120,7 +118,7 @@
   color: var(--text-secondary);
 }
 
-/* Spotify Settings */
+ 
 .spotify-actions {
   display: flex;
   gap: 0.5rem;
@@ -163,7 +161,7 @@
   text-decoration: underline;
 }
 
-/* Info Box */
+ 
 .setting-info {
   padding: 0.875rem 1rem;
   background: linear-gradient(
@@ -178,7 +176,7 @@
   margin-top: 0.5rem;
 }
 
-/* Danger Zone */
+ 
 .danger-zone {
   padding: 0.75rem;
   background: linear-gradient(
@@ -191,7 +189,7 @@
   margin-top: 0.5rem;
 }
 
-/* Env Notice */
+ 
 .env-notice {
   padding: 0.75rem;
   background: rgba(34, 197, 94, 0.1);
@@ -204,7 +202,7 @@
   text-align: center;
 }
 
-/* Upload Drop Zone */
+ 
 .drop-zone {
   display: flex;
   flex-direction: column;
@@ -285,7 +283,7 @@
   color: var(--text-muted);
 }
 
-/* Upload Preview */
+ 
 .upload-preview {
   display: flex;
   align-items: center;
@@ -351,7 +349,7 @@
   margin: 0.75rem 0;
 }
 
-/* Upload Status */
+ 
 #uploadStatus.uploading {
   background: linear-gradient(
     135deg,
@@ -393,7 +391,7 @@
   }
 }
 
-/* Pomodoro Display */
+ 
 .pomodoro-display {
   text-align: center;
   padding: 1.5rem 1rem;
@@ -409,7 +407,7 @@
   overflow: hidden;
 }
 
-/* Subtle glow effect */
+ 
 .pomodoro-display::before {
   content: "";
   position: absolute;
@@ -472,7 +470,7 @@
   gap: 0.625rem;
 }
 
-/* Login Overlay */
+ 
 .login-overlay {
   display: none;
   position: fixed;
@@ -485,7 +483,7 @@
   padding: 1.5rem;
 }
 
-/* Background gradient effect */
+ 
 .login-overlay::before {
   content: "";
   position: absolute;
@@ -521,7 +519,7 @@
   overflow: hidden;
 }
 
-/* Top glow line */
+ 
 .login-card::before {
   content: "";
   position: absolute;
@@ -638,11 +636,9 @@
   box-shadow: 0 6px 25px var(--primary-glow);
 }
 
-/* ============================================
-   RESPONSIVE DESIGN
-   ============================================ */
+ 
 
-/* Large tablet / small desktop */
+ 
 @media (max-width: 1024px) {
   .grid-layout {
     grid-template-columns: 1fr 340px;
@@ -650,7 +646,7 @@
   }
 }
 
-/* Tablet breakpoint */
+ 
 @media (max-width: 900px) {
   .grid-layout {
     grid-template-columns: 1fr;
@@ -677,7 +673,7 @@
   }
 }
 
-/* Mobile breakpoint */
+ 
 @media (max-width: 640px) {
   .container {
     padding: 0.75rem;
@@ -708,7 +704,7 @@
     border-radius: var(--radius-md);
   }
 
-  /* Accordion responsive styles */
+   
   .accordion-header {
     padding: 0.75rem;
   }
@@ -923,7 +919,7 @@
   }
 }
 
-/* Extra small devices */
+ 
 @media (max-width: 400px) {
   .container {
     padding: 0.5rem;
@@ -960,7 +956,7 @@
   }
 }
 
-/* Touch device optimizations */
+ 
 @media (hover: none) and (pointer: coarse) {
   .card:hover,
   .cycle-item:hover,
@@ -998,7 +994,7 @@
   }
 }
 
-/* Reduced motion preference */
+ 
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

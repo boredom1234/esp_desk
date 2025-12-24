@@ -1,6 +1,4 @@
-/* ============================================
-   BODY & SCROLLBAR
-   ============================================ */
+ 
 body {
   background-color: var(--bg-dark);
   color: var(--text-main);
@@ -11,7 +9,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
   overflow-x: hidden;
-  /* Subtle background gradient for depth */
+   
   background-image: radial-gradient(
       ellipse 80% 50% at 50% -20%,
       rgba(59, 130, 246, 0.08) 0%,
@@ -24,7 +22,7 @@ body {
     );
 }
 
-/* Custom Scrollbar */
+ 
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -43,7 +41,7 @@ body {
   background: var(--text-dim);
 }
 
-/* Typography */
+ 
 h1,
 h2,
 h3,
@@ -66,7 +64,7 @@ a:hover {
   color: var(--primary-hover);
 }
 
-/* Container blur state */
+ 
 .container.blur {
   filter: blur(8px);
   pointer-events: none;

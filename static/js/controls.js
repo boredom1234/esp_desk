@@ -1,7 +1,7 @@
-// ==========================================
-// ESP DESK_OS - UI Controls
-// ==========================================
-// Issue 1: All protected API calls now use authFetch()
+
+
+
+
 
 function selectStyle(style) {
   textStyle = style;
@@ -26,7 +26,7 @@ function setMarqueeSize(size) {
 }
 
 function toggleHeaders() {
-  // Issue 1: Use authFetch for protected endpoint
+  
   authFetch("/api/settings/toggle-headers", { method: "POST" })
     .then((res) => res.json())
     .then((data) => {
@@ -40,7 +40,7 @@ function toggleHeaders() {
     });
 }
 
-// Debounced API call for ESP refresh
+
 const saveEspRefreshDebounced = debounce((duration) => {
   authFetch("/api/settings", {
     method: "POST",
@@ -59,7 +59,7 @@ function updateEspRefresh(value) {
     espRefreshDuration / 1000
   ).toFixed(1)}s`;
 
-  // Debounced API call
+  
   saveEspRefreshDebounced(espRefreshDuration);
 }
 
@@ -68,15 +68,15 @@ function updateHeadersToggle(isOn) {
   toggle.classList.toggle("active", isOn);
 }
 
-// Display rotation toggle (0 = normal, 2 = 180 degrees)
+
 let displayRotation = 0;
 
 function toggleRotation() {
-  // Toggle between 0 and 2
+  
   displayRotation = displayRotation === 0 ? 2 : 0;
   updateRotationToggle(displayRotation === 2);
 
-  // Save to server
+  
   authFetch("/api/settings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -95,8 +95,8 @@ function updateRotationToggle(isOn) {
   }
 }
 
-// ===== LED Beacon Controls =====
-// Settings synced with backend and sent to ESP32 on every frame poll
+
+
 
 let ledBeaconEnabled = true;
 let ledBrightness = 50;
@@ -108,14 +108,14 @@ function toggleBeacon() {
     toggle.classList.toggle("active", ledBeaconEnabled);
   }
 
-  // Update slider visibility when beacon is disabled
+  
   const slider = document.getElementById("ledBrightnessSlider");
   if (slider) {
     slider.disabled = !ledBeaconEnabled;
     slider.style.opacity = ledBeaconEnabled ? "1" : "0.4";
   }
 
-  // Save to backend API
+  
   authFetch("/api/settings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -126,10 +126,10 @@ function toggleBeacon() {
     }
   });
 
-  //("🛰️ LED Beacon:", ledBeaconEnabled ? "ON" : "OFF");
+  
 }
 
-// Debounced API call for LED brightness
+
 const saveLedBrightnessDebounced = debounce((brightness) => {
   authFetch("/api/settings", {
     method: "POST",
@@ -140,7 +140,7 @@ const saveLedBrightnessDebounced = debounce((brightness) => {
       console.error("updateLedBrightness error:", err);
     }
   });
-  //("🛰️ LED Brightness:", brightness + "%");
+  
 }, 300);
 
 function updateLedBrightness(value) {
@@ -149,11 +149,11 @@ function updateLedBrightness(value) {
     "ledBrightnessValue"
   ).textContent = `${ledBrightness}%`;
 
-  // Debounced API call
+  
   saveLedBrightnessDebounced(ledBrightness);
 }
 
-// Update beacon UI from settings (called by loadSettings in api.js)
+
 function updateBeaconUI(brightness, enabled) {
   ledBrightness = brightness;
   ledBeaconEnabled = enabled;
@@ -171,7 +171,7 @@ function updateBeaconUI(brightness, enabled) {
   if (valueDisplay) valueDisplay.textContent = `${ledBrightness}%`;
 }
 
-// ===== Display Scale Controls =====
+
 let currentDisplayScale = "normal";
 
 function setDisplayScale(scale) {
@@ -181,7 +181,7 @@ function setDisplayScale(scale) {
   currentDisplayScale = scale;
   updateDisplayScaleUI(scale);
 
-  // Save to backend API
+  
   authFetch("/api/settings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -192,20 +192,20 @@ function setDisplayScale(scale) {
     }
   });
 
-  //("📐 Display Scale:", scale);
+  
 }
 
 function updateDisplayScaleUI(scale) {
   currentDisplayScale = scale;
 
-  // Update button states
+  
   document
     .querySelectorAll("#displayScaleButtons .scale-btn")
     .forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.scale === scale);
     });
 
-  // Update label
+  
   const label = document.getElementById("displayScaleValue");
   if (label) {
     const labels = { compact: "Compact", normal: "Normal", large: "Large" };
@@ -213,7 +213,7 @@ function updateDisplayScaleUI(scale) {
   }
 }
 
-// ===== BCD Clock Controls =====
+
 let bcd24HourMode = true;
 let bcdShowSeconds = true;
 
@@ -221,7 +221,7 @@ function setBCDFormat(is24Hour) {
   bcd24HourMode = is24Hour;
   updateBCDFormatUI(is24Hour);
 
-  // Save to backend API
+  
   authFetch("/api/settings/bcd", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -232,14 +232,14 @@ function setBCDFormat(is24Hour) {
     }
   });
 
-  //("🔢 BCD Format:", is24Hour ? "24hr" : "12hr");
+  
 }
 
 function toggleBCDSeconds() {
   bcdShowSeconds = !bcdShowSeconds;
   updateBCDSecondsUI(bcdShowSeconds);
 
-  // Save to backend API
+  
   authFetch("/api/settings/bcd", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -250,7 +250,7 @@ function toggleBCDSeconds() {
     }
   });
 
-  //("🔢 BCD Seconds:", bcdShowSeconds ? "visible" : "hidden");
+  
 }
 
 function updateBCDFormatUI(is24Hour) {
@@ -272,7 +272,7 @@ function updateBCDSettingsUI(is24Hour, showSeconds) {
   updateBCDSecondsUI(showSeconds);
 }
 
-// Load BCD settings from server (called on page load)
+
 function loadBCDSettings() {
   authFetch("/api/settings/bcd")
     .then((res) => res.json())
@@ -286,7 +286,7 @@ function loadBCDSettings() {
     });
 }
 
-// ===== Analog Clock Controls =====
+
 let analogShowSeconds = false;
 let analogShowRoman = false;
 
@@ -294,7 +294,7 @@ function toggleAnalogSeconds() {
   analogShowSeconds = !analogShowSeconds;
   updateAnalogSecondsUI(analogShowSeconds);
 
-  // Save to backend API
+  
   authFetch("/api/settings/analog", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -310,7 +310,7 @@ function toggleAnalogRoman() {
   analogShowRoman = !analogShowRoman;
   updateAnalogRomanUI(analogShowRoman);
 
-  // Save to backend API
+  
   authFetch("/api/settings/analog", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -339,7 +339,7 @@ function updateAnalogSettingsUI(showSeconds, showRoman) {
   updateAnalogRomanUI(showRoman);
 }
 
-// Load Analog settings from server (called on page load)
+
 function loadAnalogSettings() {
   authFetch("/api/settings/analog")
     .then((res) => res.json())

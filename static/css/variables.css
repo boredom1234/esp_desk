@@ -1,15 +1,12 @@
-/* ============================================
-   VARIABLES & THEME CONFIGURATION
-   Clean, Modern Dark Theme with Subtle Gradients
-   ============================================ */
+ 
 :root {
-  /* Core Palette - Clean Dark */
+   
   --bg-dark: #0c0c0f;
   --bg-panel: #151518;
   --bg-element: #1e1e24;
   --bg-elevated: #2a2a32;
 
-  /* Primary Brand Colors */
+   
   --primary: #3b82f6;
   --primary-hover: #60a5fa;
   --primary-glow: rgba(59, 130, 246, 0.25);
@@ -17,25 +14,25 @@
   --accent: #8b5cf6;
   --accent-glow: rgba(139, 92, 246, 0.2);
 
-  /* Functional Colors */
+   
   --success: #22c55e;
   --success-glow: rgba(34, 197, 94, 0.2);
   --warning: #f59e0b;
   --danger: #ef4444;
   --info: #0ea5e9;
 
-  /* Text Colors */
+   
   --text-main: #fafafa;
   --text-secondary: #a1a1aa;
   --text-muted: #71717a;
   --text-dim: #52525b;
 
-  /* UI Elements */
+   
   --border: rgba(255, 255, 255, 0.06);
   --border-hover: rgba(255, 255, 255, 0.12);
   --divider: rgba(255, 255, 255, 0.04);
 
-  /* Gradients */
+   
   --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
   --gradient-accent: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   --gradient-surface: linear-gradient(
@@ -54,14 +51,14 @@
     rgba(0, 0, 0, 0.4) 100%
   );
 
-  /* Shadows */
+   
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
   --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.15);
   --shadow-glow-accent: 0 0 25px rgba(139, 92, 246, 0.12);
 
-  /* Spacing & Sizing */
+   
   --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -69,20 +66,18 @@
   --radius-xl: 20px;
   --radius-full: 9999px;
 
-  /* Fonts */
+   
   --font-main: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", "Consolas", monospace;
 
-  /* Transitions */
+   
   --transition-fast: 0.15s ease;
   --transition-normal: 0.2s ease;
   --transition-slow: 0.3s ease;
 }
 
-/* ============================================
-   RESET & BASE STYLES
-   ============================================ */
+ 
 *,
 *::before,
 *::after {

@@ -6,9 +6,9 @@ import (
 	"net/http"
 )
 
-// ==========================================
-// CUSTOM CONTENT HANDLERS
-// ==========================================
+
+
+
 
 func handleCustomText(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -21,8 +21,8 @@ func handleCustomText(w http.ResponseWriter, r *http.Request) {
 		X        int    `json:"x"`
 		Y        int    `json:"y"`
 		Size     int    `json:"size"`
-		Style    string `json:"style"`    // Legacy: "normal", "centered", "framed"
-		Centered bool   `json:"centered"` // New: combined style flags
+		Style    string `json:"style"`    
+		Centered bool   `json:"centered"` 
 		Framed   bool   `json:"framed"`
 		Large    bool   `json:"large"`
 		Inverted bool   `json:"inverted"`
@@ -33,7 +33,7 @@ func handleCustomText(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Legacy style support - convert to new flags
+	
 	switch req.Style {
 	case "centered":
 		req.Centered = true
@@ -41,17 +41,17 @@ func handleCustomText(w http.ResponseWriter, r *http.Request) {
 		req.Framed = true
 	}
 
-	// Defaults
+	
 	size := 2
 	if req.Large {
 		size = 2
 	} else if req.Size > 0 {
 		size = req.Size
 	} else {
-		size = 1 // Default to normal size unless Large is checked
+		size = 1 
 	}
 
-	// If Large is checked, always use size 2
+	
 	if req.Large {
 		size = 2
 	}
@@ -65,66 +65,66 @@ func handleCustomText(w http.ResponseWriter, r *http.Request) {
 
 	var elements []Element
 
-	// Calculate text position
+	
 	charCount := len([]rune(req.Text))
 	textWidth := charCount*5*size + (charCount-1)*size
 	if charCount <= 0 {
 		textWidth = 0
 	}
 
-	// Default position
+	
 	x := req.X
 	y := req.Y
 
-	// Frame insets (if framed, text must be inside the border)
+	
 	frameInset := 0
 	if req.Framed {
-		frameInset = 4 // Pixels inside the frame
+		frameInset = 4 
 	}
 
-	// Calculate Y position (centered vertically based on size)
+	
 	if y == 0 {
 		lineHeight := 7 * size
 		if req.Framed {
-			// Center within frame area (between y=4 and y=59)
+			
 			y = (64 - lineHeight) / 2
 		} else {
 			y = (64 - lineHeight) / 2
 		}
 	}
 
-	// Calculate X position
+	
 	if req.Centered {
 		availableWidth := 128
 		if req.Framed {
-			availableWidth = 128 - (frameInset * 2) // Account for frame borders
+			availableWidth = 128 - (frameInset * 2) 
 		}
 		x = (availableWidth - textWidth) / 2
 		if req.Framed {
-			x += frameInset // Offset by frame inset
+			x += frameInset 
 		}
 		if x < frameInset {
 			x = frameInset
 		}
 	} else if x == 0 {
-		x = frameInset + 2 // Small padding from left
+		x = frameInset + 2 
 	}
 
-	// Add frame elements first if framed
+	
 	if req.Framed {
 		elements = append(elements,
-			// Top border line
+			
 			Element{Type: "line", X: 0, Y: 0, Width: 128, Height: 1},
-			// Bottom border line
+			
 			Element{Type: "line", X: 0, Y: 63, Width: 128, Height: 1},
-			// Left border
+			
 			Element{Type: "line", X: 0, Y: 0, Width: 1, Height: 64},
-			// Right border
+			
 			Element{Type: "line", X: 127, Y: 0, Width: 1, Height: 64},
 		)
 	}
 
-	// Add text element
+	
 	elements = append(elements, Element{
 		Type:  "text",
 		X:     x,
@@ -133,11 +133,11 @@ func handleCustomText(w http.ResponseWriter, r *http.Request) {
 		Value: req.Text,
 	})
 
-	// Handle inverted mode (swap foreground/background)
-	// For inverted, we'll use a bitmap approach
+	
+	
 	var finalFrames []Frame
 	if req.Inverted {
-		// Convert to bitmap and invert pixels
+		
 		textFrame := Frame{
 			Version:  1,
 			Duration: req.Duration,
@@ -145,7 +145,7 @@ func handleCustomText(w http.ResponseWriter, r *http.Request) {
 			Elements: elements,
 		}
 		bitmapFrame := convertFrameToBitmap(textFrame)
-		// Invert the bitmap
+		
 		for i, el := range bitmapFrame.Elements {
 			if el.Type == "bitmap" {
 				for j := range el.Bitmap {
@@ -180,18 +180,18 @@ func handleMarquee(w http.ResponseWriter, r *http.Request) {
 		Text      string `json:"text"`
 		Y         int    `json:"y"`
 		Size      int    `json:"size"`
-		Speed     int    `json:"speed"`     // pixels per frame
-		Direction string `json:"direction"` // "left" or "right"
-		Loops     int    `json:"loops"`     // number of complete scrolls
-		MaxFrames int    `json:"maxFrames"` // max frames for ESP32 memory
-		Framed    bool   `json:"framed"`    // Static frame around scrolling area
+		Speed     int    `json:"speed"`     
+		Direction string `json:"direction"` 
+		Loops     int    `json:"loops"`     
+		MaxFrames int    `json:"maxFrames"` 
+		Framed    bool   `json:"framed"`    
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		jsonError(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Defaults
+	
 	if req.Size == 0 {
 		req.Size = 2
 	}
@@ -208,12 +208,12 @@ func handleMarquee(w http.ResponseWriter, r *http.Request) {
 		req.Loops = 2
 	}
 
-	// Calculate text width (approximate: 6 pixels per char at size 1)
+	
 	charWidth := req.Size * 6
 	textWidth := len(req.Text) * charWidth
-	totalDistance := 128 + textWidth // Full scroll distance
+	totalDistance := 128 + textWidth 
 
-	// Generate all frame positions first
+	
 	var allPositions []int
 	for loop := 0; loop < req.Loops; loop++ {
 		for offset := 0; offset < totalDistance; offset += req.Speed {
@@ -227,10 +227,10 @@ func handleMarquee(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Use user-specified max frames, with sensible bounds (2-20)
+	
 	maxMarqueeFrames := req.MaxFrames
 	if maxMarqueeFrames < 2 {
-		maxMarqueeFrames = 5 // default
+		maxMarqueeFrames = 5 
 	}
 	if maxMarqueeFrames > 20 {
 		maxMarqueeFrames = 20
@@ -241,7 +241,7 @@ func handleMarquee(w http.ResponseWriter, r *http.Request) {
 	if totalPositions <= maxMarqueeFrames {
 		selectedPositions = allPositions
 	} else {
-		// Sample frames evenly across the animation
+		
 		step := float64(totalPositions) / float64(maxMarqueeFrames)
 		for i := 0; i < maxMarqueeFrames; i++ {
 			idx := int(float64(i) * step)
@@ -253,39 +253,39 @@ func handleMarquee(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Marquee: sampling %d positions down to %d frames", totalPositions, maxMarqueeFrames)
 	}
 
-	// Generate frames for selected positions
+	
 	var marqueeFrames []Frame
-	frameTime := 50 // ms per frame
+	frameTime := 50 
 
-	// Adjust frame time to maintain approximate total animation duration
+	
 	if totalPositions > maxMarqueeFrames {
 		frameTime = (totalPositions * 50) / len(selectedPositions)
 	}
 
 	for _, x := range selectedPositions {
-		// Build frame elements
+		
 		var frameElements []Element
 
-		// Add static frame border if requested
+		
 		if req.Framed {
 			frameElements = append(frameElements,
-				// Top border line
+				
 				Element{Type: "line", X: 0, Y: 0, Width: 128, Height: 1},
-				// Bottom border line
+				
 				Element{Type: "line", X: 0, Y: 63, Width: 128, Height: 1},
-				// Left border
+				
 				Element{Type: "line", X: 0, Y: 0, Width: 1, Height: 64},
-				// Right border
+				
 				Element{Type: "line", X: 127, Y: 0, Width: 1, Height: 64},
 			)
 		}
 
-		// Add scrolling text
+		
 		frameElements = append(frameElements,
 			Element{Type: "text", X: x, Y: req.Y, Size: req.Size, Value: req.Text},
 		)
 
-		// Create text frame
+		
 		textFrame := Frame{
 			Version:  1,
 			Duration: frameTime,
@@ -293,14 +293,14 @@ func handleMarquee(w http.ResponseWriter, r *http.Request) {
 			Elements: frameElements,
 		}
 
-		// Convert text frame to bitmap frame for ESP32 local playback
+		
 		bitmapFrame := convertFrameToBitmap(textFrame)
 		marqueeFrames = append(marqueeFrames, bitmapFrame)
 	}
 
 	mutex.Lock()
 	isCustomMode = true
-	isGifMode = true // Treat marquee as GIF for local ESP32 playback
+	isGifMode = true 
 	frames = marqueeFrames
 	index = 0
 	mutex.Unlock()

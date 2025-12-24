@@ -1,6 +1,6 @@
-// ==========================================
-// ESP DESK_OS - Pomodoro Timer Module
-// ==========================================
+
+
+
 
 let pomodoroSession = {
   active: false,
@@ -19,21 +19,21 @@ let pomodoroSettings = {
 };
 
 let pomodoroPollingInterval = null;
-let pomodoroSlidersEditing = false; // Track if user is editing sliders
-let pomodoroLastSliderChange = 0; // Timestamp of last slider change
-const POMODORO_EDIT_GRACE_PERIOD = 3000; // 3 seconds grace period after editing
+let pomodoroSlidersEditing = false; 
+let pomodoroLastSliderChange = 0; 
+const POMODORO_EDIT_GRACE_PERIOD = 3000; 
 
-// ==========================================
-// Initialize Pomodoro
-// ==========================================
+
+
+
 
 function initPomodoro() {
   loadPomodoroState();
-  // Start polling for state updates
+  
   if (pomodoroPollingInterval) clearInterval(pomodoroPollingInterval);
   pomodoroPollingInterval = setInterval(loadPomodoroState, 1000);
 
-  // Set up slider interaction tracking
+  
   setupSliderTracking();
 }
 
@@ -72,9 +72,9 @@ function setupSliderTracking() {
   });
 }
 
-// ==========================================
-// API Functions
-// ==========================================
+
+
+
 
 function loadPomodoroState() {
   authFetch("/api/pomodoro")
@@ -145,7 +145,7 @@ function savePomodoroSettings() {
         pomodoroSession = data.session;
       }
       renderPomodoroUI();
-      //("🍅 Pomodoro settings saved");
+      
     })
     .catch((err) => {
       if (err.message !== "Unauthorized") {
@@ -154,9 +154,9 @@ function savePomodoroSettings() {
     });
 }
 
-// ==========================================
-// Timer Controls
-// ==========================================
+
+
+
 
 function startPomodoro() {
   pomodoroAction("start");
@@ -182,12 +182,12 @@ function togglePomodoroInCycle() {
   savePomodoroSettings();
 }
 
-// ==========================================
-// UI Rendering
-// ==========================================
+
+
+
 
 function renderPomodoroUI() {
-  // Update timer display
+  
   const minutes = Math.floor(pomodoroSession.timeRemaining / 60);
   const seconds = pomodoroSession.timeRemaining % 60;
   const timeStr = `${String(minutes).padStart(2, "0")}:${String(
@@ -197,7 +197,7 @@ function renderPomodoroUI() {
   const timeEl = document.getElementById("pomodoroTime");
   if (timeEl) timeEl.textContent = timeStr;
 
-  // Update mode display
+  
   const modeEl = document.getElementById("pomodoroMode");
   if (modeEl) {
     let modeText = "READY";
@@ -226,13 +226,13 @@ function renderPomodoroUI() {
     modeEl.textContent = modeText;
   }
 
-  // Update cycles display
+  
   const cyclesEl = document.getElementById("pomodoroCycles");
   if (cyclesEl) {
     cyclesEl.textContent = `Cycle ${pomodoroSession.cyclesCompleted}/${pomodoroSettings.cyclesUntilLong}`;
   }
 
-  // Update start/pause button
+  
   const startBtn = document.getElementById("pomodoroStartBtn");
   if (startBtn) {
     if (!pomodoroSession.active) {
@@ -250,16 +250,16 @@ function renderPomodoroUI() {
     }
   }
 
-  // Update settings sliders to reflect current values
+  
   updateSettingsUI();
 }
 
 function updateSettingsUI() {
-  // Skip slider updates if user is actively editing or within grace period
+  
   const isWithinGracePeriod =
     Date.now() - pomodoroLastSliderChange < POMODORO_EDIT_GRACE_PERIOD;
   if (pomodoroSlidersEditing || isWithinGracePeriod) {
-    // Only update the checkbox, not the sliders
+    
     const showInCycleEl = document.getElementById("pomodoroInCycle");
     if (showInCycleEl) {
       showInCycleEl.checked = pomodoroSettings.showInCycle;
@@ -311,9 +311,9 @@ function updateDurationDisplay(type, value) {
   }
 }
 
-// ==========================================
-// Cleanup
-// ==========================================
+
+
+
 
 function cleanupPomodoro() {
   if (pomodoroPollingInterval) {

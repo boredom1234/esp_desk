@@ -1,13 +1,11 @@
-/* ============================================
-   LAYOUT SYSTEM
-   ============================================ */
+ 
 .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 1.5rem;
 }
 
-/* Header */
+ 
 .header {
   display: flex;
   justify-content: space-between;
@@ -26,7 +24,7 @@
   overflow: hidden;
 }
 
-/* Header glow accent */
+ 
 .header::before {
   content: "";
   position: absolute;
@@ -74,7 +72,7 @@
   gap: 0.75rem;
 }
 
-/* Status Pill */
+ 
 .status-pill {
   display: flex;
   align-items: center;
@@ -109,7 +107,7 @@
   }
 }
 
-/* Grid Layout */
+ 
 .grid-layout {
   display: grid;
   grid-template-columns: 1fr 380px;
@@ -124,7 +122,7 @@
   gap: 1.5rem;
 }
 
-/* Icon Button */
+ 
 .btn-icon {
   display: flex;
   align-items: center;

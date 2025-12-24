@@ -5,9 +5,9 @@ import (
 	"time"
 )
 
-// ==========================================
-// GLOBAL STATE
-// ==========================================
+
+
+
 
 const configFile = "config.json"
 
@@ -17,77 +17,77 @@ var (
 	mutex              sync.Mutex
 	startTime          time.Time
 	isCustomMode       bool   = false
-	isGifMode          bool   = false // True when playing multi-frame GIF animation
+	isGifMode          bool   = false 
 	showHeaders        bool   = false
 	autoPlay           bool   = true
 	frameDuration      int    = 200
-	espRefreshDuration int    = 3000      // Duration ESP32 waits before fetching next frame (ms)
-	gifFps             int    = 0         // 0 = use original timing, 5-30 = override FPS
-	displayRotation    int    = 0         // 0 = normal, 2 = 180 degrees (for upside-down mounting)
-	ledBrightness      int    = 100       // 0-100 percentage for RGB LED beacon
-	ledBeaconEnabled   bool   = true      // Enable/disable satellite beacon pulse
-	ledEffectMode      string = "auto"    // "auto", "static", "flash", "pulse", "rainbow"
-	ledCustomColor     string = "#0064FF" // Hex color for static/flash/pulse modes
-	ledFlashSpeed      int    = 500       // Flash interval in ms (100-2000)
-	ledPulseSpeed      int    = 1000      // Breathing cycle duration in ms (500-3000)
-	displayScale       string = "normal"  // "compact", "normal", "large" - global display scale
+	espRefreshDuration int    = 3000      
+	gifFps             int    = 0         
+	displayRotation    int    = 0         
+	ledBrightness      int    = 100       
+	ledBeaconEnabled   bool   = true      
+	ledEffectMode      string = "auto"    
+	ledCustomColor     string = "#0064FF" 
+	ledFlashSpeed      int    = 500       
+	ledPulseSpeed      int    = 1000      
+	displayScale       string = "normal"  
 
-	// BCD Clock settings
-	bcd24HourMode  bool = true // true = 24-hour format, false = 12-hour format
-	bcdShowSeconds bool = true // true = show seconds (6 columns), false = hide (4 columns)
+	
+	bcd24HourMode  bool = true 
+	bcdShowSeconds bool = true 
 
-	// Analog Clock settings
-	analogShowSeconds bool = false // Show second hand
-	analogShowRoman   bool = false // Use Roman numerals (12, 3, 6, 9)
+	
+	analogShowSeconds bool = false 
+	analogShowRoman   bool = false 
 
-	// Display cycle items - flexible list of what to display
+	
 	cycleItems = []CycleItem{
 		{ID: "time-1", Type: "time", Label: "🕐 Time", Enabled: true, Duration: 3000},
 		{ID: "bcd-1", Type: "bcd", Label: "🔢 BCD Clock", Enabled: true, Duration: 3000},
 		{ID: "analog-1", Type: "analog", Label: "🧮 Analog Clock", Enabled: true, Duration: 3000},
 		{ID: "weather-1", Type: "weather", Label: "🌤 Weather", Enabled: true, Duration: 3000},
 	}
-	cycleItemCounter = 4 // For generating unique IDs
+	cycleItemCounter = 4 
 
-	// Weather state
+	
 	currentCity string  = "Bangalore"
 	cityLat     float64 = 12.96
 	cityLng     float64 = 77.57
 	weatherData WeatherData
 
-	// Moon phase state (cached from Astronomy API)
+	
 	moonPhaseData      MoonPhaseData
 	moonPhaseLastFetch time.Time
-	moonPhaseAPIKey    string // Loaded from ASTRONOMY_API_KEY env var
+	moonPhaseAPIKey    string 
 
-	// Authentication state
-	dashboardPassword     string                       // Password from env (plain text)
-	dashboardPasswordHash string                       // Hashed password for secure comparison (Issue 5)
-	authTokens            = make(map[string]time.Time) // session token -> expiry time
+	
+	dashboardPassword     string                       
+	dashboardPasswordHash string                       
+	authTokens            = make(map[string]time.Time) 
 	authMutex             sync.RWMutex
-	authEnabled           bool = false // Only enable auth if password is set
+	authEnabled           bool = false 
 
-	// Rate limiting for login attempts (Issue 9)
+	
 	loginAttempts      = make(map[string]*LoginAttempt)
 	loginAttemptsMutex sync.RWMutex
-	maxLoginAttempts   = 5               // Max attempts before lockout
-	loginLockoutTime   = 1 * time.Minute // Lockout duration
+	maxLoginAttempts   = 5               
+	loginLockoutTime   = 1 * time.Minute 
 
-	// Timezone for display (Issue 13: now configurable)
-	timezoneName    string = "Asia/Kolkata" // Default timezone
+	
+	timezoneName    string = "Asia/Kolkata" 
 	displayLocation *time.Location
 
-	// Pomodoro timer state
+	
 	pomodoroSession = PomodoroSession{
 		Active:          false,
 		Mode:            "work",
-		TimeRemaining:   25 * 60, // 25 minutes default
+		TimeRemaining:   25 * 60, 
 		CyclesCompleted: 0,
 	}
 	pomodoroSettings = PomodoroSettings{
-		WorkDuration:    25 * 60, // 25 minutes
-		BreakDuration:   5 * 60,  // 5 minutes
-		LongBreak:       15 * 60, // 15 minutes
+		WorkDuration:    25 * 60, 
+		BreakDuration:   5 * 60,  
+		LongBreak:       15 * 60, 
 		CyclesUntilLong: 4,
 		ShowInCycle:     false,
 	}

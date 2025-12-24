@@ -1,6 +1,6 @@
-// ==========================================
-// ESP DESK_OS - Canvas Rendering
-// ==========================================
+
+
+
 
 function drawFrame(frame) {
   ctx.fillStyle = "#050505";
@@ -70,7 +70,7 @@ function updateModeUI(isCustom) {
     badge.classList.remove("custom-active");
   }
 
-  // Update frame badge
+  
   const frameBadge = document.getElementById("frameBadge");
   frameBadge.textContent = `Frame ${currentIndex + 1}/${frameCount}`;
 }

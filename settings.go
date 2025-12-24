@@ -10,9 +10,9 @@ import (
 	"time"
 )
 
-// ==========================================
-// SETTINGS HANDLERS
-// ==========================================
+
+
+
 
 func handleSettings(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -105,7 +105,7 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			changes = append(changes, fmt.Sprintf("showHeaders=%v", showHeaders))
 		}
 		if req.CycleItems != nil {
-			// Replace entire cycle items list
+			
 			cycleItems = req.CycleItems
 			changes = append(changes, fmt.Sprintf("cycleItems=%d items", len(cycleItems)))
 		}
@@ -130,7 +130,7 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			changes = append(changes, fmt.Sprintf("ledBeaconEnabled=%v", ledBeaconEnabled))
 		}
 		if req.LedEffectMode != nil {
-			// Validate effect mode
+			
 			validModes := map[string]bool{"auto": true, "static": true, "flash": true, "pulse": true, "rainbow": true}
 			if validModes[*req.LedEffectMode] {
 				ledEffectMode = *req.LedEffectMode
@@ -138,7 +138,7 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if req.LedCustomColor != nil {
-			// Basic hex color validation
+			
 			if len(*req.LedCustomColor) == 7 && (*req.LedCustomColor)[0] == '#' {
 				ledCustomColor = *req.LedCustomColor
 				changes = append(changes, fmt.Sprintf("ledCustomColor=%s", ledCustomColor))
@@ -165,7 +165,7 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			changes = append(changes, fmt.Sprintf("ledPulseSpeed=%dms", ledPulseSpeed))
 		}
 		if req.DisplayScale != nil {
-			// Validate scale value
+			
 			validScales := map[string]bool{"compact": true, "normal": true, "large": true}
 			if validScales[*req.DisplayScale] {
 				displayScale = *req.DisplayScale
@@ -192,10 +192,10 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		mutex.Unlock()
 
-		// Persist settings (Issue 2)
+		
 		go saveConfig()
 
-		// Log what was updated
+		
 		if len(changes) > 0 {
 			log.Printf("⚙️  Settings updated: %s", strings.Join(changes, ", "))
 		}
@@ -236,15 +236,15 @@ func handleGetHeadersState(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]bool{"headersVisible": currentState})
 }
 
-// ==========================================
-// PERSISTENCE (Issue 2)
-// ==========================================
 
-// loadConfig loads persistent settings from config.json
+
+
+
+
 func loadConfig() {
 	file, err := os.Open(configFile)
 	if err != nil {
-		// Config file doesn't exist yet, use defaults
+		
 		log.Println("No config.json found, using defaults")
 		return
 	}
@@ -257,7 +257,7 @@ func loadConfig() {
 		return
 	}
 
-	// Apply loaded settings
+	
 	mutex.Lock()
 	showHeaders = config.ShowHeaders
 	autoPlay = config.AutoPlay
@@ -289,12 +289,12 @@ func loadConfig() {
 	if config.DisplayRotation == 0 || config.DisplayRotation == 2 {
 		displayRotation = config.DisplayRotation
 	}
-	// LED beacon settings
+	
 	if config.LedBrightness >= 0 && config.LedBrightness <= 100 {
 		ledBrightness = config.LedBrightness
 	}
 	ledBeaconEnabled = config.LedBeaconEnabled
-	// LED effect settings
+	
 	if config.LedEffectMode != "" {
 		validModes := map[string]bool{"auto": true, "static": true, "flash": true, "pulse": true, "rainbow": true}
 		if validModes[config.LedEffectMode] {
@@ -310,14 +310,14 @@ func loadConfig() {
 	if config.LedPulseSpeed >= 500 && config.LedPulseSpeed <= 3000 {
 		ledPulseSpeed = config.LedPulseSpeed
 	}
-	// Display scale
+	
 	if config.DisplayScale != "" {
 		validScales := map[string]bool{"compact": true, "normal": true, "large": true}
 		if validScales[config.DisplayScale] {
 			displayScale = config.DisplayScale
 		}
 	}
-	// Pomodoro settings
+	
 	if config.PomodoroWorkDuration > 0 {
 		pomodoroSettings.WorkDuration = config.PomodoroWorkDuration
 		pomodoroSession.TimeRemaining = config.PomodoroWorkDuration
@@ -332,13 +332,13 @@ func loadConfig() {
 		pomodoroSettings.CyclesUntilLong = config.PomodoroCyclesUntil
 	}
 	pomodoroSettings.ShowInCycle = config.PomodoroShowInCycle
-	// BCD Clock settings
+	
 	bcd24HourMode = config.BCD24HourMode
 	bcdShowSeconds = config.BCDShowSeconds
-	// Analog Clock settings
+	
 	analogShowSeconds = config.AnalogShowSeconds
 	analogShowRoman = config.AnalogShowRoman
-	// Spotify settings - Check environment variables first (preferred for production)
+	
 	envClientID := os.Getenv("SPOTIFY_CLIENT_ID")
 	envClientSecret := os.Getenv("SPOTIFY_CLIENT_SECRET")
 	if envClientID != "" && envClientSecret != "" {
@@ -347,21 +347,21 @@ func loadConfig() {
 		spotifyCredsFromEnv = true
 		log.Println("Spotify credentials loaded from environment variables")
 	} else if config.SpotifyClientID != "" {
-		// Fall back to config.json
+		
 		spotifyCredentials.ClientID = config.SpotifyClientID
 		spotifyCredentials.ClientSecret = config.SpotifyClientSecret
 	}
-	// Load refresh token from config regardless (this is session-specific)
+	
 	if config.SpotifyRefreshToken != "" {
 		spotifyCredentials.RefreshToken = config.SpotifyRefreshToken
 		if spotifyCredentials.ClientID != "" {
 			spotifyEnabled = true
 		}
 	}
-	// Moon phase cached data
+	
 	if config.MoonPhaseData.PhaseName != "" {
 		moonPhaseData = config.MoonPhaseData
-		// Parse the fetched time to check if cache is still valid
+		
 		if fetchedAt, err := time.Parse(time.RFC3339, config.MoonPhaseData.FetchedAt); err == nil {
 			moonPhaseLastFetch = fetchedAt
 			log.Printf("Loaded cached moon phase: %s (%.0f%% illuminated)",
@@ -373,7 +373,7 @@ func loadConfig() {
 	log.Println("Loaded settings from config.json")
 }
 
-// saveConfig saves persistent settings to config.json (fault-tolerant)
+
 func saveConfig() {
 	mutex.Lock()
 	config := PersistentConfig{
@@ -412,7 +412,7 @@ func saveConfig() {
 	}
 	mutex.Unlock()
 
-	// Write to temp file first, then rename (atomic operation)
+	
 	tempFile := configFile + ".tmp"
 	file, err := os.Create(tempFile)
 	if err != nil {
@@ -430,7 +430,7 @@ func saveConfig() {
 	}
 	file.Close()
 
-	// Atomic rename for fault tolerance
+	
 	if err := os.Rename(tempFile, configFile); err != nil {
 		log.Printf("Error renaming config file: %v", err)
 		os.Remove(tempFile)
@@ -440,17 +440,17 @@ func saveConfig() {
 	log.Println("Settings saved to config.json")
 }
 
-// ==========================================
-// TIMEZONE (Issue 13)
-// ==========================================
 
-// initializeTimezone sets up the display timezone
+
+
+
+
 func initializeTimezone() {
-	// Try to load from configured timezone name
+	
 	var err error
 	displayLocation, err = time.LoadLocation(timezoneName)
 	if err != nil {
-		// Fallback to fixed offset for common timezones
+		
 		log.Printf("Could not load timezone %s, using UTC: %v", timezoneName, err)
 		displayLocation = time.UTC
 	} else {
@@ -458,7 +458,7 @@ func initializeTimezone() {
 	}
 }
 
-// handleTimezone handles timezone get/set
+
 func handleTimezone(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -479,7 +479,7 @@ func handleTimezone(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Validate timezone
+		
 		loc, err := time.LoadLocation(req.Timezone)
 		if err != nil {
 			jsonError(w, "Invalid timezone: "+req.Timezone, http.StatusBadRequest)
@@ -509,7 +509,7 @@ func handleReset(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mutex.Lock()
-	// Reset all state to defaults
+	
 	isCustomMode = false
 	isGifMode = false
 	showHeaders = true
@@ -534,7 +534,7 @@ func handleReset(w http.ResponseWriter, r *http.Request) {
 	index = 0
 	mutex.Unlock()
 
-	// Refresh weather for default city
+	
 	go fetchWeather()
 
 	log.Printf("🔄 System reset to defaults: city=%s, timezone=%s", currentCity, timezoneName)
@@ -543,11 +543,11 @@ func handleReset(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "reset_complete"})
 }
 
-// ==========================================
-// BCD CLOCK SETTINGS
-// ==========================================
 
-// handleBCDSettings handles BCD clock configuration get/set
+
+
+
+
 func handleBCDSettings(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -597,7 +597,7 @@ func handleBCDSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		mutex.Unlock()
 
-		// Persist settings
+		
 		go saveConfig()
 
 		if len(changes) > 0 {
@@ -611,11 +611,11 @@ func handleBCDSettings(w http.ResponseWriter, r *http.Request) {
 	jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
-// ==========================================
-// ANALOG CLOCK SETTINGS
-// ==========================================
 
-// handleAnalogSettings handles Analog clock configuration get/set
+
+
+
+
 func handleAnalogSettings(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -665,7 +665,7 @@ func handleAnalogSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		mutex.Unlock()
 
-		// Persist settings
+		
 		go saveConfig()
 
 		if len(changes) > 0 {

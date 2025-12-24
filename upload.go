@@ -12,12 +12,12 @@ import (
 	"strconv"
 )
 
-// ==========================================
-// GIF FULL DOWNLOAD FOR ESP32 LOCAL PLAYBACK
-// ==========================================
 
-// handleGifFull returns all GIF frames at once for ESP32 to store and play locally
-// This eliminates per-frame API calls during animation playback
+
+
+
+
+
 func handleGifFull(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -29,7 +29,7 @@ func handleGifFull(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-	// If not in GIF mode or no frames, return empty response
+	
 	if !isGifMode || len(frames) == 0 {
 		log.Printf("📡 ESP32 check: isGifMode=false (polling mode)")
 		json.NewEncoder(w).Encode(GifFullResponse{
@@ -47,14 +47,14 @@ func handleGifFull(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Limit frames to match ESP32 MAX_GIF_FRAMES (10 frames max for memory safety)
+	
 	maxFrames := 10
 	framesToSend := make([]Frame, 0, maxFrames)
 
-	// Calculate frame duration based on FPS override
+	
 	fpsOverrideDuration := 0
 	if gifFps > 0 {
-		fpsOverrideDuration = 1000 / gifFps // Convert FPS to ms per frame
+		fpsOverrideDuration = 1000 / gifFps 
 	}
 
 	for i, frame := range frames {
@@ -63,7 +63,7 @@ func handleGifFull(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		// Apply FPS override if set
+		
 		frameCopy := frame
 		if fpsOverrideDuration > 0 {
 			frameCopy.Duration = fpsOverrideDuration
@@ -86,8 +86,8 @@ func handleGifFull(w http.ResponseWriter, r *http.Request) {
 		LedPulseSpeed:    ledPulseSpeed,
 	}
 
-	// Buffer the JSON to calculate precise length
-	// This avoids chunked transfer encoding which confuses ESP32 streaming parser
+	
+	
 	jsonData, err := json.Marshal(resp)
 	if err != nil {
 		log.Printf("Error marshaling GIF JSON: %v", err)
@@ -97,15 +97,15 @@ func handleGifFull(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("📡 Sending GIF payload: %d bytes", len(jsonData))
 
-	// Explicitly set Content-Length so ESP32 knows exactly how much to read
+	
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(jsonData)))
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonData)
 }
 
-// ==========================================
-// IMAGE UPLOAD HANDLER
-// ==========================================
+
+
+
 
 func handleUpload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -143,12 +143,12 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		}
 
 		frames = []Frame{}
-		isGifMode = true // Multi-frame GIF - enable local playback mode
+		isGifMode = true 
 
 		totalFrames := len(g.Image)
 
-		// Parse maxFrames from form data, with sensible bounds (2-20)
-		maxFrames := 10 // default
+		
+		maxFrames := 10 
 		if maxFramesStr := r.FormValue("maxFrames"); maxFramesStr != "" {
 			if parsed, err := strconv.Atoi(maxFramesStr); err == nil {
 				maxFrames = parsed
@@ -162,16 +162,16 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Printf("GIF upload: using maxFrames=%d (user setting)", maxFrames)
 
-		// Calculate which frames to sample if we exceed the limit
+		
 		var frameIndices []int
 		if totalFrames <= maxFrames {
-			// Use all frames
+			
 			for i := 0; i < totalFrames; i++ {
 				frameIndices = append(frameIndices, i)
 			}
 			log.Printf("GIF has %d frames, using all", totalFrames)
 		} else {
-			// Sample frames evenly to fit within limit
+			
 			step := float64(totalFrames) / float64(maxFrames)
 			for i := 0; i < maxFrames; i++ {
 				frameIdx := int(float64(i) * step)
@@ -183,20 +183,20 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 			log.Printf("GIF has %d frames, sampling down to %d frames (step: %.2f)", totalFrames, maxFrames, step)
 		}
 
-		// Calculate total original duration for timing adjustment
+		
 		totalOriginalDuration := 0
 		for _, delay := range g.Delay {
 			totalOriginalDuration += delay * 10
 		}
 
-		// Process selected frames
+		
 		for _, frameIdx := range frameIndices {
 			srcImg := g.Image[frameIdx]
 			bitmap := processImageToBitmap(srcImg, 128, 64)
 
 			var duration int
 			if totalFrames > maxFrames {
-				// Distribute total animation time evenly across sampled frames
+				
 				duration = totalOriginalDuration / len(frameIndices)
 			} else {
 				duration = g.Delay[frameIdx] * 10
@@ -223,7 +223,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		isGifMode = false // Single image - use polling mode
+		isGifMode = false 
 		bitmap := processImageToBitmap(img, 128, 64)
 		frames = []Frame{
 			{
@@ -250,7 +250,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		"autoPlay":   autoPlay,
 	}
 
-	// Include bitmap data for single images (not GIF) so frontend can save to display cycle
+	
 	if format != "gif" && frameCount == 1 {
 		el := frames[0].Elements[0]
 		response["bitmap"] = el.Bitmap

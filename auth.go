@@ -12,27 +12,27 @@ import (
 	"time"
 )
 
-// ==========================================
-// AUTHENTICATION
-// ==========================================
 
-// Generate a secure random token
+
+
+
+
 func generateToken() string {
 	bytes := make([]byte, 32)
 	rand.Read(bytes)
 	return hex.EncodeToString(bytes)
 }
 
-// Hash password with SHA256
+
 func hashPassword(password string) string {
 	hash := sha256.Sum256([]byte(password))
 	return hex.EncodeToString(hash[:])
 }
 
-// Verify session token
+
 func isValidToken(token string) bool {
 	if !authEnabled || token == "" {
-		return !authEnabled // If auth disabled, always valid; if enabled and no token, invalid
+		return !authEnabled 
 	}
 
 	authMutex.RLock()
@@ -44,7 +44,7 @@ func isValidToken(token string) bool {
 	}
 
 	if time.Now().After(expiry) {
-		// Token expired, clean it up
+		
 		authMutex.Lock()
 		delete(authTokens, token)
 		authMutex.Unlock()
@@ -54,10 +54,10 @@ func isValidToken(token string) bool {
 	return true
 }
 
-// Create a new session token
+
 func createSession() string {
 	token := generateToken()
-	expiry := time.Now().Add(24 * time.Hour) // 24 hour session
+	expiry := time.Now().Add(24 * time.Hour) 
 
 	authMutex.Lock()
 	authTokens[token] = expiry
@@ -66,16 +66,16 @@ func createSession() string {
 	return token
 }
 
-// Authentication middleware
+
 func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// If auth not enabled, pass through
+		
 		if !authEnabled {
 			next(w, r)
 			return
 		}
 
-		// Check Authorization header
+		
 		authHeader := r.Header.Get("Authorization")
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 
@@ -84,7 +84,7 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// Check cookie as fallback
+		
 		cookie, err := r.Cookie("esp_desk_token")
 		if err == nil && isValidToken(cookie.Value) {
 			next(w, r)
@@ -95,20 +95,20 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// Handle login request
+
 func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Get client IP for rate limiting (Issue 9)
+	
 	clientIP := r.RemoteAddr
 	if forwardedFor := r.Header.Get("X-Forwarded-For"); forwardedFor != "" {
 		clientIP = strings.Split(forwardedFor, ",")[0]
 	}
 
-	// Check rate limit
+	
 	if checkRateLimit(clientIP) {
 		log.Printf("Rate limited login attempt from %s", clientIP)
 		w.Header().Set("Content-Type", "application/json")
@@ -128,7 +128,7 @@ func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Compare passwords using constant-time comparison (Issue 5)
+	
 	submittedHash := hashPassword(req.Password)
 	if subtle.ConstantTimeCompare([]byte(submittedHash), []byte(dashboardPasswordHash)) != 1 {
 		recordFailedLogin(clientIP)
@@ -142,14 +142,14 @@ func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Clear rate limit on successful login
+	
 	clearLoginAttempts(clientIP)
 
-	// Create session
+	
 	token := createSession()
 	log.Printf("Successful login from %s", clientIP)
 
-	// Set cookie
+	
 	http.SetCookie(w, &http.Cookie{
 		Name:     "esp_desk_token",
 		Value:    token,
@@ -157,7 +157,7 @@ func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   r.TLS != nil,
 		SameSite: http.SameSiteStrictMode,
-		MaxAge:   86400, // 24 hours
+		MaxAge:   86400, 
 	})
 
 	w.Header().Set("Content-Type", "application/json")
@@ -167,11 +167,11 @@ func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Check if user is authenticated
+
 func handleAuthVerify(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// If auth not enabled, always return authenticated
+	
 	if !authEnabled {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"authenticated": true,
@@ -180,7 +180,7 @@ func handleAuthVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check Authorization header
+	
 	authHeader := r.Header.Get("Authorization")
 	token := strings.TrimPrefix(authHeader, "Bearer ")
 
@@ -192,7 +192,7 @@ func handleAuthVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check cookie
+	
 	cookie, err := r.Cookie("esp_desk_token")
 	if err == nil && isValidToken(cookie.Value) {
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -208,14 +208,14 @@ func handleAuthVerify(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Handle logout
+
 func handleAuthLogout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Remove token from storage
+	
 	authHeader := r.Header.Get("Authorization")
 	token := strings.TrimPrefix(authHeader, "Bearer ")
 
@@ -225,7 +225,7 @@ func handleAuthLogout(w http.ResponseWriter, r *http.Request) {
 		authMutex.Unlock()
 	}
 
-	// Also check cookie
+	
 	cookie, err := r.Cookie("esp_desk_token")
 	if err == nil {
 		authMutex.Lock()
@@ -233,7 +233,7 @@ func handleAuthLogout(w http.ResponseWriter, r *http.Request) {
 		authMutex.Unlock()
 	}
 
-	// Clear cookie
+	
 	http.SetCookie(w, &http.Cookie{
 		Name:     "esp_desk_token",
 		Value:    "",
@@ -248,11 +248,11 @@ func handleAuthLogout(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ==========================================
-// TOKEN CLEANUP (Issue 4)
-// ==========================================
 
-// cleanupExpiredTokens removes expired auth tokens periodically
+
+
+
+
 func cleanupExpiredTokens() {
 	ticker := time.NewTicker(1 * time.Hour)
 	for range ticker.C {
@@ -272,11 +272,11 @@ func cleanupExpiredTokens() {
 	}
 }
 
-// ==========================================
-// RATE LIMITING (Issue 9)
-// ==========================================
 
-// checkRateLimit returns true if the IP is rate-limited
+
+
+
+
 func checkRateLimit(ip string) bool {
 	loginAttemptsMutex.RLock()
 	attempt, exists := loginAttempts[ip]
@@ -286,7 +286,7 @@ func checkRateLimit(ip string) bool {
 		return false
 	}
 
-	// Reset counter if lockout time has passed
+	
 	if time.Since(attempt.LastReset) > loginLockoutTime {
 		loginAttemptsMutex.Lock()
 		delete(loginAttempts, ip)
@@ -297,7 +297,7 @@ func checkRateLimit(ip string) bool {
 	return attempt.Count >= maxLoginAttempts
 }
 
-// recordFailedLogin records a failed login attempt for rate limiting
+
 func recordFailedLogin(ip string) {
 	loginAttemptsMutex.Lock()
 	defer loginAttemptsMutex.Unlock()
@@ -308,7 +308,7 @@ func recordFailedLogin(ip string) {
 		return
 	}
 
-	// Reset if lockout expired
+	
 	if time.Since(attempt.LastReset) > loginLockoutTime {
 		attempt.Count = 1
 		attempt.LastReset = time.Now()
@@ -317,14 +317,14 @@ func recordFailedLogin(ip string) {
 	}
 }
 
-// clearLoginAttempts clears rate limit for an IP after successful login
+
 func clearLoginAttempts(ip string) {
 	loginAttemptsMutex.Lock()
 	delete(loginAttempts, ip)
 	loginAttemptsMutex.Unlock()
 }
 
-// cleanupLoginAttempts periodically removes old login attempt records
+
 func cleanupLoginAttempts() {
 	ticker := time.NewTicker(5 * time.Minute)
 	for range ticker.C {

@@ -1,15 +1,15 @@
-// ==========================================
-// ESP DESK_OS - API Calls
-// ==========================================
-// Issue 1: All protected API calls now use authFetch()
-// Issue 12: Graceful 503 handling for /frame/current
+
+
+
+
+
 
 function loadCurrent() {
-  // Note: /frame/current is NOT protected (ESP32 access) - uses regular fetch
+  
   fetch("/frame/current")
     .then((res) => {
       if (!res.ok) {
-        // Issue 12: Graceful 503 handling
+        
         if (res.status === 503) {
           showNoFramesMessage();
           return null;
@@ -30,7 +30,7 @@ function loadCurrent() {
     });
 }
 
-// Helper for Issue 12: Show "no frames" message
+
 function showNoFramesMessage() {
   const badge = document.getElementById("mode-badge");
   if (badge) {
@@ -40,11 +40,11 @@ function showNoFramesMessage() {
 }
 
 function hideNoFramesMessage() {
-  // Badge will be updated by drawFrame/updateModeUI
+  
 }
 
 function loadSettings() {
-  // Issue 1: Use authFetch for protected endpoint
+  
   authFetch("/api/settings")
     .then((res) => res.json())
     .then((data) => {
@@ -64,18 +64,18 @@ function loadSettings() {
       updateAutoPlayButton();
       updateHeadersToggle(data.showHeaders);
 
-      // Update display rotation toggle (0 = normal, 2 = 180 degrees)
+      
       if (typeof updateRotationToggle === "function") {
         displayRotation = data.displayRotation || 0;
         updateRotationToggle(data.displayRotation === 2);
       }
 
-      // Update display cycle UI
+      
       if (data.cycleItems) {
         updateDisplayCycleUI(data.cycleItems);
       }
 
-      // Update LED beacon settings
+      
       if (typeof updateBeaconUI === "function") {
         updateBeaconUI(
           data.ledBrightness || 50,
@@ -83,7 +83,7 @@ function loadSettings() {
         );
       }
 
-      // Update LED effect settings
+      
       if (typeof initLedSettings === "function") {
         initLedSettings(
           data.ledBeaconEnabled !== false,
@@ -95,7 +95,7 @@ function loadSettings() {
         );
       }
 
-      // Update display scale settings
+      
       if (typeof updateDisplayScaleUI === "function") {
         updateDisplayScaleUI(data.displayScale || "normal");
       }
@@ -108,7 +108,7 @@ function loadSettings() {
 }
 
 function prevFrame() {
-  // Issue 1: Use authFetch for protected endpoint
+  
   authFetch("/api/control/prev", { method: "POST" })
     .then((res) => res.json())
     .then((frame) => {
@@ -123,7 +123,7 @@ function prevFrame() {
 }
 
 function nextFrame() {
-  // Issue 1: Use authFetch for protected endpoint
+  
   authFetch("/api/control/next", { method: "POST" })
     .then((res) => res.json())
     .then((frame) => {
@@ -141,13 +141,13 @@ function sendCustomText() {
   const text = document.getElementById("customText").value;
   if (!text) return;
 
-  // Read style toggle states
+  
   const centered = document.getElementById("styleCentered")?.checked || false;
   const framed = document.getElementById("styleFramed")?.checked || false;
   const large = document.getElementById("styleLarge")?.checked || false;
   const inverted = document.getElementById("styleInverted")?.checked || false;
 
-  // Issue 1: Use authFetch for protected endpoint
+  
   authFetch("/api/custom/text", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -179,7 +179,7 @@ function sendMarquee() {
   const maxFrames = parseInt(document.getElementById("marqueeMaxFrames").value);
   const framed = document.getElementById("marqueeFramed")?.checked || false;
 
-  // Issue 1: Use authFetch for protected endpoint
+  
   authFetch("/api/custom/marquee", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -195,9 +195,9 @@ function sendMarquee() {
   })
     .then((res) => res.json())
     .then((data) => {
-      //(`Marquee started: ${data.frameCount} frames`);
+      
       loadSettings();
-      // Start auto-play for frontend preview (matches GIF upload behavior)
+      
       startAutoPlay();
     })
     .catch((err) => {
@@ -208,27 +208,27 @@ function sendMarquee() {
 }
 
 function resetSystem() {
-  // Issue 1: Use authFetch for protected endpoint
+  
   authFetch("/api/reset", { method: "POST" })
     .then((res) => res.json())
     .then(() => {
-      // Clear all inputs
+      
       document.getElementById("customText").value = "";
       document.getElementById("marqueeText").value = "";
       document.getElementById("imageUpload").value = "";
 
-      // Reset city selector to default
+      
       document.getElementById("citySelect").value = "12.97,80.27,Bangalore";
 
-      // Reload all state
+      
       loadSettings();
       loadCurrent();
       loadWeather();
 
-      // Stop auto-play
+      
       stopAutoPlay();
 
-      //("System reset to defaults");
+      
     })
     .catch((err) => {
       if (err.message !== "Unauthorized") {
@@ -247,9 +247,9 @@ function processAndUploadImage() {
   uploadFile(fileInput.files[0]);
 }
 
-// ==========================================
-// Moon Phase Functions
-// ==========================================
+
+
+
 
 function refreshMoonPhase() {
   const btn = document.getElementById("moonRefreshBtn");
@@ -257,7 +257,7 @@ function refreshMoonPhase() {
   const constEl = document.getElementById("moonConstellation");
   const sourceEl = document.getElementById("moonDataSource");
 
-  // Disable button and show loading
+  
   if (btn) {
     btn.disabled = true;
     btn.textContent = "⏳ Fetching...";

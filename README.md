@@ -11,6 +11,11 @@ A smart desk display system powered by **ESP32** and a **128x64 OLED display**, 
 ## Features
 
 - **Time Display** — Real-time clock with configurable timezone
+- **Spotify Integration** — Display currently playing song and artist with album art support
+- **Pomodoro Timer** — Productivity timer with work/break intervals
+- **QR Codes** — Generate and display QR codes for any text/URL
+- **Advanced Clocks** — Binary (BCD) and Analog clock faces
+- **Moon Phase** — Real-time moon phase tracking
 - **Weather Widget** — Live weather data from Open-Meteo API with Air Quality Index (AQI), PM2.5, and PM10 readings
 - **Uptime Tracker** — Server uptime monitoring
 - **Custom Text** — Display custom messages (normal, centered, or framed styles)
@@ -62,6 +67,14 @@ The ESP32 automatically switches between modes based on server hints (`isGifMode
 esp_desk/
 ├── main.go                  # Go backend (API, image processing, frame generation)
 ├── main.ino                 # ESP32 Arduino firmware (display, WiFi, local playback)
+├── spotify.go               # Spotify integration
+├── pomodoro.go              # Pomodoro timer logic
+├── qrcode.go                # QR code generation
+├── bcd.go                   # Binary Clock Display logic
+├── analog.go                # Analog clock logic
+├── moonphase.go             # Moon phase calculation
+├── weather.go               # Weather API handling
+├── background.go            # Background tasks and polling
 ├── config.json              # Persisted settings (auto-generated)
 ├── static/
 │   ├── index.html           # Web dashboard UI (tabbed layout)
@@ -162,6 +175,10 @@ The dashboard will be available at `http://localhost:3000`
 
 > **Note:** Default I2C address is `0x3C`. Update `OLED_ADDRESS` in `main.ino` if different.
 
+### Wokwi Project for Reference
+
+[LINK](https://wokwi.com/projects/451211743294143489)
+
 ### RGB LED Beacon Colors
 
 | Color  | State                    |
@@ -212,10 +229,13 @@ The dashboard will be available at `http://localhost:3000`
 
 ### Environment Variables
 
-| Variable             | Default | Description                          |
-| -------------------- | ------- | ------------------------------------ |
-| `PORT`               | `3000`  | Server port                          |
-| `DASHBOARD_PASSWORD` | —       | Dashboard access password (optional) |
+| Variable                | Default | Description                                      |
+| ----------------------- | ------- | ------------------------------------------------ |
+| `PORT`                  | `3000`  | Server port                                      |
+| `DASHBOARD_PASSWORD`    | —       | Dashboard access password (optional)             |
+| `SPOTIFY_CLIENT_ID`     | —       | Spotify Client ID (for music integration)        |
+| `SPOTIFY_CLIENT_SECRET` | —       | Spotify Client Secret                            |
+| `ASTRONOMY_API_KEY`     | —       | Astronomy API ID/Secret (for accurate moon data) |
 
 ### Persisted Settings (config.json)
 
@@ -252,6 +272,7 @@ services:
 **Backend (Go):**
 
 - Standard library only (no external dependencies)
+- `github.com/skip2/go-qrcode`
 
 **ESP32 (Arduino):**
 

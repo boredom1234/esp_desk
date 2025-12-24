@@ -1,18 +1,16 @@
-/* ============================================
-   ESP DESK OS - MAIN STYLESHEET
-   ============================================ */
+ 
 
-/* Variables & Configuration */
+ 
 @import "./variables.css";
 
-/* Base Styles & Reset */
+ 
 @import "./base.css";
 
-/* Layout System */
+ 
 @import "./layout.css";
 
-/* Components */
+ 
 @import "./components.css";
 
-/* Functionality Modules & Responsive */
+ 
 @import "./modules.css";

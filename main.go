@@ -9,20 +9,20 @@ import (
 	"time"
 )
 
-// ==========================================
-// MAIN
-// ==========================================
 
-// loadEnvFile reads a .env file and sets environment variables
+
+
+
+
 func loadEnvFile() {
 	file, err := os.Open(".env")
 	if err != nil {
-		// .env file not found, that's okay
+		
 		return
 	}
 	defer file.Close()
 
-	// Read entire file (Issue 10: fix truncation)
+	
 	contentBytes, err := io.ReadAll(file)
 	if err != nil {
 		log.Printf("Error reading .env file: %v", err)
@@ -32,16 +32,16 @@ func loadEnvFile() {
 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		// Skip empty lines and comments
+		
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		// Parse KEY=VALUE
+		
 		parts := strings.SplitN(line, "=", 2)
 		if len(parts) == 2 {
 			key := strings.TrimSpace(parts[0])
 			value := strings.TrimSpace(parts[1])
-			// Remove quotes if present
+			
 			value = strings.Trim(value, "\"'")
 			os.Setenv(key, value)
 		}
@@ -52,34 +52,34 @@ func loadEnvFile() {
 func main() {
 	startTime = time.Now()
 
-	// Load .env file if present
+	
 	loadEnvFile()
 
-	// Load persistent config (Issue 2)
+	
 	loadConfig()
 
-	// Initialize authentication from environment variable
+	
 	dashboardPassword = os.Getenv("DASHBOARD_PASSWORD")
 	if dashboardPassword != "" {
 		authEnabled = true
-		// Hash password for secure comparison (Issue 5)
+		
 		dashboardPasswordHash = hashPassword(dashboardPassword)
 		log.Printf("Authentication ENABLED - password required to access dashboard")
 	} else {
 		log.Printf("Authentication DISABLED - no DASHBOARD_PASSWORD set")
 	}
 
-	// Initialize timezone for time display (Issue 13: configurable)
+	
 	initializeTimezone()
 
-	// Start cleanup goroutines (Issues 4, 9)
+	
 	go cleanupExpiredTokens()
 	go cleanupLoginAttempts()
 
-	// Start Spotify background poller
+	
 	startSpotifyPoller()
 
-	// Initialize and start moon phase fetcher
+	
 	initMoonPhase()
 	startMoonPhaseFetcher()
 
@@ -87,20 +87,20 @@ func main() {
 
 	go updateLoop()
 
-	// Frame endpoints (ESP32 access - no auth required)
+	
 	http.HandleFunc("/frame/current", loggingMiddleware(currentFrame))
 	http.HandleFunc("/frame/next", loggingMiddleware(nextFrame))
 	http.HandleFunc("/api/gif/full", loggingMiddleware(handleGifFull))
 
-	// Auth endpoints (no auth required to access these)
+	
 	http.HandleFunc("/api/auth/login", loggingMiddleware(handleAuthLogin))
 	http.HandleFunc("/api/auth/verify", loggingMiddleware(handleAuthVerify))
 	http.HandleFunc("/api/auth/logout", loggingMiddleware(handleAuthLogout))
 
-	// Static files
+	
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 
-	// Protected API endpoints (require authentication)
+	
 	http.HandleFunc("/api/frames", loggingMiddleware(authMiddleware(handleFrames)))
 	http.HandleFunc("/api/control/next", loggingMiddleware(authMiddleware(nextFrame)))
 	http.HandleFunc("/api/control/prev", loggingMiddleware(authMiddleware(prevFrame)))
@@ -120,7 +120,7 @@ func main() {
 	http.HandleFunc("/api/settings/analog", loggingMiddleware(authMiddleware(handleAnalogSettings)))
 	http.HandleFunc("/api/settings/spotify", loggingMiddleware(authMiddleware(handleSpotifySettings)))
 	http.HandleFunc("/api/spotify/auth", loggingMiddleware(authMiddleware(handleSpotifyAuth)))
-	http.HandleFunc("/api/spotify/callback", loggingMiddleware(handleSpotifyCallback)) // No auth - OAuth callback
+	http.HandleFunc("/api/spotify/callback", loggingMiddleware(handleSpotifyCallback)) 
 	http.HandleFunc("/api/moonphase/refresh", loggingMiddleware(authMiddleware(handleMoonPhaseRefresh)))
 
 	port := os.Getenv("PORT")

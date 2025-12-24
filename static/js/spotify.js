@@ -1,6 +1,6 @@
-// ==========================================
-// ESP DESK_OS - Spotify Integration
-// ==========================================
+
+
+
 
 let spotifyStatus = {
   enabled: false,
@@ -9,7 +9,7 @@ let spotifyStatus = {
   currentTrack: null,
 };
 
-// Load Spotify status from server
+
 function loadSpotifyStatus() {
   authFetch("/api/settings/spotify")
     .then((res) => res.json())
@@ -24,7 +24,7 @@ function loadSpotifyStatus() {
     });
 }
 
-// Update Spotify UI elements
+
 function updateSpotifyUI() {
   const statusEl = document.getElementById("spotifyStatus");
   const connectBtn = document.getElementById("spotifyConnectBtn");
@@ -33,7 +33,7 @@ function updateSpotifyUI() {
 
   if (!statusEl) return;
 
-  // Show/hide env notice if credentials are from environment variables
+  
   if (envNotice) {
     envNotice.style.display = spotifyStatus.credsFromEnv ? "block" : "none";
   }
@@ -56,9 +56,9 @@ function updateSpotifyUI() {
   }
 }
 
-// Connect to Spotify (opens OAuth flow in new window)
+
 function connectSpotify() {
-  // Open auth URL in a popup window
+  
   const width = 500;
   const height = 700;
   const left = screen.width / 2 - width / 2;
@@ -70,7 +70,7 @@ function connectSpotify() {
     `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
   );
 
-  // Poll for popup close and refresh status
+  
   const pollTimer = setInterval(() => {
     if (popup.closed) {
       clearInterval(pollTimer);
@@ -79,7 +79,7 @@ function connectSpotify() {
   }, 500);
 }
 
-// Disconnect from Spotify
+
 function disconnectSpotify() {
   if (!confirm("Disconnect from Spotify?")) return;
 

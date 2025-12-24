@@ -4,12 +4,12 @@ import (
 	"image"
 )
 
-// ==========================================
-// TEXT-TO-BITMAP RENDERING
-// ==========================================
 
-// Basic 5x7 font for text rendering to bitmap
-// Each character is represented as 5 bytes (columns), 7 bits tall
+
+
+
+
+
 var font5x7 = map[rune][]byte{
 	' ': {0x00, 0x00, 0x00, 0x00, 0x00},
 	'A': {0x7C, 0x12, 0x11, 0x12, 0x7C},
@@ -85,7 +85,7 @@ var font5x7 = map[rune][]byte{
 	')': {0x00, 0x41, 0x22, 0x1C, 0x00},
 	'/': {0x60, 0x10, 0x08, 0x04, 0x03},
 	'@': {0x3E, 0x41, 0x5D, 0x55, 0x1E},
-	// Additional special characters (Issue 15)
+	
 	'%':  {0x23, 0x13, 0x08, 0x64, 0x62},
 	'+':  {0x08, 0x08, 0x3E, 0x08, 0x08},
 	'=':  {0x14, 0x14, 0x14, 0x14, 0x14},
@@ -257,9 +257,9 @@ func convertFrameToBitmap(frame Frame) Frame {
 	}
 }
 
-// ==========================================
-// IMAGE PROCESSING
-// ==========================================
+
+
+
 
 func processImageToBitmap(src image.Image, width, height int) []int {
 	bounds := src.Bounds()

@@ -1,8 +1,8 @@
-// ==========================================
-// ESP DESK_OS - Weather
-// ==========================================
 
-// Get AQI color class based on level
+
+
+
+
 function getAQIColorClass(aqi) {
   if (aqi <= 50) return "aqi-good";
   if (aqi <= 100) return "aqi-moderate";
@@ -15,7 +15,7 @@ function getAQIColorClass(aqi) {
 function renderWeatherDisplay(data, display) {
   display.innerHTML = "";
 
-  // Row 1: Icon, Temp, Condition
+  
   const row1 = document.createElement("div");
   row1.className = "weather-row";
 
@@ -28,14 +28,14 @@ function renderWeatherDisplay(data, display) {
   row1.appendChild(iconSpan);
   row1.appendChild(infoSpan);
 
-  // Row 2: Wind & AQI
+  
   const row2 = document.createElement("div");
   row2.className = "weather-row weather-row-secondary";
 
   const windSpan = safeElement("span", `💨 ${data.windspeed}`, "weather-wind");
   row2.appendChild(windSpan);
 
-  // Add AQI if available
+  
   if (data.aqi && data.aqi > 0) {
     const aqiContainer = document.createElement("span");
     aqiContainer.className = "weather-aqi";
@@ -54,7 +54,7 @@ function renderWeatherDisplay(data, display) {
   display.appendChild(row1);
   display.appendChild(row2);
 
-  // Row 3: PM2.5 & PM10 (if available)
+  
   if (data.pm25 && data.pm25 !== "N/A") {
     const row3 = document.createElement("div");
     row3.className = "weather-row weather-row-pm";
@@ -70,7 +70,7 @@ function renderWeatherDisplay(data, display) {
 }
 
 function loadWeather() {
-  // Issue 1: Use authFetch for protected endpoint
+  
   authFetch("/api/weather")
     .then((res) => res.json())
     .then((data) => {
@@ -91,7 +91,7 @@ function changeCity() {
   const value = select.value;
   const [lat, lng, city] = value.split(",");
 
-  // Issue 1: Use authFetch for protected endpoint
+  
   authFetch("/api/weather", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

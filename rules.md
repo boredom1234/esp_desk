@@ -1,10 +1,3 @@
-Great question — this is **exactly** the right mindset if you want this system to scale without turning into a mess 👍
-Below is a **practical, hard-won checklist** you can follow every time you add features, so you **don’t break anything**.
-
-Think of this as your **“rules of the display engine”**.
-
----
-
 # 🧠 GOLDEN RULE (Read This First)
 
 > **The ESP32 must NEVER decide _what_ to show.**
@@ -544,20 +537,3 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/settings" -Method Get
 - Hardware changes (new pins, sensors)
 - New LED effects beyond existing modes
 - WebSocket instead of polling
-
----
-
-## 🎯 Feature Ideas (Backend-Only)
-
-| Feature         | Uses              | Complexity |
-| --------------- | ----------------- | ---------- |
-| Quotes widget   | text              | ⭐         |
-| Countdown       | text + math       | ⭐⭐       |
-| QR codes        | bitmap            | ⭐⭐       |
-| Progress bars   | line elements     | ⭐⭐       |
-| Crypto prices   | text + API        | ⭐⭐       |
-| Stock ticker    | text + API        | ⭐⭐       |
-| RSS headlines   | marquee frames    | ⭐⭐⭐     |
-| Calendar events | text + OAuth      | ⭐⭐⭐     |
-| Simple graphs   | bitmap generation | ⭐⭐⭐     |
-| System stats    | text + monitoring | ⭐⭐⭐     |

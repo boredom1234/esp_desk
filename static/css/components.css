@@ -1,8 +1,6 @@
-/* ============================================
-   COMPONENTS
-   ============================================ */
+ 
 
-/* Card */
+ 
 .card {
   background: linear-gradient(
     180deg,
@@ -17,7 +15,7 @@
   transition: all var(--transition-normal);
 }
 
-/* Card top glow line */
+ 
 .card::before {
   content: "";
   position: absolute;
@@ -62,7 +60,7 @@
   color: var(--text-dim);
 }
 
-/* Badge */
+ 
 .badge {
   display: inline-flex;
   align-items: center;
@@ -104,7 +102,7 @@
   }
 }
 
-/* Display Canvas - Visual Feed */
+ 
 .canvas-wrapper {
   background: #000;
   border-radius: var(--radius-md);
@@ -119,7 +117,7 @@
   overflow: hidden;
 }
 
-/* Vignette effect on canvas */
+ 
 .canvas-wrapper::after {
   content: "";
   position: absolute;
@@ -174,7 +172,7 @@
   }
 }
 
-/* Player Controls */
+ 
 .player-controls {
   display: flex;
   justify-content: space-between;
@@ -230,7 +228,7 @@
   box-shadow: 0 4px 20px var(--primary-glow);
 }
 
-/* Cycle List */
+ 
 .display-cycle-list {
   display: flex;
   flex-direction: column;
@@ -331,7 +329,7 @@
   color: var(--danger);
 }
 
-/* Cycle Add Area */
+ 
 .cycle-add-area {
   margin-top: 1rem;
   padding-top: 1rem;
@@ -382,7 +380,7 @@
   box-shadow: 0 2px 8px var(--primary-glow);
 }
 
-/* Tabs */
+ 
 .tabs {
   display: flex;
   gap: 4px;
@@ -417,7 +415,7 @@
   box-shadow: var(--shadow-sm);
 }
 
-/* Tab Content */
+ 
 .tab-content {
   animation: fade-in 0.2s ease-out;
 }
@@ -433,7 +431,7 @@
   }
 }
 
-/* Input Groups */
+ 
 .input-group {
   margin-bottom: 1rem;
 }
@@ -447,7 +445,7 @@
   font-family: var(--font-mono);
 }
 
-/* Forms */
+ 
 .modern-select,
 .modern-input,
 textarea {
@@ -481,7 +479,7 @@ textarea {
   min-height: 80px;
 }
 
-/* Style Toggles */
+ 
 .style-toggles {
   display: flex;
   flex-wrap: wrap;
@@ -522,7 +520,7 @@ textarea {
   cursor: pointer;
 }
 
-/* Buttons */
+ 
 .btn {
   display: inline-flex;
   align-items: center;
@@ -588,7 +586,7 @@ textarea {
   gap: 0.5rem;
 }
 
-/* Action Footer */
+ 
 .action-footer {
   display: flex;
   justify-content: space-between;
@@ -599,7 +597,7 @@ textarea {
   border-top: 1px solid var(--divider);
 }
 
-/* Settings Rows */
+ 
 .settings-row {
   display: flex;
   gap: 0.75rem;
@@ -620,7 +618,7 @@ textarea {
   letter-spacing: 0.03em;
 }
 
-/* Toggle Group */
+ 
 .toggle-group {
   display: flex;
   gap: 2px;
@@ -653,7 +651,7 @@ textarea {
   box-shadow: 0 2px 6px var(--primary-glow);
 }
 
-/* Sliders */
+ 
 .sliders-stack {
   display: flex;
   flex-direction: column;
@@ -722,7 +720,7 @@ input[type="range"]::-moz-range-thumb {
   box-shadow: 0 1px 6px var(--primary-glow);
 }
 
-/* Toggle Switch */
+ 
 .toggle-switch {
   position: relative;
   width: 44px;
@@ -755,7 +753,7 @@ input[type="range"]::-moz-range-thumb {
   background: white;
 }
 
-/* Toggle Label */
+ 
 .toggle-label {
   display: flex;
   align-items: center;
@@ -769,9 +767,7 @@ input[type="range"]::-moz-range-thumb {
   accent-color: var(--primary);
 }
 
-/* ============================================
-   LED EFFECT CONTROLS
-   ============================================ */
+ 
 
 .led-effects-block {
   margin-top: 1rem;
@@ -879,7 +875,7 @@ input[type="range"]::-moz-range-thumb {
   border-radius: var(--radius-xs);
 }
 
-/* RGB Sliders */
+ 
 .led-rgb-sliders {
   margin-top: 0.75rem;
   padding: 0.75rem;
@@ -943,7 +939,7 @@ input[type="range"]::-moz-range-thumb {
   outline: none;
 }
 
-/* Hide number input spinners */
+ 
 .rgb-value::-webkit-outer-spin-button,
 .rgb-value::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -988,9 +984,7 @@ input[type="range"]::-moz-range-thumb {
   text-transform: none;
 }
 
-/* ============================================
-   DISPLAY SCALE CONTROLS
-   ============================================ */
+ 
 
 .scale-buttons {
   display: flex;
@@ -1021,7 +1015,7 @@ input[type="range"]::-moz-range-thumb {
   box-shadow: 0 2px 8px var(--primary-glow);
 }
 
-/* Config panels for countdown and QR */
+ 
 .countdown-item-config,
 .qr-item-config {
   margin-top: 0.75rem;
@@ -1045,9 +1039,7 @@ input[type="range"]::-moz-range-thumb {
   margin-top: 0.75rem;
 }
 
-/* ============================================
-   ACCORDION COMPONENT
-   ============================================ */
+ 
 .accordion {
   display: flex;
   flex-direction: column;
@@ -1140,7 +1132,7 @@ input[type="range"]::-moz-range-thumb {
   border-top: 1px solid var(--divider);
 }
 
-/* Adjust nested setting-row styles inside accordion */
+ 
 .accordion-body .setting-row {
   margin-top: 0;
 }
@@ -1149,7 +1141,7 @@ input[type="range"]::-moz-range-thumb {
   margin-top: 0;
 }
 
-/* First item in accordion body doesn't need extra top margin */
+ 
 .accordion-body > *:first-child {
   margin-top: 0;
 }

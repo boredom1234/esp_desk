@@ -7,9 +7,9 @@ import (
 	"time"
 )
 
-// ==========================================
-// MIDDLEWARE
-// ==========================================
+
+
+
 
 func loggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -20,11 +20,11 @@ func loggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// ==========================================
-// JSON ERROR HELPER (Issue 11)
-// ==========================================
 
-// jsonError sends a consistent JSON error response
+
+
+
+
 func jsonError(w http.ResponseWriter, message string, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

@@ -5,9 +5,9 @@ import (
 	"net/http"
 )
 
-// ==========================================
-// FRAME HANDLERS
-// ==========================================
+
+
+
 
 func currentFrame(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
@@ -18,26 +18,26 @@ func currentFrame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create a copy of the frame with ESP refresh duration
+	
 	frame := frames[index]
 	frame.Duration = espRefreshDuration
 
 	w.Header().Set("Content-Type", "application/json")
 
-	// Include isGifMode hint so ESP32 can detect mode change immediately
+	
 	response := map[string]interface{}{
 		"version":          frame.Version,
 		"duration":         frame.Duration,
 		"clear":            frame.Clear,
 		"elements":         frame.Elements,
-		"isGifMode":        isGifMode,        // Hint for ESP32 to fetch /api/gif/full immediately
-		"displayRotation":  displayRotation,  // 0 = normal, 2 = 180 degrees
-		"ledBrightness":    ledBrightness,    // 0-100 for RGB LED beacon
-		"ledBeaconEnabled": ledBeaconEnabled, // Enable/disable satellite beacon
-		"ledEffectMode":    ledEffectMode,    // "auto", "static", "flash", "pulse", "rainbow"
-		"ledCustomColor":   ledCustomColor,   // Hex color e.g. "#FF5500"
-		"ledFlashSpeed":    ledFlashSpeed,    // Flash interval ms
-		"ledPulseSpeed":    ledPulseSpeed,    // Pulse cycle ms
+		"isGifMode":        isGifMode,        
+		"displayRotation":  displayRotation,  
+		"ledBrightness":    ledBrightness,    
+		"ledBeaconEnabled": ledBeaconEnabled, 
+		"ledEffectMode":    ledEffectMode,    
+		"ledCustomColor":   ledCustomColor,   
+		"ledFlashSpeed":    ledFlashSpeed,    
+		"ledPulseSpeed":    ledPulseSpeed,    
 	}
 	json.NewEncoder(w).Encode(response)
 }
@@ -52,26 +52,26 @@ func nextFrame(w http.ResponseWriter, r *http.Request) {
 
 	index = (index + 1) % len(frames)
 
-	// Create a copy of the frame with ESP refresh duration
+	
 	frame := frames[index]
 	frame.Duration = espRefreshDuration
 
 	w.Header().Set("Content-Type", "application/json")
 
-	// Include isGifMode hint so ESP32 can detect mode change immediately
+	
 	response := map[string]interface{}{
 		"version":          frame.Version,
 		"duration":         frame.Duration,
 		"clear":            frame.Clear,
 		"elements":         frame.Elements,
-		"isGifMode":        isGifMode,        // Hint for ESP32 to fetch /api/gif/full immediately
-		"displayRotation":  displayRotation,  // 0 = normal, 2 = 180 degrees
-		"ledBrightness":    ledBrightness,    // 0-100 for RGB LED beacon
-		"ledBeaconEnabled": ledBeaconEnabled, // Enable/disable satellite beacon
-		"ledEffectMode":    ledEffectMode,    // "auto", "static", "flash", "pulse", "rainbow"
-		"ledCustomColor":   ledCustomColor,   // Hex color e.g. "#FF5500"
-		"ledFlashSpeed":    ledFlashSpeed,    // Flash interval ms
-		"ledPulseSpeed":    ledPulseSpeed,    // Pulse cycle ms
+		"isGifMode":        isGifMode,        
+		"displayRotation":  displayRotation,  
+		"ledBrightness":    ledBrightness,    
+		"ledBeaconEnabled": ledBeaconEnabled, 
+		"ledEffectMode":    ledEffectMode,    
+		"ledCustomColor":   ledCustomColor,   
+		"ledFlashSpeed":    ledFlashSpeed,    
+		"ledPulseSpeed":    ledPulseSpeed,    
 	}
 	json.NewEncoder(w).Encode(response)
 }
@@ -89,7 +89,7 @@ func prevFrame(w http.ResponseWriter, r *http.Request) {
 		index = len(frames) - 1
 	}
 
-	// Create a copy of the frame with ESP refresh duration
+	
 	frame := frames[index]
 	frame.Duration = espRefreshDuration
 
