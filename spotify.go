@@ -461,37 +461,23 @@ func convertImageTo1Bit(img image.Image, targetWidth, targetHeight int) []int {
 }
 
 // generateSpotifyFrame creates a frame displaying the current track
+// SIMPLIFIED: Shows only song name, artist, and seek bar (no album art, no header, no icons)
 func generateSpotifyFrame(duration int) Frame {
 	elements := []Element{}
 
-	// Add header if enabled
-	if showHeaders {
-		headerText := "= NOW PLAYING ="
-		headerSize := getScaledTextSize(1)
-		elements = append(elements,
-			Element{Type: "text", X: calcCenteredX(headerText, headerSize), Y: 2, Size: headerSize, Value: headerText},
-			Element{Type: "line", X: 0, Y: 12, Width: 128, Height: 1},
-		)
-	}
-
 	// Use cached track data (updated by background poller, never blocks)
 	track := spotifyLastTrack
-	albumArt := spotifyAlbumArt
 	enabled := spotifyEnabled
 
 	if !enabled || track == nil {
-		// Show "Not Playing" state
+		// Show "Not Playing" state - simple centered message
 		msg := "~ Not Playing"
 		if !enabled {
 			msg = "~ Connect Spotify"
 		}
 		textSize := getScaledTextSize(1)
-		yPos := 28
-		if showHeaders {
-			yPos = 32
-		}
 		elements = append(elements,
-			Element{Type: "text", X: calcCenteredX(msg, textSize), Y: yPos, Size: textSize, Value: msg},
+			Element{Type: "text", X: calcCenteredX(msg, textSize), Y: 28, Size: textSize, Value: msg},
 		)
 		return Frame{
 			Version:  1,
@@ -501,30 +487,11 @@ func generateSpotifyFrame(duration int) Frame {
 		}
 	}
 
-	// Layout: Album art on left (flush), text on right
-	artX := 0
-	artY := 16
-	if showHeaders {
-		artY = 20
-	}
-
-	// Add album art bitmap if available
-	if len(albumArt) > 0 {
-		elements = append(elements, Element{
-			Type:   "bitmap",
-			X:      artX,
-			Y:      artY,
-			Width:  32,
-			Height: 32,
-			Bitmap: albumArt,
-		})
-	}
-
-	// Text position (starts right after album art)
-	textX := artX + 34
+	// Simplified layout - full width, no album art
 	textSize := getScaledTextSize(1)
-	maxDisplayWidth := 128 - textX // Use full remaining width
-	charWidth := 6 * textSize      // Approx pixels per character
+	textX := 4                // Start from left edge with small margin
+	maxDisplayWidth := 120    // Full usable width (128 - 4*2 margins)
+	charWidth := 6 * textSize // Approx pixels per character
 	maxChars := maxDisplayWidth / charWidth
 
 	// Reset scroll positions if track changed
@@ -539,11 +506,10 @@ func generateSpotifyFrame(duration int) Frame {
 	}
 
 	// Calculate scroll positions based on time (15 pixels per second)
-	// This ensures consistent speed even with variable network latency
 	pixelsPerSec := 15.0
 
-	// Song name - use scrolling if too long
-	songY := artY + 2
+	// Song name - centered vertically, with scrolling if too long
+	songY := 18
 	songName := track.Name
 	songRunes := []rune(songName)
 	if len(songRunes) > maxChars {
@@ -572,8 +538,8 @@ func generateSpotifyFrame(duration int) Frame {
 		Value: songName,
 	})
 
-	// Artist name - use scrolling if too long
-	artistY := songY + 10
+	// Artist name - below song, with scrolling if too long
+	artistY := songY + 14
 	artistName := track.Artist
 	artistRunes := []rune(artistName)
 	if len(artistRunes) > maxChars {
@@ -601,52 +567,35 @@ func generateSpotifyFrame(duration int) Frame {
 		Value: artistName,
 	})
 
-	// Progress bar - extend to fill width
+	// Progress/seek bar - simple bar at bottom, full width
 	if track.DurationMs > 0 {
-		barY := artistY + 12
-
-		// Play icon or pause
-		playIcon := ">"
-		if !track.IsPlaying {
-			playIcon = "||"
-		}
-		elements = append(elements, Element{
-			Type:  "text",
-			X:     textX,
-			Y:     barY,
-			Size:  1,
-			Value: playIcon,
-		})
-
-		// Wider progress bar
-		barX := textX + 10
-		barWidth := 128 - barX - 2 // Fill remaining width
+		barY := 50
+		barX := 4
+		barWidth := 120 // Full width minus margins
 
 		progress := float64(track.ProgressMs) / float64(track.DurationMs)
 		filledWidth := int(progress * float64(barWidth))
 
-		// Progress bar background
+		// Progress bar background (thin line)
 		elements = append(elements, Element{
 			Type:   "line",
 			X:      barX,
-			Y:      barY + 4,
+			Y:      barY + 3,
 			Width:  barWidth,
 			Height: 2,
 		})
 
-		// Progress bar filled portion
+		// Progress bar filled portion (thicker)
 		if filledWidth > 0 {
 			elements = append(elements, Element{
 				Type:   "line",
 				X:      barX,
-				Y:      barY + 2,
+				Y:      barY + 1,
 				Width:  filledWidth,
 				Height: 6,
 			})
 		}
 	}
-
-	spotifyLastTrack = track
 
 	return Frame{
 		Version:  1,
