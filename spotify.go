@@ -4,11 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"image"
-	"image/color"
-	_ "image/gif"
-	_ "image/jpeg"
-	_ "image/png"
+
 	"io"
 	"log"
 	"net/http"
@@ -71,6 +67,18 @@ var (
 	spotifyLastArtistName        string    // Track artist changes to reset scroll
 )
 
+// Static music note icon (32x32px) for Spotify display
+var spotifyMusicIcon = []int{
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00,
+	0x00, 0x00, 0x80, 0x00, 0x00, 0x01, 0xc0, 0x00, 0x00, 0x01, 0xc0, 0x00, 0x00, 0x05, 0xc0, 0x00,
+	0x00, 0x07, 0xe0, 0x00, 0x00, 0x07, 0xf0, 0x00, 0x00, 0x07, 0xf8, 0x00, 0x00, 0x07, 0xe0, 0x00,
+	0x00, 0x05, 0xc0, 0x00, 0x00, 0x01, 0xc0, 0x00, 0x00, 0x01, 0xc0, 0x00, 0x00, 0x00, 0x80, 0x00,
+	0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+}
+
 // startSpotifyPoller starts background polling for Spotify data
 func startSpotifyPoller() {
 	go func() {
@@ -100,25 +108,14 @@ func startSpotifyPoller() {
 			spotifyFetchError = err
 			if err == nil {
 				spotifyLastTrack = track
-				// Fetch album art if changed
-				if track != nil && track.AlbumArtURL != spotifyAlbumArtURL && track.AlbumArtURL != "" {
-					go fetchAndCacheAlbumArt(track.AlbumArtURL)
-				}
+				// Spotify album art is no longer displayed, so we don't fetch it
+				// if track != nil && track.AlbumArtURL != spotifyAlbumArtURL && track.AlbumArtURL != "" {
+				// 	go fetchAndCacheAlbumArt(track.AlbumArtURL)
+				// }
 			}
 			mutex.Unlock()
 		}
 	}()
-}
-
-// fetchAndCacheAlbumArt fetches album art in background
-func fetchAndCacheAlbumArt(urlStr string) {
-	art, err := fetchAlbumArt(urlStr, 32, 32)
-	if err == nil {
-		mutex.Lock()
-		spotifyAlbumArt = art
-		spotifyAlbumArtURL = urlStr
-		mutex.Unlock()
-	}
 }
 
 // handleSpotifyAuth initiates the OAuth flow
@@ -385,81 +382,6 @@ func getCurrentlyPlayingAsync() (*SpotifyTrack, error) {
 	}, nil
 }
 
-// fetchAlbumArt downloads album art and converts to 1-bit bitmap
-func fetchAlbumArt(urlStr string, width, height int) ([]int, error) {
-	resp, err := http.Get(urlStr)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	img, _, err := image.Decode(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return convertImageTo1Bit(img, width, height), nil
-}
-
-// convertImageTo1Bit converts an image to 1-bit bitmap using Floyd-Steinberg dithering
-func convertImageTo1Bit(img image.Image, targetWidth, targetHeight int) []int {
-	bounds := img.Bounds()
-	srcWidth := bounds.Dx()
-	srcHeight := bounds.Dy()
-
-	// 1. Create a grayscale buffer
-	grayBuffer := make([]float64, targetWidth*targetHeight)
-
-	for y := 0; y < targetHeight; y++ {
-		for x := 0; x < targetWidth; x++ {
-			// Nearest neighbor sampling
-			srcX := bounds.Min.X + x*srcWidth/targetWidth
-			srcY := bounds.Min.Y + y*srcHeight/targetHeight
-
-			c := img.At(srcX, srcY)
-			r, g, b, _ := c.RGBA()
-
-			// Convert to grayscale (0-255 range)
-			gray := float64(r*299+g*587+b*114) / 65535.0 / 1000.0 * 255.0
-			grayBuffer[y*targetWidth+x] = gray
-		}
-	}
-
-	// 2. Apply Floyd-Steinberg dithering
-	bitmap := make([]int, targetWidth*targetHeight)
-
-	for y := 0; y < targetHeight; y++ {
-		for x := 0; x < targetWidth; x++ {
-			oldPixel := grayBuffer[y*targetWidth+x]
-			newPixel := 0.0
-			if oldPixel > 128 { // Threshold
-				newPixel = 255.0
-				bitmap[y*targetWidth+x] = 1 // ON
-			} else {
-				bitmap[y*targetWidth+x] = 0 // OFF
-			}
-
-			quantError := oldPixel - newPixel
-
-			// Distribute error to key neighbors
-			if x+1 < targetWidth {
-				grayBuffer[y*targetWidth+(x+1)] += quantError * 7.0 / 16.0
-			}
-			if x-1 >= 0 && y+1 < targetHeight {
-				grayBuffer[(y+1)*targetWidth+(x-1)] += quantError * 3.0 / 16.0
-			}
-			if y+1 < targetHeight {
-				grayBuffer[(y+1)*targetWidth+x] += quantError * 5.0 / 16.0
-			}
-			if x+1 < targetWidth && y+1 < targetHeight {
-				grayBuffer[(y+1)*targetWidth+(x+1)] += quantError * 1.0 / 16.0
-			}
-		}
-	}
-
-	return bitmap
-}
-
 // generateSpotifyFrame creates a frame displaying the current track
 // SIMPLIFIED: Shows only song name, artist, and seek bar (no album art, no header, no icons)
 func generateSpotifyFrame(duration int) Frame {
@@ -487,11 +409,25 @@ func generateSpotifyFrame(duration int) Frame {
 		}
 	}
 
-	// Simplified layout - full width, no album art
+	// Layout with static icon on left, text on right
+	iconX := 0
+	iconY := 16
+
+	// Add static music note icon (32x32)
+	elements = append(elements, Element{
+		Type:   "bitmap",
+		X:      iconX,
+		Y:      iconY,
+		Width:  32,
+		Height: 32,
+		Bitmap: spotifyMusicIcon,
+	})
+
+	// Text position (starts right after icon)
 	textSize := getScaledTextSize(1)
-	textX := 4                // Start from left edge with small margin
-	maxDisplayWidth := 120    // Full usable width (128 - 4*2 margins)
-	charWidth := 6 * textSize // Approx pixels per character
+	textX := iconX + 34                // 32px icon + 2px margin
+	maxDisplayWidth := 128 - textX - 4 // Remaining width with small right margin
+	charWidth := 6 * textSize          // Approx pixels per character
 	maxChars := maxDisplayWidth / charWidth
 
 	// Reset scroll positions if track changed
@@ -508,8 +444,8 @@ func generateSpotifyFrame(duration int) Frame {
 	// Calculate scroll positions based on time (15 pixels per second)
 	pixelsPerSec := 15.0
 
-	// Song name - centered vertically, with scrolling if too long
-	songY := 18
+	// Song name - with scrolling if too long
+	songY := iconY + 2
 	songName := track.Name
 	songRunes := []rune(songName)
 	if len(songRunes) > maxChars {
@@ -539,7 +475,7 @@ func generateSpotifyFrame(duration int) Frame {
 	})
 
 	// Artist name - below song, with scrolling if too long
-	artistY := songY + 14
+	artistY := songY + 10
 	artistName := track.Artist
 	artistRunes := []rune(artistName)
 	if len(artistRunes) > maxChars {
@@ -567,11 +503,11 @@ func generateSpotifyFrame(duration int) Frame {
 		Value: artistName,
 	})
 
-	// Progress/seek bar - simple bar at bottom, full width
+	// Progress/seek bar - simple bar at bottom, aligned with text
 	if track.DurationMs > 0 {
-		barY := 50
-		barX := 4
-		barWidth := 120 // Full width minus margins
+		barY := artistY + 12
+		barX := textX
+		barWidth := 128 - textX - 4 // Match text width
 
 		progress := float64(track.ProgressMs) / float64(track.DurationMs)
 		filledWidth := int(progress * float64(barWidth))
@@ -603,17 +539,6 @@ func generateSpotifyFrame(duration int) Frame {
 		Clear:    true,
 		Elements: elements,
 	}
-}
-
-// truncateText truncates a string to maxLen characters with "..." if needed
-func truncateText(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	if maxLen <= 3 {
-		return s[:maxLen]
-	}
-	return s[:maxLen-2] + ".."
 }
 
 // handleSpotifySettings handles Spotify configuration get/set
@@ -676,15 +601,4 @@ func handleSpotifySettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
-}
-
-// convertTo1BitGray converts color.Color to 1 (white) or 0 (black)
-func convertTo1BitGray(c color.Color) int {
-	r, g, b, _ := c.RGBA()
-	// Human luminance perception: 0.299 R + 0.587 G + 0.114 B
-	gray := (r*299 + g*587 + b*114) / 1000
-	if gray > 32768 {
-		return 1
-	}
-	return 0
 }
