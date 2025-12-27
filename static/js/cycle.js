@@ -85,6 +85,7 @@ function getTypeIcon(type) {
     qr: "📱",
     moonphase: "🌙",
     wordclock: "🕰️",
+    snake: "🐍",
   };
   return icons[type] || "📋";
 }
@@ -172,6 +173,7 @@ function addCycleItem() {
     qr: "📱 QR Code",
     moonphase: "🌙 Moon Phase",
     wordclock: "🕰️ Word Clock",
+    snake: "🐍 Snake Game",
   };
 
   const newItem = {

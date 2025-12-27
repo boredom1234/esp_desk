@@ -334,14 +334,19 @@ func updateLoop() {
 					frames = append(frames, spotifyFrame)
 
 				case "moonphase":
-					
+
 					moonFrame := generateMoonPhaseFrame(duration)
 					frames = append(frames, moonFrame)
 
 				case "wordclock":
-					
+
 					wordClockFrame := generateWordClockFrame(duration)
 					frames = append(frames, wordClockFrame)
+
+				case "snake":
+					// Auto-playing snake game
+					snakeFrame := generateSnakeFrame(duration)
+					frames = append(frames, snakeFrame)
 				}
 			}
 
