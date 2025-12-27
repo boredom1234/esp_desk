@@ -1,16 +1,10 @@
-
-
-
-
 let cycleItems = [];
 let newItemStyle = "normal";
 let cycleItemIdCounter = 0;
 let pendingSaveCount = 0;
 let lastSaveTimestamp = 0;
 
-
 function renderCycleItems(items, updateLocalState = true) {
-  
   if (updateLocalState) {
     cycleItems = items || [];
   }
@@ -30,28 +24,22 @@ function renderCycleItems(items, updateLocalState = true) {
     const extraInfo =
       item.type === "text" ? ` "${truncate(item.text, 15)}"` : "";
 
-    
-    
     const handleSpan = document.createElement("span");
     handleSpan.className = "cycle-handle";
     handleSpan.textContent = "⋮⋮";
 
-    
     const checkboxLabel = document.createElement("label");
     checkboxLabel.className = "cycle-checkbox";
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.checked = item.enabled;
-    
 
-    
     checkbox.addEventListener("mousedown", (e) => {
       e.stopPropagation();
     });
 
     checkbox.addEventListener("change", (e) => {
-      
       toggleCycleItem(item.id);
     });
 
@@ -61,19 +49,16 @@ function renderCycleItems(items, updateLocalState = true) {
     checkboxLabel.appendChild(checkbox);
     checkboxLabel.appendChild(checkmark);
 
-    
     const labelSpan = document.createElement("span");
     labelSpan.className = "cycle-label";
     labelSpan.textContent = `${typeIcon} ${labelText}${extraInfo}`;
 
-    
     const deleteBtn = document.createElement("button");
     deleteBtn.className = "cycle-delete-btn";
     deleteBtn.title = "Remove";
     deleteBtn.textContent = "✕";
     deleteBtn.addEventListener("click", () => deleteCycleItem(item.id));
 
-    
     div.appendChild(handleSpan);
     div.appendChild(checkboxLabel);
     div.appendChild(labelSpan);
@@ -99,6 +84,7 @@ function getTypeIcon(type) {
     countdown: "⏳",
     qr: "📱",
     moonphase: "🌙",
+    wordclock: "🕰️",
   };
   return icons[type] || "📋";
 }
@@ -108,15 +94,11 @@ function truncate(str, len) {
   return str.length > len ? str.substring(0, len) + "..." : str;
 }
 
-
 function toggleCycleItem(id) {
-  
   const item = cycleItems.find((i) => i.id === id);
   if (item) {
-    
     item.enabled = !item.enabled;
-    
-    
+
     const checkbox = document.querySelector(
       `.cycle-item[data-id="${CSS.escape(id)}"] input[type="checkbox"]`
     );
@@ -129,12 +111,11 @@ function toggleCycleItem(id) {
   }
 }
 
-
 function deleteCycleItem(id) {
   cycleItems = cycleItems.filter((i) => i.id !== id);
   if (cycleItems.length === 0) {
     alert("You need at least one item in the cycle!");
-    
+
     cycleItems.push({
       id: "time-fallback",
       type: "time",
@@ -147,12 +128,10 @@ function deleteCycleItem(id) {
   renderCycleItems(cycleItems);
 }
 
-
 function addCycleItem() {
   const type = document.getElementById("addItemType").value;
 
   if (type === "text") {
-    
     document.getElementById("textItemConfig").style.display = "block";
     document.getElementById("newItemText").focus();
     return;
@@ -166,20 +145,17 @@ function addCycleItem() {
   }
 
   if (type === "countdown") {
-    
     document.getElementById("countdownItemConfig").style.display = "block";
     document.getElementById("countdownLabel").focus();
     return;
   }
 
   if (type === "qr") {
-    
     document.getElementById("qrItemConfig").style.display = "block";
     document.getElementById("qrDataInput").focus();
     return;
   }
 
-  
   cycleItemIdCounter++;
   const id = `${type}-${Date.now()}-${cycleItemIdCounter}`;
 
@@ -195,6 +171,7 @@ function addCycleItem() {
     countdown: "⏳ Countdown",
     qr: "📱 QR Code",
     moonphase: "🌙 Moon Phase",
+    wordclock: "🕰️ Word Clock",
   };
 
   const newItem = {
@@ -210,14 +187,12 @@ function addCycleItem() {
   renderCycleItems(cycleItems);
 }
 
-
 function setNewItemStyle(style) {
   newItemStyle = style;
   document.querySelectorAll(".style-mini-btn").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.style === style);
   });
 }
-
 
 function confirmAddText() {
   const text = document.getElementById("newItemText").value.trim();
@@ -244,32 +219,23 @@ function confirmAddText() {
   saveCycleItems();
   renderCycleItems(cycleItems);
 
-  
   document.getElementById("newItemText").value = "";
   document.getElementById("textItemConfig").style.display = "none";
 }
 
-
 function saveCycleItems() {
   pendingSaveCount++;
-  
-  
-  
 
-  
   authFetch("/api/settings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ cycleItems: cycleItems }),
   })
     .then((res) => {
-      
       return res.json();
     })
     .then((data) => {
       lastSaveTimestamp = Date.now();
-      
-      
     })
     .catch((err) => {
       if (err.message !== "Unauthorized") {
@@ -279,28 +245,21 @@ function saveCycleItems() {
     .finally(() => {
       pendingSaveCount--;
       if (pendingSaveCount < 0) pendingSaveCount = 0;
-      
     });
 }
 
-
 function updateDisplayCycleUI(items) {
-  
-  
   if (pendingSaveCount > 0 || Date.now() - lastSaveTimestamp < 5000) {
-    
     return;
   }
   renderCycleItems(items, true);
 }
-
 
 function initDisplayCycleDragDrop() {
   const list = document.getElementById("displayCycleList");
   let draggedItem = null;
   let draggedIndex = -1;
 
-  
   const newList = list.cloneNode(true);
   list.parentNode.replaceChild(newList, list);
 
@@ -316,11 +275,9 @@ function initDisplayCycleDragDrop() {
     if (e.target.classList.contains("cycle-item")) {
       e.target.classList.remove("dragging");
 
-      
       const items = Array.from(newList.querySelectorAll(".cycle-item"));
       const newOrder = items.map((el) => el.dataset.id);
 
-      
       const reordered = [];
       newOrder.forEach((id) => {
         const item = cycleItems.find((i) => i.id === id);
@@ -346,8 +303,6 @@ function initDisplayCycleDragDrop() {
     }
   });
 
-  
-  
   newList.querySelectorAll(".cycle-item").forEach((item) => {
     const itemId = item.dataset.id;
     const checkbox = item.querySelector('input[type="checkbox"]');
@@ -383,14 +338,9 @@ function getDragAfterElement(container, y) {
   ).element;
 }
 
-
 function updateDisplayCycle() {
   saveCycleItems();
 }
-
-
-
-
 
 function saveImageToCycle() {
   if (!lastUploadedImage) {
@@ -416,10 +366,8 @@ function saveImageToCycle() {
   saveCycleItems();
   renderCycleItems(cycleItems);
 
-  
   document.getElementById("saveToCycleBtn").style.display = "none";
   lastUploadedImage = null;
 
-  
   setUploadStatus("success", "Saved to cycle!");
 }

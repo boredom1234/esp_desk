@@ -6,10 +6,6 @@ import (
 	"time"
 )
 
-
-
-
-
 func updateLoop() {
 	go func() {
 		fetchWeather()
@@ -23,12 +19,11 @@ func updateLoop() {
 	for range ticker.C {
 		mutex.Lock()
 
-		
 		if pomodoroSession.Active && !pomodoroSession.IsPaused {
 			if pomodoroSession.TimeRemaining > 0 {
 				pomodoroSession.TimeRemaining--
 			} else {
-				
+
 				if pomodoroSession.Mode == "work" {
 					pomodoroSession.CyclesCompleted++
 					if pomodoroSession.CyclesCompleted >= pomodoroSettings.CyclesUntilLong {
@@ -42,7 +37,7 @@ func updateLoop() {
 						log.Printf("🍅 Pomodoro: Auto-started break (%d min)", pomodoroSettings.BreakDuration/60)
 					}
 				} else {
-					
+
 					pomodoroSession.Mode = "work"
 					pomodoroSession.TimeRemaining = pomodoroSettings.WorkDuration
 					log.Printf("🍅 Pomodoro: Auto-started work session (%d min)", pomodoroSettings.WorkDuration/60)
@@ -52,7 +47,7 @@ func updateLoop() {
 		}
 
 		if !isCustomMode {
-			
+
 			now := time.Now()
 			if displayLocation != nil {
 				now = now.In(displayLocation)
@@ -60,14 +55,11 @@ func updateLoop() {
 			currentTime := now.Format("15:04:05")
 			uptime := time.Since(startTime).Round(time.Second).String()
 
-			
 			frameMap := make(map[string]Frame)
 
-			
-			
 			tzAbbrev, _ := now.Zone()
-			timeMainSize := getScaledTextSize(2) 
-			headerSize := getScaledTextSize(1)   
+			timeMainSize := getScaledTextSize(2)
+			headerSize := getScaledTextSize(1)
 			timeElements := []Element{
 				{Type: "text", X: calcCenteredX(currentTime, timeMainSize), Y: 22, Size: timeMainSize, Value: currentTime},
 			}
@@ -82,8 +74,6 @@ func updateLoop() {
 			}
 			frameMap["time"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: timeElements}
 
-			
-			
 			aqiDisplay := ""
 			if weatherData.AQI > 0 {
 				aqiDisplay = fmt.Sprintf("AQI:%d", weatherData.AQI)
@@ -100,9 +90,9 @@ func updateLoop() {
 					{Type: "text", X: calcCenteredX(weatherHeaderText, weatherLabelSize), Y: 2, Size: weatherLabelSize, Value: weatherHeaderText},
 					{Type: "line", X: 0, Y: 12, Width: 128, Height: 1},
 				}, weatherElements...)
-				
+
 				if aqiDisplay != "" {
-					
+
 					weatherElements = append(weatherElements, Element{Type: "text", X: 5, Y: 42, Size: weatherLabelSize, Value: weatherData.Condition})
 					weatherElements = append(weatherElements, Element{Type: "text", X: 75, Y: 42, Size: weatherLabelSize, Value: aqiDisplay})
 				} else {
@@ -111,7 +101,7 @@ func updateLoop() {
 				weatherElements = append(weatherElements, Element{Type: "line", X: 0, Y: 53, Width: 128, Height: 1})
 				weatherElements = append(weatherElements, Element{Type: "text", X: calcCenteredX(weatherData.City, weatherLabelSize), Y: 56, Size: weatherLabelSize, Value: weatherData.City})
 			} else {
-				
+
 				weatherElements = append(weatherElements, Element{Type: "text", X: calcCenteredX(weatherData.Condition, weatherLabelSize), Y: 42, Size: weatherLabelSize, Value: weatherData.Condition})
 				if aqiDisplay != "" {
 					weatherElements = append(weatherElements, Element{Type: "text", X: calcCenteredX(aqiDisplay, weatherLabelSize), Y: 52, Size: weatherLabelSize, Value: aqiDisplay})
@@ -119,7 +109,6 @@ func updateLoop() {
 			}
 			frameMap["weather"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: weatherElements}
 
-			
 			uptimeSize := getScaledTextSize(1)
 			uptimeElements := []Element{
 				{Type: "text", X: calcCenteredX(uptime, uptimeSize), Y: 28, Size: uptimeSize, Value: uptime},
@@ -133,12 +122,10 @@ func updateLoop() {
 			}
 			frameMap["uptime"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: uptimeElements}
 
-			
 			pomodoroMinutes := pomodoroSession.TimeRemaining / 60
 			pomodoroSeconds := pomodoroSession.TimeRemaining % 60
 			pomodoroTimeStr := fmt.Sprintf("%02d:%02d", pomodoroMinutes, pomodoroSeconds)
 
-			
 			var modeText string
 			switch pomodoroSession.Mode {
 			case "work":
@@ -151,7 +138,6 @@ func updateLoop() {
 				modeText = "READY"
 			}
 
-			
 			statusText := ""
 			if pomodoroSession.IsPaused {
 				statusText = "PAUSED"
@@ -160,19 +146,16 @@ func updateLoop() {
 				modeText = "POMODORO"
 			}
 
-			
 			cycleText := fmt.Sprintf("%d/%d", pomodoroSession.CyclesCompleted, pomodoroSettings.CyclesUntilLong)
 
-			
-			
 			timeX := calcCenteredX(pomodoroTimeStr, 2)
 			pomodoroElements := []Element{
-				
+
 				{Type: "text", X: timeX, Y: 22, Size: 2, Value: pomodoroTimeStr},
 			}
 
 			if showHeaders {
-				
+
 				headerText := fmt.Sprintf("= %s =", modeText)
 				headerX := calcCenteredX(headerText, 1)
 				pomodoroElements = append([]Element{
@@ -180,21 +163,19 @@ func updateLoop() {
 					{Type: "line", X: 0, Y: 12, Width: 128, Height: 1},
 				}, pomodoroElements...)
 
-				
 				pomodoroElements = append(pomodoroElements, Element{Type: "line", X: 0, Y: 52, Width: 128, Height: 1})
 				if statusText != "" {
 					pomodoroElements = append(pomodoroElements, Element{Type: "text", X: 8, Y: 55, Size: 1, Value: statusText})
 				}
 				pomodoroElements = append(pomodoroElements, Element{Type: "text", X: 90, Y: 55, Size: 1, Value: cycleText})
 			} else {
-				
+
 				modeX := calcCenteredX(modeText, 1)
 				pomodoroElements = append(pomodoroElements, Element{Type: "text", X: modeX, Y: 48, Size: 1, Value: modeText})
 			}
 
 			frameMap["pomodoro"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: pomodoroElements}
 
-			
 			frames = []Frame{}
 			for _, item := range cycleItems {
 				if !item.Enabled {
@@ -203,7 +184,7 @@ func updateLoop() {
 
 				duration := item.Duration
 				if duration <= 0 {
-					duration = 3000 
+					duration = 3000
 				}
 
 				switch item.Type {
@@ -223,7 +204,7 @@ func updateLoop() {
 					frames = append(frames, frame)
 
 				case "text":
-					
+
 					var elements []Element
 					textSize := item.Size
 					if textSize <= 0 {
@@ -249,7 +230,7 @@ func updateLoop() {
 							{Type: "line", X: 127, Y: 0, Width: 1, Height: 64},
 							{Type: "text", X: 8, Y: 28, Size: textSize, Value: item.Text},
 						}
-					default: 
+					default:
 						elements = []Element{
 							{Type: "text", X: 4, Y: 28, Size: textSize, Value: item.Text},
 						}
@@ -265,7 +246,7 @@ func updateLoop() {
 					frames = append(frames, Frame{Version: 1, Duration: duration, Clear: true, Elements: elements})
 
 				case "image":
-					
+
 					if len(item.Bitmap) > 0 {
 						elements := []Element{
 							{Type: "bitmap", X: 0, Y: 0, Width: item.Width, Height: item.Height, Bitmap: item.Bitmap},
@@ -274,17 +255,17 @@ func updateLoop() {
 					}
 
 				case "pomodoro":
-					
+
 					frame := frameMap["pomodoro"]
 					frame.Duration = duration
 					frames = append(frames, frame)
 
 				case "countdown":
-					
+
 					if item.TargetDate != "" {
 						targetTime, err := time.Parse("2006-01-02", item.TargetDate)
 						if err == nil {
-							
+
 							remaining := time.Until(targetTime)
 
 							var countdownStr string
@@ -304,7 +285,6 @@ func updateLoop() {
 								countdownStr = fmt.Sprintf("%dm %ds", mins, secs)
 							}
 
-							
 							label := item.TargetLabel
 							if label == "" {
 								label = "Countdown"
@@ -320,7 +300,7 @@ func updateLoop() {
 									{Type: "line", X: 0, Y: 12, Width: 128, Height: 1},
 								}, countdownElements...)
 								countdownElements = append(countdownElements, Element{Type: "line", X: 0, Y: 52, Width: 128, Height: 1})
-								
+
 								dateStr := targetTime.Format("Jan 2, 2006")
 								countdownElements = append(countdownElements, Element{Type: "text", X: calcCenteredX(dateStr, 1), Y: 55, Size: 1, Value: dateStr})
 							}
@@ -330,7 +310,7 @@ func updateLoop() {
 					}
 
 				case "qr":
-					
+
 					if item.QRData != "" {
 						qrFrame, err := generateQRFrame(item.QRData, duration)
 						if err == nil {
@@ -339,17 +319,17 @@ func updateLoop() {
 					}
 
 				case "bcd":
-					
+
 					bcdFrame := generateBCDFrame(duration)
 					frames = append(frames, bcdFrame)
 
 				case "analog":
-					
+
 					analogFrame := generateAnalogFrame(duration)
 					frames = append(frames, analogFrame)
 
 				case "spotify":
-					
+
 					spotifyFrame := generateSpotifyFrame(duration)
 					frames = append(frames, spotifyFrame)
 
@@ -357,10 +337,14 @@ func updateLoop() {
 					
 					moonFrame := generateMoonPhaseFrame(duration)
 					frames = append(frames, moonFrame)
+
+				case "wordclock":
+					
+					wordClockFrame := generateWordClockFrame(duration)
+					frames = append(frames, wordClockFrame)
 				}
 			}
 
-			
 			if pomodoroSettings.ShowInCycle {
 				hasPomodoroInCycle := false
 				for _, item := range cycleItems {
@@ -376,7 +360,6 @@ func updateLoop() {
 				}
 			}
 
-			
 			if len(frames) == 0 {
 				frames = append(frames, frameMap["time"])
 			}

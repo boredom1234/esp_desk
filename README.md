@@ -14,7 +14,7 @@ A smart desk display system powered by **ESP32** and a **128x64 OLED display**, 
 - **Spotify Integration** — Display currently playing song and artist with album art support
 - **Pomodoro Timer** — Productivity timer with work/break intervals
 - **QR Codes** — Generate and display QR codes for any text/URL
-- **Advanced Clocks** — Binary (BCD) and Analog clock faces
+- **Advanced Clocks** — Binary (BCD), Analog, and Word Clock faces
 - **Moon Phase** — Real-time moon phase tracking
 - **Weather Widget** — Live weather data from Open-Meteo API with Air Quality Index (AQI), PM2.5, and PM10 readings
 - **Uptime Tracker** — Server uptime monitoring
@@ -72,6 +72,7 @@ esp_desk/
 ├── qrcode.go                # QR code generation
 ├── bcd.go                   # Binary Clock Display logic
 ├── analog.go                # Analog clock logic
+├── wordclock.go             # Word Clock display logic
 ├── moonphase.go             # Moon phase calculation
 ├── weather.go               # Weather API handling
 ├── background.go            # Background tasks and polling

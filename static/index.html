@@ -11,7 +11,7 @@
       content="ESP32, OLED Display, Control Dashboard, ESP Desk OS, ESP Desk OS Control Dashboard, ESP Desk OS Control Panel"
     />
     <link rel="stylesheet" href="css/style.css" />
-    
+
     <link rel="icon" href="favicon.ico" type="image/x-icon" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -22,7 +22,6 @@
   </head>
 
   <body>
-    
     <div class="login-overlay" id="loginOverlay">
       <div class="login-card">
         <div class="login-header">
@@ -49,7 +48,6 @@
     </div>
 
     <div class="container" id="mainContainer">
-      
       <header class="header">
         <div class="logo">
           <span class="icon">◇</span>
@@ -72,9 +70,7 @@
         </div>
       </header>
 
-      
       <main class="grid-layout">
-        
         <div class="left-column">
           <section class="card preview-section">
             <div class="card-header">
@@ -128,15 +124,12 @@
             </div>
           </section>
 
-          
           <section class="card cycle-section">
             <div class="card-header">
               <h2>Display Cycle</h2>
               <small>Drag to reorder</small>
             </div>
-            <div class="display-cycle-list" id="displayCycleList">
-              
-            </div>
+            <div class="display-cycle-list" id="displayCycleList"></div>
 
             <div class="cycle-add-area">
               <div class="add-row">
@@ -153,6 +146,7 @@
                   <option value="countdown">⏳ Countdown</option>
                   <option value="qr">📱 QR Code</option>
                   <option value="moonphase">🌙 Moon Phase</option>
+                  <option value="wordclock">🕰️ Word Clock</option>
                 </select>
                 <button
                   class="btn btn-secondary btn-sm"
@@ -162,7 +156,6 @@
                 </button>
               </div>
 
-              
               <div
                 class="text-item-config"
                 id="textItemConfig"
@@ -207,7 +200,6 @@
                 </div>
               </div>
 
-              
               <div
                 class="countdown-item-config"
                 id="countdownItemConfig"
@@ -230,7 +222,6 @@
                 </div>
               </div>
 
-              
               <div
                 class="qr-item-config"
                 id="qrItemConfig"
@@ -263,9 +254,7 @@
           </section>
         </div>
 
-        
         <div class="right-column">
-          
           <section class="card control-panel">
             <div class="tabs">
               <button class="tab-btn active" onclick="switchTab('quickText')">
@@ -594,14 +583,12 @@
             </div>
           </section>
 
-          
           <section class="card settings-section">
             <div class="card-header">
               <h2>System Preferences</h2>
             </div>
 
             <div class="accordion" id="settingsAccordion">
-              
               <div class="accordion-item expanded" data-section="display">
                 <button
                   class="accordion-header"
@@ -735,7 +722,6 @@
                 </div>
               </div>
 
-              
               <div class="accordion-item" data-section="led">
                 <button
                   class="accordion-header"
@@ -984,7 +970,6 @@
                 </div>
               </div>
 
-              
               <div class="accordion-item" data-section="moonphase">
                 <button
                   class="accordion-header"
@@ -1026,7 +1011,6 @@
                 </div>
               </div>
 
-              
               <div class="accordion-item" data-section="spotify">
                 <button
                   class="accordion-header"
@@ -1075,7 +1059,6 @@
                 </div>
               </div>
 
-              
               <div class="accordion-item" data-section="environment">
                 <button
                   class="accordion-header"
@@ -1193,7 +1176,6 @@
                 </div>
               </div>
 
-              
               <div class="accordion-item" data-section="advanced">
                 <button
                   class="accordion-header"
