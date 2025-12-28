@@ -344,7 +344,7 @@ func updateLoop() {
 					frames = append(frames, wordClockFrame)
 
 				case "snake":
-					// Auto-playing snake game
+					
 					snakeFrame := generateSnakeFrame(duration)
 					frames = append(frames, snakeFrame)
 				}
