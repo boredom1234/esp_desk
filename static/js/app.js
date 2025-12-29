@@ -1,22 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 const canvas = document.getElementById("preview");
 const ctx = canvas.getContext("2d");
 const scale = 4;
@@ -24,79 +5,60 @@ const scale = 4;
 ctx.imageSmoothingEnabled = false;
 ctx.scale(scale, scale);
 
-
-
-
 let autoPlayEnabled = true;
 let autoPlayInterval = null;
 let frameSpeed = 200;
 let espRefreshDuration = 3000;
-let gifFps = 0; 
+let gifFps = 0;
 let settings = {};
 let marqueeDirection = "left";
 let marqueeSize = 2;
 let textStyle = "normal";
-let lastFrameHash = null; 
-let lastUploadedImage = null; 
-
-
-
-
-
+let lastFrameHash = null;
+let lastUploadedImage = null;
 
 initDragAndDrop();
 initClipboardPaste();
 initCharCounters();
 
-
 function initAfterAuth() {
   loadSettings();
   loadCurrent();
   loadWeather();
-  loadTimezone(); 
-  loadBCDSettings(); 
-  loadAnalogSettings(); 
-  loadSpotifyStatus(); 
-  initPomodoro(); 
+  loadTimezone();
+  loadBCDSettings();
+  loadAnalogSettings();
+  loadTimeSettings();
+  loadSpotifyStatus();
+  initPomodoro();
 
-  
   startPolling();
 }
-
-
-
-
 
 let pollingInterval = null;
 let settingsPollingInterval = null;
 let weatherInterval = null;
 
 function startPolling() {
-  
-  
   if (pollingInterval) clearInterval(pollingInterval);
   pollingInterval = setInterval(() => {
     loadCurrentWithChangeDetection();
   }, 1500);
 
-  
   if (settingsPollingInterval) clearInterval(settingsPollingInterval);
   settingsPollingInterval = setInterval(() => {
     loadSettings();
   }, 10000);
 
-  
   if (weatherInterval) clearInterval(weatherInterval);
   weatherInterval = setInterval(loadWeather, 60000);
 }
-
 
 function loadCurrentWithChangeDetection() {
   fetch("/frame/current")
     .then((res) => {
       if (!res.ok) {
         if (res.status === 503) {
-          
           return null;
         }
         throw new Error(`HTTP ${res.status}`);
@@ -105,7 +67,7 @@ function loadCurrentWithChangeDetection() {
     })
     .then((frame) => {
       if (!frame) return;
-      
+
       const frameHash = JSON.stringify(frame);
       if (frameHash !== lastFrameHash) {
         lastFrameHash = frameHash;
@@ -116,7 +78,6 @@ function loadCurrentWithChangeDetection() {
     .catch(() => {});
 }
 
-
 function showRefreshIndicator() {
   const badge = document.getElementById("mode-badge");
   if (badge) {
@@ -124,11 +85,6 @@ function showRefreshIndicator() {
     setTimeout(() => badge.classList.remove("refresh-pulse"), 300);
   }
 }
-
-
-
-
-
 
 document.getElementById("customText").addEventListener("keypress", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
@@ -143,9 +99,6 @@ document.getElementById("marqueeText").addEventListener("keypress", (e) => {
   }
 });
 
-
-
-
 function updateGifFpsDisplay(fps) {
   const label = document.getElementById("gifFpsValue");
   if (fps === 0) {
@@ -154,7 +107,6 @@ function updateGifFpsDisplay(fps) {
     label.textContent = `${fps} FPS`;
   }
 }
-
 
 const saveGifFpsDebounced = debounce((fps) => {
   authFetch("/api/settings", {
@@ -168,7 +120,6 @@ function updateGifFps(value) {
   gifFps = parseInt(value);
   updateGifFpsDisplay(gifFps);
 
-  
   saveGifFpsDebounced(gifFps);
 }
 
@@ -177,16 +128,12 @@ function resetGifFps() {
   document.getElementById("gifFpsSlider").value = 0;
   updateGifFpsDisplay(0);
 
-  
   authFetch("/api/settings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ gifFps: 0 }),
   }).catch(() => {});
 }
-
-
-
 
 function loadTimezone() {
   authFetch("/api/settings/timezone")
@@ -216,7 +163,6 @@ function updateTimezone() {
     .then((res) => res.json())
     .then((data) => {
       if (data.status === "updated") {
-        
       }
     })
     .catch((err) => {
@@ -225,9 +171,5 @@ function updateTimezone() {
       }
     });
 }
-
-
-
-
 
 checkAuth();

@@ -52,7 +52,11 @@ func updateLoop() {
 			if displayLocation != nil {
 				now = now.In(displayLocation)
 			}
-			currentTime := now.Format("15:04:05")
+			timeFormat := "15:04"
+			if timeShowSeconds {
+				timeFormat = "15:04:05"
+			}
+			currentTime := now.Format(timeFormat)
 			uptime := time.Since(startTime).Round(time.Second).String()
 
 			frameMap := make(map[string]Frame)
@@ -344,7 +348,7 @@ func updateLoop() {
 					frames = append(frames, wordClockFrame)
 
 				case "snake":
-					
+
 					snakeFrame := generateSnakeFrame(duration)
 					frames = append(frames, snakeFrame)
 				}

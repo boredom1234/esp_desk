@@ -1,8 +1,3 @@
-
-
-
-
-
 function selectStyle(style) {
   textStyle = style;
   document.querySelectorAll(".style-card").forEach((btn) => {
@@ -26,7 +21,6 @@ function setMarqueeSize(size) {
 }
 
 function toggleHeaders() {
-  
   authFetch("/api/settings/toggle-headers", { method: "POST" })
     .then((res) => res.json())
     .then((data) => {
@@ -39,7 +33,6 @@ function toggleHeaders() {
       }
     });
 }
-
 
 const saveEspRefreshDebounced = debounce((duration) => {
   authFetch("/api/settings", {
@@ -59,7 +52,6 @@ function updateEspRefresh(value) {
     espRefreshDuration / 1000
   ).toFixed(1)}s`;
 
-  
   saveEspRefreshDebounced(espRefreshDuration);
 }
 
@@ -68,15 +60,12 @@ function updateHeadersToggle(isOn) {
   toggle.classList.toggle("active", isOn);
 }
 
-
 let displayRotation = 0;
 
 function toggleRotation() {
-  
   displayRotation = displayRotation === 0 ? 2 : 0;
   updateRotationToggle(displayRotation === 2);
 
-  
   authFetch("/api/settings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -95,9 +84,6 @@ function updateRotationToggle(isOn) {
   }
 }
 
-
-
-
 let ledBeaconEnabled = true;
 let ledBrightness = 50;
 
@@ -108,14 +94,12 @@ function toggleBeacon() {
     toggle.classList.toggle("active", ledBeaconEnabled);
   }
 
-  
   const slider = document.getElementById("ledBrightnessSlider");
   if (slider) {
     slider.disabled = !ledBeaconEnabled;
     slider.style.opacity = ledBeaconEnabled ? "1" : "0.4";
   }
 
-  
   authFetch("/api/settings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -125,10 +109,7 @@ function toggleBeacon() {
       console.error("toggleBeacon error:", err);
     }
   });
-
-  
 }
-
 
 const saveLedBrightnessDebounced = debounce((brightness) => {
   authFetch("/api/settings", {
@@ -140,7 +121,6 @@ const saveLedBrightnessDebounced = debounce((brightness) => {
       console.error("updateLedBrightness error:", err);
     }
   });
-  
 }, 300);
 
 function updateLedBrightness(value) {
@@ -149,10 +129,8 @@ function updateLedBrightness(value) {
     "ledBrightnessValue"
   ).textContent = `${ledBrightness}%`;
 
-  
   saveLedBrightnessDebounced(ledBrightness);
 }
-
 
 function updateBeaconUI(brightness, enabled) {
   ledBrightness = brightness;
@@ -171,7 +149,6 @@ function updateBeaconUI(brightness, enabled) {
   if (valueDisplay) valueDisplay.textContent = `${ledBrightness}%`;
 }
 
-
 let currentDisplayScale = "normal";
 
 function setDisplayScale(scale) {
@@ -181,7 +158,6 @@ function setDisplayScale(scale) {
   currentDisplayScale = scale;
   updateDisplayScaleUI(scale);
 
-  
   authFetch("/api/settings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -191,28 +167,23 @@ function setDisplayScale(scale) {
       console.error("setDisplayScale error:", err);
     }
   });
-
-  
 }
 
 function updateDisplayScaleUI(scale) {
   currentDisplayScale = scale;
 
-  
   document
     .querySelectorAll("#displayScaleButtons .scale-btn")
     .forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.scale === scale);
     });
 
-  
   const label = document.getElementById("displayScaleValue");
   if (label) {
     const labels = { compact: "Compact", normal: "Normal", large: "Large" };
     label.textContent = labels[scale] || "Normal";
   }
 }
-
 
 let bcd24HourMode = true;
 let bcdShowSeconds = true;
@@ -221,7 +192,6 @@ function setBCDFormat(is24Hour) {
   bcd24HourMode = is24Hour;
   updateBCDFormatUI(is24Hour);
 
-  
   authFetch("/api/settings/bcd", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -231,15 +201,12 @@ function setBCDFormat(is24Hour) {
       console.error("setBCDFormat error:", err);
     }
   });
-
-  
 }
 
 function toggleBCDSeconds() {
   bcdShowSeconds = !bcdShowSeconds;
   updateBCDSecondsUI(bcdShowSeconds);
 
-  
   authFetch("/api/settings/bcd", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -249,8 +216,6 @@ function toggleBCDSeconds() {
       console.error("toggleBCDSeconds error:", err);
     }
   });
-
-  
 }
 
 function updateBCDFormatUI(is24Hour) {
@@ -272,7 +237,6 @@ function updateBCDSettingsUI(is24Hour, showSeconds) {
   updateBCDSecondsUI(showSeconds);
 }
 
-
 function loadBCDSettings() {
   authFetch("/api/settings/bcd")
     .then((res) => res.json())
@@ -286,7 +250,6 @@ function loadBCDSettings() {
     });
 }
 
-
 let analogShowSeconds = false;
 let analogShowRoman = false;
 
@@ -294,7 +257,6 @@ function toggleAnalogSeconds() {
   analogShowSeconds = !analogShowSeconds;
   updateAnalogSecondsUI(analogShowSeconds);
 
-  
   authFetch("/api/settings/analog", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -310,7 +272,6 @@ function toggleAnalogRoman() {
   analogShowRoman = !analogShowRoman;
   updateAnalogRomanUI(analogShowRoman);
 
-  
   authFetch("/api/settings/analog", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -339,7 +300,6 @@ function updateAnalogSettingsUI(showSeconds, showRoman) {
   updateAnalogRomanUI(showRoman);
 }
 
-
 function loadAnalogSettings() {
   authFetch("/api/settings/analog")
     .then((res) => res.json())
@@ -349,6 +309,50 @@ function loadAnalogSettings() {
     .catch((err) => {
       if (err.message !== "Unauthorized") {
         console.error("loadAnalogSettings error:", err);
+      }
+    });
+}
+
+// Time Clock Settings Management
+
+let timeShowSeconds = true;
+
+function toggleTimeSeconds() {
+  timeShowSeconds = !timeShowSeconds;
+  updateTimeSecondsUI(timeShowSeconds);
+
+  // Send update to backend
+  authFetch("/api/settings/time", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ timeShowSeconds: timeShowSeconds }),
+  }).catch((err) => {
+    if (err.message !== "Unauthorized") {
+      console.error("toggleTimeSeconds error:", err);
+    }
+  });
+}
+
+function updateTimeSecondsUI(showSeconds) {
+  timeShowSeconds = showSeconds;
+  const toggle = document.getElementById("timeSecondsToggle");
+  if (toggle) toggle.classList.toggle("active", showSeconds);
+}
+
+function updateTimeSettingsUI(showSeconds) {
+  updateTimeSecondsUI(showSeconds);
+}
+
+// Load Time settings on page load
+function loadTimeSettings() {
+  authFetch("/api/settings/time")
+    .then((res) => res.json())
+    .then((data) => {
+      updateTimeSettingsUI(data.timeShowSeconds);
+    })
+    .catch((err) => {
+      if (err.message !== "Unauthorized") {
+        console.error("loadTimeSettings error:", err);
       }
     });
 }

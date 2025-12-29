@@ -31,6 +31,8 @@ var (
 	bcd24HourMode  bool = true
 	bcdShowSeconds bool = true
 
+	timeShowSeconds bool = true
+
 	analogShowSeconds bool = false
 	analogShowRoman   bool = false
 
