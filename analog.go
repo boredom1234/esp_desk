@@ -5,40 +5,29 @@ import (
 	"time"
 )
 
-
-
-
-
-
-
-
 func generateAnalogFrame(duration int) Frame {
-	
+
 	now := time.Now()
 	if displayLocation != nil {
 		now = now.In(displayLocation)
 	}
 	h, m, s := now.Hour(), now.Minute(), now.Second()
 
-	
 	const (
 		screenWidth  = 128
 		screenHeight = 64
 	)
 
-	
-	clockRadius := 28           
-	centerX := screenWidth / 2  
-	centerY := screenHeight / 2 
+	clockRadius := 28
+	centerX := screenWidth / 2
+	centerY := screenHeight / 2
 
-	
 	if showHeaders {
 		centerY = 12 + (screenHeight-12)/2
 	}
 
 	elements := []Element{}
 
-	
 	if showHeaders {
 		headerText := "= CLOCK ="
 		headerSize := getScaledTextSize(1)
@@ -48,36 +37,28 @@ func generateAnalogFrame(duration int) Frame {
 		)
 	}
 
-	
 	elements = append(elements, drawClockCircle(centerX, centerY, clockRadius)...)
 
-	
 	if analogShowRoman {
 		elements = append(elements, drawRomanNumerals(centerX, centerY, clockRadius)...)
 	} else {
 		elements = append(elements, drawHourMarkers(centerX, centerY, clockRadius)...)
 	}
 
-	
 	elements = append(elements, Element{Type: "line", X: centerX - 1, Y: centerY - 1, Width: 3, Height: 3})
 
-	
-	
 	hourAngle := float64(h%12)*30 + float64(m)*0.5 - 90
-	
+
 	minuteAngle := float64(m)*6 + float64(s)*0.1 - 90
-	
+
 	secondAngle := float64(s)*6 - 90
 
-	
 	hourLength := int(float64(clockRadius) * 0.5)
 	elements = append(elements, drawClockHand(centerX, centerY, hourAngle, hourLength, 3)...)
 
-	
 	minuteLength := int(float64(clockRadius) * 0.75)
 	elements = append(elements, drawClockHand(centerX, centerY, minuteAngle, minuteLength, 2)...)
 
-	
 	if analogShowSeconds {
 		secondLength := int(float64(clockRadius) * 0.85)
 		elements = append(elements, drawClockHand(centerX, centerY, secondAngle, secondLength, 1)...)
@@ -91,17 +72,15 @@ func generateAnalogFrame(duration int) Frame {
 	}
 }
 
-
 func drawClockCircle(cx, cy, radius int) []Element {
 	elements := []Element{}
 
-	
 	x := radius
 	y := 0
 	err := 1 - radius
 
 	for x >= y {
-		
+
 		points := [][2]int{
 			{cx + x, cy + y}, {cx - x, cy + y},
 			{cx + x, cy - y}, {cx - x, cy - y},
@@ -130,15 +109,13 @@ func drawClockCircle(cx, cy, radius int) []Element {
 	return elements
 }
 
-
 func drawHourMarkers(cx, cy, radius int) []Element {
 	elements := []Element{}
 
 	for hour := 0; hour < 12; hour++ {
-		angle := float64(hour)*30 - 90 
+		angle := float64(hour)*30 - 90
 		radians := angle * math.Pi / 180
 
-		
 		innerRadius := float64(radius) - 4
 		outerRadius := float64(radius) - 1
 
@@ -147,60 +124,55 @@ func drawHourMarkers(cx, cy, radius int) []Element {
 		x2 := cx + int(outerRadius*math.Cos(radians))
 		y2 := cy + int(outerRadius*math.Sin(radians))
 
-		
 		elements = append(elements, drawLine(x1, y1, x2, y2)...)
 	}
 
 	return elements
 }
 
-
 func drawRomanNumerals(cx, cy, radius int) []Element {
 	elements := []Element{}
 
-	
-	
 	textRadius := float64(radius) - 8
 
-	
+	// 12
 	elements = append(elements, Element{
 		Type:  "text",
-		X:     cx - 9, 
-		Y:     cy - int(textRadius) - 2,
+		X:     cx - 6,
+		Y:     cy - int(textRadius) - 5,
 		Size:  1,
 		Value: "12",
 	})
 
-	
+	// 3
 	elements = append(elements, Element{
 		Type:  "text",
-		X:     cx + int(textRadius) - 2,
-		Y:     cy - 3,
+		X:     cx + int(textRadius) - 3,
+		Y:     cy - 5,
 		Size:  1,
 		Value: "3",
 	})
 
-	
+	// 6
 	elements = append(elements, Element{
 		Type:  "text",
 		X:     cx - 3,
-		Y:     cy + int(textRadius) - 6,
+		Y:     cy + int(textRadius) - 5,
 		Size:  1,
 		Value: "6",
 	})
 
-	
+	// 9
 	elements = append(elements, Element{
 		Type:  "text",
-		X:     cx - int(textRadius) - 2,
-		Y:     cy - 3,
+		X:     cx - int(textRadius) - 3,
+		Y:     cy - 5,
 		Size:  1,
 		Value: "9",
 	})
 
-	
 	for hour := 0; hour < 12; hour++ {
-		
+
 		if hour == 0 || hour == 3 || hour == 6 || hour == 9 {
 			continue
 		}
@@ -222,22 +194,19 @@ func drawRomanNumerals(cx, cy, radius int) []Element {
 	return elements
 }
 
-
 func drawClockHand(cx, cy int, angleDegrees float64, length, thickness int) []Element {
 	radians := angleDegrees * math.Pi / 180
 
-	
 	endX := cx + int(float64(length)*math.Cos(radians))
 	endY := cy + int(float64(length)*math.Sin(radians))
 
-	
 	elements := []Element{}
 
 	if thickness <= 1 {
-		
+
 		elements = append(elements, drawLine(cx, cy, endX, endY)...)
 	} else {
-		
+
 		perpAngle := radians + math.Pi/2
 		halfThickness := float64(thickness-1) / 2
 
@@ -256,7 +225,6 @@ func drawClockHand(cx, cy int, angleDegrees float64, length, thickness int) []El
 
 	return elements
 }
-
 
 func drawLine(x1, y1, x2, y2 int) []Element {
 	elements := []Element{}
@@ -301,7 +269,6 @@ func drawLine(x1, y1, x2, y2 int) []Element {
 
 	return elements
 }
-
 
 func abs(x int) int {
 	if x < 0 {

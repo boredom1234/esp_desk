@@ -230,13 +230,12 @@ The dashboard will be available at `http://localhost:3000`
 
 ### Environment Variables
 
-| Variable                | Default | Description                                      |
-| ----------------------- | ------- | ------------------------------------------------ |
-| `PORT`                  | `3000`  | Server port                                      |
-| `DASHBOARD_PASSWORD`    | —       | Dashboard access password (optional)             |
-| `SPOTIFY_CLIENT_ID`     | —       | Spotify Client ID (for music integration)        |
-| `SPOTIFY_CLIENT_SECRET` | —       | Spotify Client Secret                            |
-| `ASTRONOMY_API_KEY`     | —       | Astronomy API ID/Secret (for accurate moon data) |
+| Variable                | Default | Description                               |
+| ----------------------- | ------- | ----------------------------------------- |
+| `PORT`                  | `3000`  | Server port                               |
+| `DASHBOARD_PASSWORD`    | —       | Dashboard access password (optional)      |
+| `SPOTIFY_CLIENT_ID`     | —       | Spotify Client ID (for music integration) |
+| `SPOTIFY_CLIENT_SECRET` | —       | Spotify Client Secret                     |
 
 ### Persisted Settings (config.json)
 

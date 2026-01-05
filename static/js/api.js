@@ -1,15 +1,7 @@
-
-
-
-
-
-
 function loadCurrent() {
-  
   fetch("/frame/current")
     .then((res) => {
       if (!res.ok) {
-        
         if (res.status === 503) {
           showNoFramesMessage();
           return null;
@@ -30,7 +22,6 @@ function loadCurrent() {
     });
 }
 
-
 function showNoFramesMessage() {
   const badge = document.getElementById("mode-badge");
   if (badge) {
@@ -39,12 +30,9 @@ function showNoFramesMessage() {
   }
 }
 
-function hideNoFramesMessage() {
-  
-}
+function hideNoFramesMessage() {}
 
 function loadSettings() {
-  
   authFetch("/api/settings")
     .then((res) => res.json())
     .then((data) => {
@@ -64,18 +52,15 @@ function loadSettings() {
       updateAutoPlayButton();
       updateHeadersToggle(data.showHeaders);
 
-      
       if (typeof updateRotationToggle === "function") {
         displayRotation = data.displayRotation || 0;
         updateRotationToggle(data.displayRotation === 2);
       }
 
-      
       if (data.cycleItems) {
         updateDisplayCycleUI(data.cycleItems);
       }
 
-      
       if (typeof updateBeaconUI === "function") {
         updateBeaconUI(
           data.ledBrightness || 50,
@@ -83,7 +68,6 @@ function loadSettings() {
         );
       }
 
-      
       if (typeof initLedSettings === "function") {
         initLedSettings(
           data.ledBeaconEnabled !== false,
@@ -95,7 +79,6 @@ function loadSettings() {
         );
       }
 
-      
       if (typeof updateDisplayScaleUI === "function") {
         updateDisplayScaleUI(data.displayScale || "normal");
       }
@@ -108,7 +91,6 @@ function loadSettings() {
 }
 
 function prevFrame() {
-  
   authFetch("/api/control/prev", { method: "POST" })
     .then((res) => res.json())
     .then((frame) => {
@@ -123,7 +105,6 @@ function prevFrame() {
 }
 
 function nextFrame() {
-  
   authFetch("/api/control/next", { method: "POST" })
     .then((res) => res.json())
     .then((frame) => {
@@ -141,13 +122,11 @@ function sendCustomText() {
   const text = document.getElementById("customText").value;
   if (!text) return;
 
-  
   const centered = document.getElementById("styleCentered")?.checked || false;
   const framed = document.getElementById("styleFramed")?.checked || false;
   const large = document.getElementById("styleLarge")?.checked || false;
   const inverted = document.getElementById("styleInverted")?.checked || false;
 
-  
   authFetch("/api/custom/text", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -179,7 +158,6 @@ function sendMarquee() {
   const maxFrames = parseInt(document.getElementById("marqueeMaxFrames").value);
   const framed = document.getElementById("marqueeFramed")?.checked || false;
 
-  
   authFetch("/api/custom/marquee", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -195,9 +173,8 @@ function sendMarquee() {
   })
     .then((res) => res.json())
     .then((data) => {
-      
       loadSettings();
-      
+
       startAutoPlay();
     })
     .catch((err) => {
@@ -208,27 +185,20 @@ function sendMarquee() {
 }
 
 function resetSystem() {
-  
   authFetch("/api/reset", { method: "POST" })
     .then((res) => res.json())
     .then(() => {
-      
       document.getElementById("customText").value = "";
       document.getElementById("marqueeText").value = "";
       document.getElementById("imageUpload").value = "";
 
-      
       document.getElementById("citySelect").value = "12.97,80.27,Bangalore";
 
-      
       loadSettings();
       loadCurrent();
       loadWeather();
 
-      
       stopAutoPlay();
-
-      
     })
     .catch((err) => {
       if (err.message !== "Unauthorized") {
@@ -247,17 +217,12 @@ function processAndUploadImage() {
   uploadFile(fileInput.files[0]);
 }
 
-
-
-
-
 function refreshMoonPhase() {
   const btn = document.getElementById("moonRefreshBtn");
   const statusEl = document.getElementById("moonPhaseStatus");
   const constEl = document.getElementById("moonConstellation");
   const sourceEl = document.getElementById("moonDataSource");
 
-  
   if (btn) {
     btn.disabled = true;
     btn.textContent = "⏳ Fetching...";
@@ -271,7 +236,7 @@ function refreshMoonPhase() {
         const illum = Math.round((data.illumination || 0) * 100);
         if (statusEl) statusEl.textContent = `${data.phaseName} (${illum}%)`;
         if (constEl) constEl.textContent = data.constellation || "--";
-        if (sourceEl) sourceEl.textContent = "✅ Astronomy API";
+        if (sourceEl) sourceEl.textContent = "✅ Live Data";
       } else {
         if (statusEl) statusEl.textContent = data.phaseName || "Error";
         if (constEl) constEl.textContent = "--";
