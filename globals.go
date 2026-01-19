@@ -56,7 +56,6 @@ var (
 	dashboardPasswordHash string
 	authTokens            = make(map[string]time.Time)
 	authMutex             sync.RWMutex
-	authEnabled           bool = false
 
 	loginAttempts      = make(map[string]*LoginAttempt)
 	loginAttemptsMutex sync.RWMutex

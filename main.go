@@ -52,14 +52,12 @@ func main() {
 	startConfigSaver()
 
 	dashboardPassword = os.Getenv("DASHBOARD_PASSWORD")
-	if dashboardPassword != "" {
-		authEnabled = true
-
-		dashboardPasswordHash = hashPassword(dashboardPassword)
-		log.Printf("Authentication ENABLED - password required to access dashboard")
-	} else {
-		log.Printf("Authentication DISABLED - no DASHBOARD_PASSWORD set")
+	if dashboardPassword == "" {
+		log.Fatal("DASHBOARD_PASSWORD environment variable is required")
 	}
+
+	dashboardPasswordHash = hashPassword(dashboardPassword)
+	log.Printf("Authentication ENABLED - password required to access dashboard")
 
 	initializeTimezone()
 

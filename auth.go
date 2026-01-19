@@ -31,8 +31,8 @@ func hashPassword(password string) string {
 
 
 func isValidToken(token string) bool {
-	if !authEnabled || token == "" {
-		return !authEnabled 
+	if token == "" {
+		return false
 	}
 
 	authMutex.RLock()
@@ -69,13 +69,6 @@ func createSession() string {
 
 func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		
-		if !authEnabled {
-			next(w, r)
-			return
-		}
-
-		
 		authHeader := r.Header.Get("Authorization")
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 
@@ -171,16 +164,6 @@ func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 func handleAuthVerify(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	
-	if !authEnabled {
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"authenticated": true,
-			"authRequired":  false,
-		})
-		return
-	}
-
-	
 	authHeader := r.Header.Get("Authorization")
 	token := strings.TrimPrefix(authHeader, "Bearer ")
 
