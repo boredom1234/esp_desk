@@ -49,6 +49,7 @@ func main() {
 	loadEnvFile()
 
 	loadConfig()
+	startConfigSaver()
 
 	dashboardPassword = os.Getenv("DASHBOARD_PASSWORD")
 	if dashboardPassword != "" {

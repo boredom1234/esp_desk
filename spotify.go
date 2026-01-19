@@ -386,12 +386,8 @@ func getCurrentlyPlayingAsync() (*SpotifyTrack, error) {
 
 
 
-func generateSpotifyFrame(duration int) Frame {
+func generateSpotifyFrame(duration int, track *SpotifyTrack, enabled bool) Frame {
 	elements := []Element{}
-
-	
-	track := spotifyLastTrack
-	enabled := spotifyEnabled
 
 	if !enabled || track == nil {
 		

@@ -3,22 +3,16 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"math"
 	"net/http"
-	"regexp"
-	"strconv"
-	"strings"
 	"time"
 )
 
-
-
 func initMoonPhase() {
-	
-	log.Println("🌙 Moon phase utilizing web scraping (timeanddate.com)")
+	log.Println("🌙 Moon phase utilizing internal calculation")
 }
+
 
 func handleMoonPhaseRefresh(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -30,166 +24,36 @@ func handleMoonPhaseRefresh(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("🌙 Manual moon phase refresh triggered")
 
-	
-	err := fetchMoonPhaseFromWeb()
+	updateMoonPhaseData()
 
 	mutex.Lock()
 	data := moonPhaseData
 	mutex.Unlock()
-
-	if err != nil {
-		log.Printf("🌙 Manual refresh failed: %v", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"success":   false,
-			"error":     err.Error(),
-			"phaseName": data.PhaseName,
-			"source":    "fallback",
-		})
-		return
-	}
 
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success":       true,
 		"phaseName":     data.PhaseName,
 		"illumination":  data.Illumination,
 		"constellation": data.Constellation,
-		"source":        "web",
+		"source":        "calculated",
 	})
 }
 
 func startMoonPhaseFetcher() {
+	
+	updateMoonPhaseData()
+
 	go func() {
 		
-		mutex.Lock()
-		lastFetch := moonPhaseLastFetch
-		hasData := moonPhaseData.PhaseName != ""
-		mutex.Unlock()
-
-		if hasData && time.Since(lastFetch) < 6*time.Hour {
-			log.Printf("🌙 Using cached moon phase data (fetched %s ago)", time.Since(lastFetch).Round(time.Minute))
-		} else {
-			
-			fetchMoonPhaseWithRetry(3)
-		}
-
-		
-		ticker := time.NewTicker(6 * time.Hour)
+		ticker := time.NewTicker(4 * time.Hour)
 		for range ticker.C {
-			fetchMoonPhaseWithRetry(3)
+			updateMoonPhaseData()
 		}
 	}()
 }
 
-func fetchMoonPhaseWithRetry(maxRetries int) {
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		err := fetchMoonPhaseFromWeb()
-		if err == nil {
-			return 
-		}
 
-		if attempt < maxRetries {
-			backoff := time.Duration(attempt*attempt) * 30 * time.Second
-			log.Printf("🌙 Moon phase fetch failed (attempt %d/%d), retrying in %s: %v",
-				attempt, maxRetries, backoff, err)
-			time.Sleep(backoff)
-		} else {
-			log.Printf("🌙 Moon phase fetch failed after %d attempts, using calculated fallback: %v",
-				maxRetries, err)
-			
-			useFallbackMoonPhase()
-		}
-	}
-}
-
-
-func fetchMoonPhaseFromWeb() error {
-	mutex.Lock()
-	
-	url := "https://www.timeanddate.com/moon/phases/usa/new-york"
-	mutex.Unlock()
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
-	}
-
-	
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml")
-
-	log.Printf("🌙 Scraping Moon Phase from: %s", url)
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("received status code %d", resp.StatusCode)
-	}
-
-	
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to read body: %w", err)
-	}
-	body := string(bodyBytes)
-
-	
-	
-	reIllum := regexp.MustCompile(`id=cur-moon-percent>([\d\.]+)%</span>`)
-	illumMatches := reIllum.FindStringSubmatch(body)
-	var illumVal float64
-	if len(illumMatches) >= 2 {
-		illumStr := illumMatches[1]
-		val, err := strconv.ParseFloat(illumStr, 64)
-		if err == nil {
-			illumVal = val
-		} else {
-			log.Printf("⚠️ Failed to parse illumination '%s': %v", illumStr, err)
-		}
-	} else {
-		return fmt.Errorf("could not find illumination percentage")
-	}
-
-	
-	
-	
-	rePhase := regexp.MustCompile(`(?s)<div id=qlook[^>]*>.*?<a[^>]+>([^<]+)</a>`)
-	phaseMatches := rePhase.FindStringSubmatch(body)
-
-	var phaseName string
-	if len(phaseMatches) >= 2 {
-		phaseName = phaseMatches[1]
-	} else {
-		
-		log.Println("⚠️ Could not parse phase name from HTML")
-		phaseName = "Unknown"
-	}
-
-	phaseName = strings.TrimSpace(phaseName)
-
-	log.Printf("🌙 Scraped Data - Phase: %s, Illum: %.1f%%", phaseName, illumVal)
-
-	mutex.Lock()
-	moonPhaseData = MoonPhaseData{
-		PhaseName:     phaseName,
-		PhaseAngle:    0, 
-		Illumination:  illumVal / 100.0,
-		Constellation: "",
-		DistanceKM:    "",
-		FetchedAt:     time.Now().Format(time.RFC3339),
-	}
-	moonPhaseLastFetch = time.Now()
-	mutex.Unlock()
-
-	go saveConfig()
-
-	return nil
-}
-
-func useFallbackMoonPhase() {
+func updateMoonPhaseData() {
 	phase := calculateMoonPhase()
 	phaseName := getMoonPhaseName(phase)
 	illumination := float64(calculateIllumination(phase)) / 100.0
@@ -206,14 +70,18 @@ func useFallbackMoonPhase() {
 	moonPhaseLastFetch = time.Now()
 	mutex.Unlock()
 
-	log.Printf("🌙 Using calculated moon phase: %s (~%.0f%% illuminated)",
-		phaseName, illumination*100)
+	log.Printf("🌙 Updated moon phase: %s (%.0f%% illuminated)", phaseName, illumination*100)
+
+	
+	saveConfig()
 }
 
 const synodicMonth = 29.53058867
 
+
 func calculateMoonPhase() int {
 	now := time.Now()
+	
 	if displayLocation != nil {
 		now = now.In(displayLocation)
 	}
@@ -231,10 +99,8 @@ func calculateMoonPhase() int {
 	}
 
 	
-	phase := int(cyclePosition * 8.0)
-	if phase > 7 {
-		phase = 7
-	}
+	
+	phase := int(math.Round(cyclePosition * 8.0)) % 8
 
 	return phase
 }
@@ -256,7 +122,9 @@ func getMoonPhaseName(phase int) string {
 	return "Unknown"
 }
 
+
 func calculateIllumination(phase int) int {
+	
 	illuminations := []int{0, 25, 50, 75, 100, 75, 50, 25}
 	if phase >= 0 && phase < len(illuminations) {
 		return illuminations[phase]
@@ -291,7 +159,6 @@ func generateMoonBitmap(illumination float64, phaseName string) ([]int, int, int
 	bytesPerRow := (size + 7) / 8
 	bitmap := make([]int, bytesPerRow*size)
 
-	
 	setPixel := func(x, y int) {
 		if x < 0 || x >= size || y < 0 || y >= size {
 			return
@@ -302,11 +169,9 @@ func generateMoonBitmap(illumination float64, phaseName string) ([]int, int, int
 		}
 	}
 
-	
 	isWaxing := phaseName == "Waxing Crescent" || phaseName == "Waxing Gibbous" ||
 		phaseName == "First Quarter" || phaseName == "New Moon"
 
-	
 	for y := 0; y < size; y++ {
 		for x := 0; x < size; x++ {
 			dx := float64(x - centerX)
@@ -321,7 +186,6 @@ func generateMoonBitmap(illumination float64, phaseName string) ([]int, int, int
 			
 			normalizedX := dx / float64(radius)
 
-			
 			var shouldLight bool
 
 			if illumination <= 0.02 {
@@ -333,14 +197,15 @@ func generateMoonBitmap(illumination float64, phaseName string) ([]int, int, int
 			} else {
 				
 				
-				
-				
 				terminator := (illumination - 0.5) * 2.0
 
 				if isWaxing {
 					
+					
+					
 					shouldLight = normalizedX >= -terminator
 				} else {
+					
 					
 					shouldLight = normalizedX <= terminator
 				}
@@ -353,8 +218,6 @@ func generateMoonBitmap(illumination float64, phaseName string) ([]int, int, int
 	}
 
 	
-	
-	
 	for angle := 0.0; angle < 360.0; angle += 1.0 {
 		rad := angle * math.Pi / 180.0
 		x := int(float64(centerX) + float64(radius)*math.Cos(rad))
@@ -365,46 +228,28 @@ func generateMoonBitmap(illumination float64, phaseName string) ([]int, int, int
 	return bitmap, size, size
 }
 
-func generateMoonPhaseFrame(duration int) Frame {
-	
-	data := moonPhaseData
-
-	
+func generateMoonPhaseFrame(duration int, data MoonPhaseData) Frame {
 	
 	if data.PhaseName == "" {
-		phase := calculateMoonPhase()
-		phaseName := getMoonPhaseName(phase)
-		illumination := float64(calculateIllumination(phase)) / 100.0
-
-		moonPhaseData = MoonPhaseData{
-			PhaseName:     phaseName,
-			PhaseAngle:    float64(phase) * 45.0, 
-			Illumination:  illumination,
-			Constellation: "", 
-			DistanceKM:    "", 
-			FetchedAt:     time.Now().Format(time.RFC3339),
-		}
+		updateMoonPhaseData()
+		mutex.Lock()
 		data = moonPhaseData
+		mutex.Unlock()
 	}
 
-	
 	bitmap, width, height := generateMoonBitmap(data.Illumination, data.PhaseName)
 
-	
 	bitmapX := (128 - width) / 2
 	bitmapY := 0
 
-	
 	illuminationPct := int(data.Illumination * 100)
 	illuminationStr := fmt.Sprintf("%d%%", illuminationPct)
 
 	elements := []Element{
-		
 		{Type: "bitmap", X: bitmapX, Y: bitmapY, Width: width, Height: height, Bitmap: bitmap},
 	}
 
 	if showHeaders {
-		
 		displayStr := fmt.Sprintf("%s %s", data.PhaseName, illuminationStr)
 		elements = append(elements, Element{
 			Type:  "text",
@@ -414,8 +259,6 @@ func generateMoonPhaseFrame(duration int) Frame {
 			Value: displayStr,
 		})
 	}
-	
-	
 
 	return Frame{
 		Version:  1,

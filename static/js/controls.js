@@ -313,7 +313,7 @@ function loadAnalogSettings() {
     });
 }
 
-// Time Clock Settings Management
+
 
 let timeShowSeconds = true;
 
@@ -321,7 +321,7 @@ function toggleTimeSeconds() {
   timeShowSeconds = !timeShowSeconds;
   updateTimeSecondsUI(timeShowSeconds);
 
-  // Send update to backend
+  
   authFetch("/api/settings/time", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -343,7 +343,7 @@ function updateTimeSettingsUI(showSeconds) {
   updateTimeSecondsUI(showSeconds);
 }
 
-// Load Time settings on page load
+
 function loadTimeSettings() {
   authFetch("/api/settings/time")
     .then((res) => res.json())

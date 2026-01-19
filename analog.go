@@ -135,7 +135,7 @@ func drawRomanNumerals(cx, cy, radius int) []Element {
 
 	textRadius := float64(radius) - 8
 
-	// 12
+	
 	elements = append(elements, Element{
 		Type:  "text",
 		X:     cx - 6,
@@ -144,7 +144,7 @@ func drawRomanNumerals(cx, cy, radius int) []Element {
 		Value: "12",
 	})
 
-	// 3
+	
 	elements = append(elements, Element{
 		Type:  "text",
 		X:     cx + int(textRadius) - 3,
@@ -153,7 +153,7 @@ func drawRomanNumerals(cx, cy, radius int) []Element {
 		Value: "3",
 	})
 
-	// 6
+	
 	elements = append(elements, Element{
 		Type:  "text",
 		X:     cx - 3,
@@ -162,7 +162,7 @@ func drawRomanNumerals(cx, cy, radius int) []Element {
 		Value: "6",
 	})
 
-	// 9
+	
 	elements = append(elements, Element{
 		Type:  "text",
 		X:     cx - int(textRadius) - 3,

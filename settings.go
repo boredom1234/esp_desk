@@ -363,7 +363,39 @@ func loadConfig() {
 	log.Println("Loaded settings from config.json")
 }
 
+var saveConfigChan = make(chan struct{}, 1)
+
+func startConfigSaver() {
+	go func() {
+		for range saveConfigChan {
+			
+			time.Sleep(500 * time.Millisecond)
+
+			
+		drainLoop:
+			for {
+				select {
+				case <-saveConfigChan:
+					continue
+				default:
+					break drainLoop
+				}
+			}
+
+			writeConfigToDisk()
+		}
+	}()
+}
+
 func saveConfig() {
+	select {
+	case saveConfigChan <- struct{}{}:
+	default:
+		
+	}
+}
+
+func writeConfigToDisk() {
 	mutex.Lock()
 	config := PersistentConfig{
 		ShowHeaders:           showHeaders,
@@ -647,9 +679,9 @@ func handleAnalogSettings(w http.ResponseWriter, r *http.Request) {
 	jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
-// Time Settings Management
-//
-// Handles Time Clock configuration options
+
+
+
 
 func handleTimeSettings(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -689,7 +721,7 @@ func handleTimeSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		mutex.Unlock()
 
-		// Save config asynchronously
+		
 		go saveConfig()
 
 		if len(changes) > 0 {

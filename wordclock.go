@@ -123,11 +123,11 @@ func getActiveWords(hours, minutes int) []string {
 }
 
 
-func generateWordClockFrame(duration int) Frame {
-	
+func generateWordClockFrame(duration int, loc *time.Location) Frame {
+
 	now := time.Now()
-	if displayLocation != nil {
-		now = now.In(displayLocation)
+	if loc != nil {
+		now = now.In(loc)
 	}
 	hours := now.Hour()
 	minutes := now.Minute()
