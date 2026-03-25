@@ -309,6 +309,14 @@ function initDisplayCycleDragDrop() {
         toggleCycleItem(item.dataset.id);
       });
     }
+
+    const deleteBtn = item.querySelector(".cycle-delete-btn");
+    if (deleteBtn) {
+      deleteBtn.addEventListener("mousedown", (e) => e.stopPropagation());
+      deleteBtn.addEventListener("click", () => {
+        deleteCycleItem(item.dataset.id);
+      });
+    }
   });
 }
 
