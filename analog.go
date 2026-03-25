@@ -5,11 +5,10 @@ import (
 	"time"
 )
 
-func generateAnalogFrame(duration int) Frame {
-
+func generateAnalogFrame(duration int, loc *time.Location, headers bool, showSeconds bool, showRoman bool) Frame {
 	now := time.Now()
-	if displayLocation != nil {
-		now = now.In(displayLocation)
+	if loc != nil {
+		now = now.In(loc)
 	}
 	h, m, s := now.Hour(), now.Minute(), now.Second()
 
@@ -22,13 +21,13 @@ func generateAnalogFrame(duration int) Frame {
 	centerX := screenWidth / 2
 	centerY := screenHeight / 2
 
-	if showHeaders {
+	if headers {
 		centerY = 12 + (screenHeight-12)/2
 	}
 
 	elements := []Element{}
 
-	if showHeaders {
+	if headers {
 		headerText := "= CLOCK ="
 		headerSize := getScaledTextSize(1)
 		elements = append(elements,
@@ -39,7 +38,7 @@ func generateAnalogFrame(duration int) Frame {
 
 	elements = append(elements, drawClockCircle(centerX, centerY, clockRadius)...)
 
-	if analogShowRoman {
+	if showRoman {
 		elements = append(elements, drawRomanNumerals(centerX, centerY, clockRadius)...)
 	} else {
 		elements = append(elements, drawHourMarkers(centerX, centerY, clockRadius)...)
@@ -59,7 +58,7 @@ func generateAnalogFrame(duration int) Frame {
 	minuteLength := int(float64(clockRadius) * 0.75)
 	elements = append(elements, drawClockHand(centerX, centerY, minuteAngle, minuteLength, 2)...)
 
-	if analogShowSeconds {
+	if showSeconds {
 		secondLength := int(float64(clockRadius) * 0.85)
 		elements = append(elements, drawClockHand(centerX, centerY, secondAngle, secondLength, 1)...)
 	}
@@ -135,7 +134,6 @@ func drawRomanNumerals(cx, cy, radius int) []Element {
 
 	textRadius := float64(radius) - 8
 
-	
 	elements = append(elements, Element{
 		Type:  "text",
 		X:     cx - 6,
@@ -144,7 +142,6 @@ func drawRomanNumerals(cx, cy, radius int) []Element {
 		Value: "12",
 	})
 
-	
 	elements = append(elements, Element{
 		Type:  "text",
 		X:     cx + int(textRadius) - 3,
@@ -153,7 +150,6 @@ func drawRomanNumerals(cx, cy, radius int) []Element {
 		Value: "3",
 	})
 
-	
 	elements = append(elements, Element{
 		Type:  "text",
 		X:     cx - 3,
@@ -162,7 +158,6 @@ func drawRomanNumerals(cx, cy, radius int) []Element {
 		Value: "6",
 	})
 
-	
 	elements = append(elements, Element{
 		Type:  "text",
 		X:     cx - int(textRadius) - 3,

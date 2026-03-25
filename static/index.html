@@ -258,16 +258,16 @@
         <div class="right-column">
           <section class="card control-panel">
             <div class="tabs">
-              <button class="tab-btn active" onclick="switchTab('quickText')">
+              <button class="tab-btn active" onclick="switchTab(event, 'quickText')">
                 Text
               </button>
-              <button class="tab-btn" onclick="switchTab('marquee')">
+              <button class="tab-btn" onclick="switchTab(event, 'marquee')">
                 Marquee
               </button>
-              <button class="tab-btn" onclick="switchTab('upload')">
+              <button class="tab-btn" onclick="switchTab(event, 'upload')">
                 Media
               </button>
-              <button class="tab-btn" onclick="switchTab('pomodoro')">
+              <button class="tab-btn" onclick="switchTab(event, 'pomodoro')">
                 Timer
               </button>
             </div>
@@ -1262,7 +1262,7 @@
 
     <script>
       // Simple tab implementation for the new layout
-      function switchTab(tabId) {
+      function switchTab(event, tabId) {
         document
           .querySelectorAll(".tab-content")
           .forEach((el) => (el.style.display = "none"));
@@ -1271,7 +1271,9 @@
         document
           .querySelectorAll(".tab-btn")
           .forEach((el) => el.classList.remove("active"));
-        event.target.classList.add("active");
+        if (event && event.target) {
+          event.target.classList.add("active");
+        }
       }
     </script>
   </body>

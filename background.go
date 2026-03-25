@@ -15,59 +15,72 @@ func updateLoop() {
 		}
 	}()
 
-	// Increased update rate to 10Hz (100ms) for smoother animations
+	
 	ticker := time.NewTicker(100 * time.Millisecond)
+	var lastPomodoroTick time.Time
+	var pomodoroAccumulator time.Duration
 	for range ticker.C {
 		mutex.Lock()
 
-		
+		nowTick := time.Now()
+		if lastPomodoroTick.IsZero() {
+			lastPomodoroTick = nowTick
+		}
+		delta := nowTick.Sub(lastPomodoroTick)
+		lastPomodoroTick = nowTick
+
 		if pomodoroSession.Active && !pomodoroSession.IsPaused {
-			if pomodoroSession.TimeRemaining > 0 {
-				pomodoroSession.TimeRemaining--
-			} else {
+			pomodoroAccumulator += delta
+			for pomodoroAccumulator >= time.Second {
+				pomodoroAccumulator -= time.Second
+				if pomodoroSession.TimeRemaining > 0 {
+					pomodoroSession.TimeRemaining--
+					continue
+				}
 				if pomodoroSession.Mode == "work" {
 					pomodoroSession.CyclesCompleted++
 					if pomodoroSession.CyclesCompleted >= pomodoroSettings.CyclesUntilLong {
 						pomodoroSession.Mode = "longBreak"
 						pomodoroSession.TimeRemaining = pomodoroSettings.LongBreak
 						pomodoroSession.CyclesCompleted = 0
-						log.Printf("🍅 Pomodoro: Auto-started long break (%d min)", pomodoroSettings.LongBreak/60)
+						log.Printf("Pomodoro: Auto-started long break (%d min)", pomodoroSettings.LongBreak/60)
 					} else {
 						pomodoroSession.Mode = "break"
 						pomodoroSession.TimeRemaining = pomodoroSettings.BreakDuration
-						log.Printf("🍅 Pomodoro: Auto-started break (%d min)", pomodoroSettings.BreakDuration/60)
+						log.Printf("Pomodoro: Auto-started break (%d min)", pomodoroSettings.BreakDuration/60)
 					}
 				} else {
 					pomodoroSession.Mode = "work"
 					pomodoroSession.TimeRemaining = pomodoroSettings.WorkDuration
-					log.Printf("🍅 Pomodoro: Auto-started work session (%d min)", pomodoroSettings.WorkDuration/60)
+					log.Printf("Pomodoro: Auto-started work session (%d min)", pomodoroSettings.WorkDuration/60)
 				}
-				pomodoroSession.StartedAt = time.Now()
+				pomodoroSession.StartedAt = nowTick
 			}
+		} else {
+			pomodoroAccumulator = 0
 		}
 
-		
-		
 		localIsCustomMode := isCustomMode
 		localStartTime := startTime
 		localDisplayLocation := displayLocation
 		localTimeShowSeconds := timeShowSeconds
 		localShowHeaders := showHeaders
+		localBCD24HourMode := bcd24HourMode
+		localBCDShowSeconds := bcdShowSeconds
+		localAnalogShowSeconds := analogShowSeconds
+		localAnalogShowRoman := analogShowRoman
 		localWeatherData := weatherData
 		localPomodoroSession := pomodoroSession
 		localPomodoroSettings := pomodoroSettings
 		localCycleItems := make([]CycleItem, len(cycleItems))
 		copy(localCycleItems, cycleItems)
 
-		
-		localSpotifyTrack := spotifyLastTrack 
+		localSpotifyTrack := spotifyLastTrack
 		localSpotifyEnabled := spotifyEnabled
 		localMoonPhaseData := moonPhaseData
 
 		mutex.Unlock()
-		
 
-		
 		var newFrames []Frame
 
 		if !localIsCustomMode {
@@ -82,14 +95,12 @@ func updateLoop() {
 			currentTime := now.Format(timeFormat)
 			uptime := time.Since(localStartTime).Round(time.Second).String()
 
-			
 			frameMap := make(map[string]Frame)
 
 			tzAbbrev, _ := now.Zone()
 			timeMainSize := getScaledTextSize(2)
 			headerSize := getScaledTextSize(1)
 
-			
 			timeElements := []Element{
 				{Type: "text", X: calcCenteredX(currentTime, timeMainSize), Y: 22, Size: timeMainSize, Value: currentTime},
 			}
@@ -104,7 +115,6 @@ func updateLoop() {
 			}
 			frameMap["time"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: timeElements}
 
-			
 			aqiDisplay := ""
 			if localWeatherData.AQI > 0 {
 				aqiDisplay = fmt.Sprintf("AQI:%d", localWeatherData.AQI)
@@ -138,7 +148,6 @@ func updateLoop() {
 			}
 			frameMap["weather"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: weatherElements}
 
-			
 			uptimeSize := getScaledTextSize(1)
 			uptimeElements := []Element{
 				{Type: "text", X: calcCenteredX(uptime, uptimeSize), Y: 28, Size: uptimeSize, Value: uptime},
@@ -152,7 +161,6 @@ func updateLoop() {
 			}
 			frameMap["uptime"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: uptimeElements}
 
-			
 			pomodoroMinutes := localPomodoroSession.TimeRemaining / 60
 			pomodoroSeconds := localPomodoroSession.TimeRemaining % 60
 			pomodoroTimeStr := fmt.Sprintf("%02d:%02d", pomodoroMinutes, pomodoroSeconds)
@@ -203,7 +211,6 @@ func updateLoop() {
 			}
 			frameMap["pomodoro"] = Frame{Version: 1, Duration: 3000, Clear: true, Elements: pomodoroElements}
 
-			
 			for _, item := range localCycleItems {
 				if !item.Enabled {
 					continue
@@ -339,36 +346,35 @@ func updateLoop() {
 					}
 
 				case "bcd":
-					bcdFrame := generateBCDFrame(duration)
+					bcdFrame := generateBCDFrame(duration, localDisplayLocation, localShowHeaders, localBCD24HourMode, localBCDShowSeconds)
 					newFrames = append(newFrames, bcdFrame)
 
 				case "analog":
-					analogFrame := generateAnalogFrame(duration)
+					analogFrame := generateAnalogFrame(duration, localDisplayLocation, localShowHeaders, localAnalogShowSeconds, localAnalogShowRoman)
 					newFrames = append(newFrames, analogFrame)
 
 				case "spotify":
-					
+
 					spotifyFrame := generateSpotifyFrame(duration, localSpotifyTrack, localSpotifyEnabled)
 					newFrames = append(newFrames, spotifyFrame)
 
 				case "moonphase":
-					
-					moonFrame := generateMoonPhaseFrame(duration, localMoonPhaseData)
+
+					moonFrame := generateMoonPhaseFrame(duration, localMoonPhaseData, localShowHeaders)
 					newFrames = append(newFrames, moonFrame)
 
 				case "wordclock":
-					
-					wordClockFrame := generateWordClockFrame(duration, localDisplayLocation)
+
+					wordClockFrame := generateWordClockFrame(duration, localDisplayLocation, localShowHeaders)
 					newFrames = append(newFrames, wordClockFrame)
 
 				case "snake":
-					
-					snakeFrame := generateSnakeFrame(duration)
+
+					snakeFrame := generateSnakeFrame(duration, localShowHeaders)
 					newFrames = append(newFrames, snakeFrame)
 				}
 			}
 
-			
 			if localPomodoroSettings.ShowInCycle {
 				hasPomodoroInCycle := false
 				for _, item := range localCycleItems {
@@ -389,9 +395,11 @@ func updateLoop() {
 			}
 		}
 
-		
 		mutex.Lock()
 		frames = newFrames
+		if len(frames) == 0 || index < 0 || index >= len(frames) {
+			index = 0
+		}
 		mutex.Unlock()
 	}
 }

@@ -4,21 +4,17 @@ import (
 	"time"
 )
 
-
-
 var wordClockGrid = []string{
-	"ITTISITWENTY", 
-	"QUARTERHALFM", 
-	"TENFIVEEPAST", 
-	"TOATWELVEONE", 
-	"TWOTHREEFOUR", 
-	"FIVESIXSEVEN", 
-	"EIGHTNINETEN", 
-	"ELEVENNDDATE", 
-	"TO'CLOCKIMEA", 
+	"ITTISITWENTY",
+	"QUARTERHALFM",
+	"TENFIVEEPAST",
+	"TOATWELVEONE",
+	"TWOTHREEFOUR",
+	"FIVESIXSEVEN",
+	"EIGHTNINETEN",
+	"ELEVENNDDATE",
+	"TO'CLOCKIMEA",
 }
-
-
 
 type WordPosition struct {
 	Row      int
@@ -26,25 +22,21 @@ type WordPosition struct {
 	EndCol   int
 }
 
-
 var wordMapping = map[string][]WordPosition{
-	
+
 	"IT": {{0, 0, 1}},
 	"IS": {{0, 3, 4}},
 
-	
 	"M_TWENTY":  {{0, 6, 11}},
 	"M_QUARTER": {{1, 0, 6}},
 	"M_HALF":    {{1, 7, 10}},
 	"M_TEN":     {{2, 0, 2}},
 	"M_FIVE":    {{2, 3, 6}},
 
-	
 	"PAST": {{2, 8, 11}},
 	"TO":   {{3, 0, 1}},
 	"A":    {{3, 2, 2}},
 
-	
 	"H_TWELVE": {{3, 3, 8}},
 	"H_ONE":    {{3, 9, 11}},
 	"H_TWO":    {{4, 0, 2}},
@@ -58,36 +50,30 @@ var wordMapping = map[string][]WordPosition{
 	"H_TEN":    {{6, 9, 11}},
 	"H_ELEVEN": {{7, 0, 5}},
 
-	
 	"OCLOCK": {{8, 1, 7}},
 }
-
 
 var hourNames = []string{
 	"", "H_ONE", "H_TWO", "H_THREE", "H_FOUR", "H_FIVE", "H_SIX",
 	"H_SEVEN", "H_EIGHT", "H_NINE", "H_TEN", "H_ELEVEN", "H_TWELVE",
 }
 
-
 func getActiveWords(hours, minutes int) []string {
 	activeWords := []string{"IT", "IS"}
 
-	
 	displayHour := hours % 12
 	if displayHour == 0 {
 		displayHour = 12
 	}
 
-	
 	if minutes >= 5 && minutes < 35 {
 		activeWords = append(activeWords, "PAST")
 	}
 	if minutes >= 35 {
 		activeWords = append(activeWords, "TO")
-		displayHour = (displayHour % 12) + 1 
+		displayHour = (displayHour % 12) + 1
 	}
 
-	
 	switch {
 	case minutes >= 5 && minutes < 10:
 		activeWords = append(activeWords, "M_FIVE")
@@ -112,18 +98,16 @@ func getActiveWords(hours, minutes int) []string {
 	case minutes >= 55:
 		activeWords = append(activeWords, "M_FIVE")
 	default:
-		
+
 		activeWords = append(activeWords, "OCLOCK")
 	}
 
-	
 	activeWords = append(activeWords, hourNames[displayHour])
 
 	return activeWords
 }
 
-
-func generateWordClockFrame(duration int, loc *time.Location) Frame {
+func generateWordClockFrame(duration int, loc *time.Location, headers bool) Frame {
 
 	now := time.Now()
 	if loc != nil {
@@ -132,22 +116,18 @@ func generateWordClockFrame(duration int, loc *time.Location) Frame {
 	hours := now.Hour()
 	minutes := now.Minute()
 
-	
 	hours12 := hours % 12
 	if hours12 == 0 {
 		hours12 = 12
 	}
 
-	
 	activeWords := getActiveWords(hours12, minutes)
 
-	
 	activePositions := make(map[int]map[int]bool)
 	for row := 0; row < len(wordClockGrid); row++ {
 		activePositions[row] = make(map[int]bool)
 	}
 
-	
 	for _, word := range activeWords {
 		if positions, ok := wordMapping[word]; ok {
 			for _, pos := range positions {
@@ -158,7 +138,6 @@ func generateWordClockFrame(duration int, loc *time.Location) Frame {
 		}
 	}
 
-	
 	const (
 		screenWidth  = 128
 		screenHeight = 64
@@ -166,23 +145,18 @@ func generateWordClockFrame(duration int, loc *time.Location) Frame {
 		gridCols     = 12
 	)
 
-	
-	
-	charWidth := 6  
-	rowSpacing := 7 
+	charWidth := 6
+	rowSpacing := 7
 	textSize := 1
 
-	
 	totalGridWidth := gridCols * charWidth * textSize
 	totalGridHeight := gridRows * rowSpacing
 
-	
 	startX := (screenWidth - totalGridWidth) / 2
 	startY := (screenHeight - totalGridHeight) / 2
 
-	
-	if showHeaders {
-		
+	if headers {
+
 		rowSpacing = 6
 		totalGridHeight = gridRows * rowSpacing
 		startY = 14 + (screenHeight-14-totalGridHeight)/2
@@ -190,8 +164,7 @@ func generateWordClockFrame(duration int, loc *time.Location) Frame {
 
 	elements := []Element{}
 
-	
-	if showHeaders {
+	if headers {
 		headerText := "= WORD CLOCK ="
 		headerSize := getScaledTextSize(1)
 		elements = append(elements,
@@ -200,9 +173,6 @@ func generateWordClockFrame(duration int, loc *time.Location) Frame {
 		)
 	}
 
-	
-	
-	
 	for row := 0; row < gridRows; row++ {
 		if row >= len(wordClockGrid) {
 			break

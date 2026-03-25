@@ -192,7 +192,7 @@ function resetSystem() {
       document.getElementById("marqueeText").value = "";
       document.getElementById("imageUpload").value = "";
 
-      document.getElementById("citySelect").value = "12.97,80.27,Bangalore";
+      document.getElementById("citySelect").value = "12.97,77.59,Bangalore";
 
       loadSettings();
       loadCurrent();

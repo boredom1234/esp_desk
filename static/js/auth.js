@@ -37,9 +37,7 @@ async function checkAuth() {
     }
   } catch (err) {
     console.error("Auth check failed:", err);
-    
-    showDashboard();
-    initAfterAuth();
+    showLogin();
   }
 }
 

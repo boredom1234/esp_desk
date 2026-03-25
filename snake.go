@@ -6,29 +6,25 @@ import (
 	"time"
 )
 
-
 const (
-	snakeGridWidth  = 32 
-	snakeGridHeight = 16 
-	snakeCellSize   = 4  
+	snakeGridWidth  = 32
+	snakeGridHeight = 16
+	snakeCellSize   = 4
 )
-
 
 type Point struct {
 	X int
 	Y int
 }
 
-
 type SnakeGame struct {
-	snake     []Point 
-	food      Point   
-	direction Point   
-	gameOver  bool    
-	score     int     
+	snake     []Point
+	food      Point
+	direction Point
+	gameOver  bool
+	score     int
 	mu        sync.Mutex
 }
-
 
 var snakeGame *SnakeGame
 
@@ -37,7 +33,6 @@ func init() {
 	initSnakeGame()
 }
 
-
 func initSnakeGame() {
 	snakeGame = &SnakeGame{
 		snake: []Point{
@@ -45,20 +40,18 @@ func initSnakeGame() {
 			{X: snakeGridWidth/2 - 1, Y: snakeGridHeight / 2},
 			{X: snakeGridWidth/2 - 2, Y: snakeGridHeight / 2},
 		},
-		direction: Point{X: 1, Y: 0}, 
+		direction: Point{X: 1, Y: 0},
 		gameOver:  false,
 		score:     0,
 	}
 	spawnFood()
 }
 
-
 func spawnFood() {
 	for {
 		x := rand.Intn(snakeGridWidth)
 		y := rand.Intn(snakeGridHeight)
 
-		
 		occupied := false
 		for _, segment := range snakeGame.snake {
 			if segment.X == x && segment.Y == y {
@@ -74,21 +67,18 @@ func spawnFood() {
 	}
 }
 
-
 func getSnakeDirection() Point {
 	head := snakeGame.snake[0]
 	food := snakeGame.food
 	currentDir := snakeGame.direction
 
-	
 	directions := []Point{
-		{X: 0, Y: -1}, 
-		{X: 0, Y: 1},  
-		{X: -1, Y: 0}, 
-		{X: 1, Y: 0},  
+		{X: 0, Y: -1},
+		{X: 0, Y: 1},
+		{X: -1, Y: 0},
+		{X: 1, Y: 0},
 	}
 
-	
 	validDirs := []Point{}
 	for _, dir := range directions {
 		if dir.X != -currentDir.X || dir.Y != -currentDir.Y {
@@ -96,7 +86,6 @@ func getSnakeDirection() Point {
 		}
 	}
 
-	
 	safeDirs := []Point{}
 	for _, dir := range validDirs {
 		newHead := Point{X: head.X + dir.X, Y: head.Y + dir.Y}
@@ -105,12 +94,10 @@ func getSnakeDirection() Point {
 		}
 	}
 
-	
 	if len(safeDirs) == 0 {
 		return currentDir
 	}
 
-	
 	bestDir := safeDirs[0]
 	bestDistance := manhattan(Point{X: head.X + bestDir.X, Y: head.Y + bestDir.Y}, food)
 
@@ -126,14 +113,12 @@ func getSnakeDirection() Point {
 	return bestDir
 }
 
-
 func isSafe(p Point) bool {
-	
+
 	if p.X < 0 || p.X >= snakeGridWidth || p.Y < 0 || p.Y >= snakeGridHeight {
 		return false
 	}
 
-	
 	for i := 0; i < len(snakeGame.snake)-1; i++ {
 		if snakeGame.snake[i].X == p.X && snakeGame.snake[i].Y == p.Y {
 			return false
@@ -142,7 +127,6 @@ func isSafe(p Point) bool {
 
 	return true
 }
-
 
 func manhattan(a, b Point) int {
 	dx := a.X - b.X
@@ -156,35 +140,30 @@ func manhattan(a, b Point) int {
 	return dx + dy
 }
 
-
 func updateSnake() {
 	snakeGame.mu.Lock()
 	defer snakeGame.mu.Unlock()
 
 	if snakeGame.gameOver {
-		
+
 		initSnakeGame()
 		return
 	}
 
-	
 	snakeGame.direction = getSnakeDirection()
 
-	
 	head := snakeGame.snake[0]
 	newHead := Point{
 		X: head.X + snakeGame.direction.X,
 		Y: head.Y + snakeGame.direction.Y,
 	}
 
-	
 	if newHead.X < 0 || newHead.X >= snakeGridWidth ||
 		newHead.Y < 0 || newHead.Y >= snakeGridHeight {
 		snakeGame.gameOver = true
 		return
 	}
 
-	
 	for _, segment := range snakeGame.snake {
 		if segment.X == newHead.X && segment.Y == newHead.Y {
 			snakeGame.gameOver = true
@@ -192,33 +171,28 @@ func updateSnake() {
 		}
 	}
 
-	
 	snakeGame.snake = append([]Point{newHead}, snakeGame.snake...)
 
-	
 	if newHead.X == snakeGame.food.X && newHead.Y == snakeGame.food.Y {
 		snakeGame.score++
 		spawnFood()
-		
+
 	} else {
-		
+
 		snakeGame.snake = snakeGame.snake[:len(snakeGame.snake)-1]
 	}
 }
 
-
-func generateSnakeFrame(duration int) Frame {
+func generateSnakeFrame(duration int, headers bool) Frame {
 	snakeGame.mu.Lock()
 	defer snakeGame.mu.Unlock()
 
-	
 	updateSnakeUnlocked()
 
 	elements := []Element{}
 
-	
 	startY := 0
-	if showHeaders {
+	if headers {
 		headerText := "= SNAKE ="
 		headerSize := getScaledTextSize(1)
 		elements = append(elements,
@@ -228,25 +202,20 @@ func generateSnakeFrame(duration int) Frame {
 		startY = 14
 	}
 
-	
-	if showHeaders {
+	if headers {
 		startY = 14
 	}
 
-	
 	for i, segment := range snakeGame.snake {
 		x := segment.X * snakeCellSize
 		y := startY + segment.Y*snakeCellSize
 
-		
 		if y+snakeCellSize > 64 {
 			continue
 		}
 
-		
-		_ = i 
+		_ = i
 
-		
 		for row := 0; row < snakeCellSize-1; row++ {
 			elements = append(elements, Element{
 				Type:   "line",
@@ -258,7 +227,6 @@ func generateSnakeFrame(duration int) Frame {
 		}
 	}
 
-	
 	foodX := snakeGame.food.X * snakeCellSize
 	foodY := startY + snakeGame.food.Y*snakeCellSize
 
@@ -274,8 +242,7 @@ func generateSnakeFrame(duration int) Frame {
 		}
 	}
 
-	
-	if showHeaders {
+	if headers {
 		scoreText := "Score:" + itoa(snakeGame.score)
 		elements = append(elements, Element{
 			Type:  "text",
@@ -294,10 +261,9 @@ func generateSnakeFrame(duration int) Frame {
 	}
 }
 
-
 func updateSnakeUnlocked() {
 	if snakeGame.gameOver {
-		
+
 		snakeGame.snake = []Point{
 			{X: snakeGridWidth / 2, Y: snakeGridHeight / 2},
 			{X: snakeGridWidth/2 - 1, Y: snakeGridHeight / 2},
@@ -310,24 +276,20 @@ func updateSnakeUnlocked() {
 		return
 	}
 
-	
 	snakeGame.direction = getSnakeDirection()
 
-	
 	head := snakeGame.snake[0]
 	newHead := Point{
 		X: head.X + snakeGame.direction.X,
 		Y: head.Y + snakeGame.direction.Y,
 	}
 
-	
 	if newHead.X < 0 || newHead.X >= snakeGridWidth ||
 		newHead.Y < 0 || newHead.Y >= snakeGridHeight {
 		snakeGame.gameOver = true
 		return
 	}
 
-	
 	for _, segment := range snakeGame.snake {
 		if segment.X == newHead.X && segment.Y == newHead.Y {
 			snakeGame.gameOver = true
@@ -335,20 +297,17 @@ func updateSnakeUnlocked() {
 		}
 	}
 
-	
 	snakeGame.snake = append([]Point{newHead}, snakeGame.snake...)
 
-	
 	if newHead.X == snakeGame.food.X && newHead.Y == snakeGame.food.Y {
 		snakeGame.score++
 		spawnFoodUnlocked()
-		
+
 	} else {
-		
+
 		snakeGame.snake = snakeGame.snake[:len(snakeGame.snake)-1]
 	}
 }
-
 
 func spawnFoodUnlocked() {
 	for attempts := 0; attempts < 100; attempts++ {
@@ -368,10 +327,9 @@ func spawnFoodUnlocked() {
 			return
 		}
 	}
-	
+
 	snakeGame.food = Point{X: 0, Y: 0}
 }
-
 
 func itoa(n int) string {
 	if n == 0 {

@@ -10,14 +10,9 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 )
-
-
-
-
-
-
 
 type SpotifyCredentials struct {
 	ClientID     string `json:"clientId"`
@@ -26,7 +21,6 @@ type SpotifyCredentials struct {
 	RefreshToken string `json:"refreshToken"`
 	ExpiresAt    int64  `json:"expiresAt"`
 }
-
 
 type SpotifyTrack struct {
 	Name        string `json:"name"`
@@ -38,7 +32,6 @@ type SpotifyTrack struct {
 	DurationMs  int    `json:"durationMs"`
 }
 
-
 const (
 	spotifyAuthURL     = "https://accounts.spotify.com/authorize"
 	spotifyTokenURL    = "https://accounts.spotify.com/api/token"
@@ -47,26 +40,24 @@ const (
 	spotifyScopes      = "user-read-playback-state user-read-currently-playing"
 )
 
-
 var (
 	spotifyCredentials  SpotifyCredentials
 	spotifyEnabled      bool
-	spotifyCredsFromEnv bool 
+	spotifyCredsFromEnv bool
 	spotifyLastTrack    *SpotifyTrack
-	spotifyAlbumArt     []int 
+	spotifyAlbumArt     []int
 	spotifyAlbumArtURL  string
-	spotifyLastFetch    time.Time         
-	spotifyFetchError   error             
-	spotifyFetching     bool              
-	spotifyPollInterval = 5 * time.Second 
+	spotifyLastFetch    time.Time
+	spotifyFetchError   error
+	spotifyFetching     bool
+	spotifyPollInterval = 5 * time.Second
 
-	
-	spotifySongScrollStartTime   time.Time 
-	spotifyArtistScrollStartTime time.Time 
-	spotifyLastSongName          string    
-	spotifyLastArtistName        string    
+	spotifySongScrollStartTime   time.Time
+	spotifyArtistScrollStartTime time.Time
+	spotifyLastSongName          string
+	spotifyLastArtistName        string
+	spotifyScrollMutex           sync.Mutex
 )
-
 
 var spotifyMusicIcon = []int{
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00,
@@ -78,7 +69,6 @@ var spotifyMusicIcon = []int{
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 }
-
 
 func startSpotifyPoller() {
 	go func() {
@@ -94,12 +84,10 @@ func startSpotifyPoller() {
 				continue
 			}
 
-			
 			mutex.Lock()
 			spotifyFetching = true
 			mutex.Unlock()
 
-			
 			track, err := getCurrentlyPlayingAsync()
 
 			mutex.Lock()
@@ -108,16 +96,12 @@ func startSpotifyPoller() {
 			spotifyFetchError = err
 			if err == nil {
 				spotifyLastTrack = track
-				
-				
-				
-				
+
 			}
 			mutex.Unlock()
 		}
 	}()
 }
-
 
 func handleSpotifyAuth(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
@@ -129,26 +113,22 @@ func handleSpotifyAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
-	
 	scheme := "http"
 	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
 		scheme = "https"
 	}
 	redirectURI := fmt.Sprintf("%s://%s%s", scheme, r.Host, spotifyCallbackURL)
 
-	
 	params := url.Values{}
 	params.Set("client_id", clientID)
 	params.Set("response_type", "code")
 	params.Set("redirect_uri", redirectURI)
 	params.Set("scope", spotifyScopes)
-	params.Set("show_dialog", "true") 
+	params.Set("show_dialog", "true")
 
 	authURL := fmt.Sprintf("%s?%s", spotifyAuthURL, params.Encode())
 	http.Redirect(w, r, authURL, http.StatusTemporaryRedirect)
 }
-
 
 func handleSpotifyCallback(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
@@ -162,15 +142,12 @@ func handleSpotifyCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
-	
 	scheme := "http"
 	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
 		scheme = "https"
 	}
 	redirectURI := fmt.Sprintf("%s://%s%s", scheme, r.Host, spotifyCallbackURL)
 
-	
 	mutex.Lock()
 	clientID := spotifyCredentials.ClientID
 	clientSecret := spotifyCredentials.ClientSecret
@@ -181,7 +158,12 @@ func handleSpotifyCallback(w http.ResponseWriter, r *http.Request) {
 	data.Set("code", code)
 	data.Set("redirect_uri", redirectURI)
 
-	req, _ := http.NewRequest("POST", spotifyTokenURL, strings.NewReader(data.Encode()))
+	req, err := http.NewRequest("POST", spotifyTokenURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		log.Printf("Spotify token request creation failed: %v", err)
+		http.Error(w, "Failed to create token request", http.StatusInternalServerError)
+		return
+	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(clientID+":"+clientSecret)))
 
@@ -197,6 +179,12 @@ func handleSpotifyCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("Spotify token exchange bad status %d: %s", resp.StatusCode, string(body))
+		http.Error(w, "Spotify token exchange failed", http.StatusBadGateway)
+		return
+	}
 
 	var tokenResp struct {
 		AccessToken  string `json:"access_token"`
@@ -205,7 +193,11 @@ func handleSpotifyCallback(w http.ResponseWriter, r *http.Request) {
 		RefreshToken string `json:"refresh_token"`
 		Scope        string `json:"scope"`
 	}
-	json.NewDecoder(resp.Body).Decode(&tokenResp)
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
+		log.Printf("Spotify token decode failed: %v", err)
+		http.Error(w, "Invalid Spotify token response", http.StatusBadGateway)
+		return
+	}
 
 	if tokenResp.AccessToken == "" {
 		html := `<!DOCTYPE html><html><head><title>Spotify Auth Failed</title></head>
@@ -216,20 +208,17 @@ func handleSpotifyCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
 	mutex.Lock()
 	spotifyCredentials.AccessToken = tokenResp.AccessToken
 	spotifyCredentials.RefreshToken = tokenResp.RefreshToken
-	spotifyCredentials.ExpiresAt = time.Now().Unix() + int64(tokenResp.ExpiresIn) - 60 
+	spotifyCredentials.ExpiresAt = time.Now().Unix() + int64(tokenResp.ExpiresIn) - 60
 	spotifyEnabled = true
 	mutex.Unlock()
 
-	
 	go saveConfig()
 
 	log.Println("🎵 Spotify connected successfully")
 
-	
 	html := `<!DOCTYPE html><html><head><title>Spotify Connected</title></head>
 		<body style="font-family: sans-serif; text-align: center; padding: 50px;">
 		<h2>✅ Spotify Connected!</h2><p>You can close this window.</p>
@@ -237,7 +226,6 @@ func handleSpotifyCallback(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(html))
 }
-
 
 func refreshSpotifyToken() error {
 	mutex.Lock()
@@ -254,7 +242,10 @@ func refreshSpotifyToken() error {
 	data.Set("grant_type", "refresh_token")
 	data.Set("refresh_token", refreshToken)
 
-	req, _ := http.NewRequest("POST", spotifyTokenURL, strings.NewReader(data.Encode()))
+	req, err := http.NewRequest("POST", spotifyTokenURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return err
+	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(clientID+":"+clientSecret)))
 
@@ -264,12 +255,18 @@ func refreshSpotifyToken() error {
 		return err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("spotify token refresh status %d: %s", resp.StatusCode, string(body))
+	}
 
 	var tokenResp struct {
 		AccessToken string `json:"access_token"`
 		ExpiresIn   int    `json:"expires_in"`
 	}
-	json.NewDecoder(resp.Body).Decode(&tokenResp)
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
+		return fmt.Errorf("spotify token refresh decode failed: %w", err)
+	}
 
 	if tokenResp.AccessToken == "" {
 		return fmt.Errorf("failed to refresh token")
@@ -285,7 +282,6 @@ func refreshSpotifyToken() error {
 	return nil
 }
 
-
 func getCurrentlyPlayingAsync() (*SpotifyTrack, error) {
 	mutex.Lock()
 	accessToken := spotifyCredentials.AccessToken
@@ -297,7 +293,6 @@ func getCurrentlyPlayingAsync() (*SpotifyTrack, error) {
 		return nil, fmt.Errorf("spotify not connected")
 	}
 
-	
 	if time.Now().Unix() >= expiresAt {
 		if err := refreshSpotifyToken(); err != nil {
 			return nil, err
@@ -307,7 +302,10 @@ func getCurrentlyPlayingAsync() (*SpotifyTrack, error) {
 		mutex.Unlock()
 	}
 
-	req, _ := http.NewRequest("GET", spotifyPlayerURL, nil)
+	req, err := http.NewRequest("GET", spotifyPlayerURL, nil)
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	client := &http.Client{Timeout: 5 * time.Second}
@@ -318,7 +316,7 @@ func getCurrentlyPlayingAsync() (*SpotifyTrack, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == 204 {
-		
+
 		return nil, nil
 	}
 
@@ -346,13 +344,14 @@ func getCurrentlyPlayingAsync() (*SpotifyTrack, error) {
 			} `json:"album"`
 		} `json:"item"`
 	}
-	json.NewDecoder(resp.Body).Decode(&playerResp)
+	if err := json.NewDecoder(resp.Body).Decode(&playerResp); err != nil {
+		return nil, err
+	}
 
 	if playerResp.Item.Name == "" {
 		return nil, nil
 	}
 
-	
 	albumArtURL := ""
 	for _, img := range playerResp.Item.Album.Images {
 		if img.Width == 64 || img.Height == 64 {
@@ -360,13 +359,11 @@ func getCurrentlyPlayingAsync() (*SpotifyTrack, error) {
 			break
 		}
 	}
-	
+
 	if albumArtURL == "" && len(playerResp.Item.Album.Images) > 0 {
 		albumArtURL = playerResp.Item.Album.Images[len(playerResp.Item.Album.Images)-1].URL
 	}
 
-	
-	
 	var artistNames []string
 	for _, artist := range playerResp.Item.Artists {
 		artistNames = append(artistNames, artist.Name)
@@ -384,13 +381,11 @@ func getCurrentlyPlayingAsync() (*SpotifyTrack, error) {
 	}, nil
 }
 
-
-
 func generateSpotifyFrame(duration int, track *SpotifyTrack, enabled bool) Frame {
 	elements := []Element{}
 
 	if !enabled || track == nil {
-		
+
 		msg := "~ Not Playing"
 		if !enabled {
 			msg = "~ Connect Spotify"
@@ -407,11 +402,9 @@ func generateSpotifyFrame(duration int, track *SpotifyTrack, enabled bool) Frame
 		}
 	}
 
-	
 	iconX := 0
 	iconY := 16
 
-	
 	elements = append(elements, Element{
 		Type:   "bitmap",
 		X:      iconX,
@@ -421,15 +414,14 @@ func generateSpotifyFrame(duration int, track *SpotifyTrack, enabled bool) Frame
 		Bitmap: spotifyMusicIcon,
 	})
 
-	
 	textSize := getScaledTextSize(1)
-	textX := iconX + 34                
-	maxDisplayWidth := 128 - textX - 4 
-	charWidth := 6 * textSize          
+	textX := iconX + 34
+	maxDisplayWidth := 128 - textX - 4
+	charWidth := 6 * textSize
 	maxChars := maxDisplayWidth / charWidth
 
-	
 	now := time.Now()
+	spotifyScrollMutex.Lock()
 	if track.Name != spotifyLastSongName {
 		spotifySongScrollStartTime = now
 		spotifyLastSongName = track.Name
@@ -438,25 +430,24 @@ func generateSpotifyFrame(duration int, track *SpotifyTrack, enabled bool) Frame
 		spotifyArtistScrollStartTime = now
 		spotifyLastArtistName = track.Artist
 	}
+	songScrollStart := spotifySongScrollStartTime
+	artistScrollStart := spotifyArtistScrollStartTime
+	spotifyScrollMutex.Unlock()
 
-	
 	pixelsPerSec := 15.0
 
-	
 	songY := iconY + 2
 	songName := normalizeText(track.Name)
 	songRunes := []rune(songName)
 	if len(songRunes) > maxChars {
-		
+
 		paddedSong := songName + "   " + songName
 		paddedRunes := []rune(paddedSong)
 		totalLen := len([]rune(songName)) + 3
 
-		
-		elapsed := now.Sub(spotifySongScrollStartTime).Seconds()
+		elapsed := now.Sub(songScrollStart).Seconds()
 		scrollPos := int(elapsed * pixelsPerSec)
 
-		
 		startIdx := scrollPos % totalLen
 		endIdx := startIdx + maxChars
 		if endIdx > len(paddedRunes) {
@@ -472,18 +463,16 @@ func generateSpotifyFrame(duration int, track *SpotifyTrack, enabled bool) Frame
 		Value: songName,
 	})
 
-	
 	artistY := songY + 10
 	artistName := normalizeText(track.Artist)
 	artistRunes := []rune(artistName)
 	if len(artistRunes) > maxChars {
-		
+
 		paddedArtist := artistName + "   " + artistName
 		paddedRunes := []rune(paddedArtist)
 		totalLen := len([]rune(artistName)) + 3
 
-		
-		elapsed := now.Sub(spotifyArtistScrollStartTime).Seconds()
+		elapsed := now.Sub(artistScrollStart).Seconds()
 		scrollPos := int(elapsed * pixelsPerSec)
 
 		startIdx := scrollPos % totalLen
@@ -501,16 +490,14 @@ func generateSpotifyFrame(duration int, track *SpotifyTrack, enabled bool) Frame
 		Value: artistName,
 	})
 
-	
 	if track.DurationMs > 0 {
 		barY := artistY + 12
 		barX := textX
-		barWidth := 128 - textX - 4 
+		barWidth := 128 - textX - 4
 
 		progress := float64(track.ProgressMs) / float64(track.DurationMs)
 		filledWidth := int(progress * float64(barWidth))
 
-		
 		elements = append(elements, Element{
 			Type:   "line",
 			X:      barX,
@@ -519,7 +506,6 @@ func generateSpotifyFrame(duration int, track *SpotifyTrack, enabled bool) Frame
 			Height: 2,
 		})
 
-		
 		if filledWidth > 0 {
 			elements = append(elements, Element{
 				Type:   "line",
@@ -538,7 +524,6 @@ func generateSpotifyFrame(duration int, track *SpotifyTrack, enabled bool) Frame
 		Elements: elements,
 	}
 }
-
 
 func handleSpotifySettings(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -570,7 +555,7 @@ func handleSpotifySettings(w http.ResponseWriter, r *http.Request) {
 
 		mutex.Lock()
 		if req.Disconnect {
-			
+
 			spotifyCredentials = SpotifyCredentials{}
 			spotifyEnabled = false
 			spotifyLastTrack = nil
@@ -601,7 +586,6 @@ func handleSpotifySettings(w http.ResponseWriter, r *http.Request) {
 	jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
-
 func normalizeText(s string) string {
 	replacements := map[string]string{
 		"Á": "A", "À": "A", "Â": "A", "Ã": "A", "Ä": "A",
@@ -616,7 +600,6 @@ func normalizeText(s string) string {
 		"ú": "u", "ù": "u", "û": "u", "ü": "u",
 		"Ñ": "N", "ñ": "n", "Ç": "C", "ç": "c",
 		"Ý": "Y", "ý": "y", "ÿ": "y",
-		
 	}
 
 	for old, new := range replacements {

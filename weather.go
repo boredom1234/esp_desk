@@ -5,14 +5,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 )
 
-
-
-
-
 func getWeatherIcon(code int, isDay bool) string {
-	
+
 	switch {
 	case code == 0:
 		if isDay {
@@ -75,7 +72,6 @@ func getWeatherCondition(code int) string {
 	}
 }
 
-
 func getAQILevel(aqi int) string {
 	switch {
 	case aqi <= 50:
@@ -94,21 +90,26 @@ func getAQILevel(aqi int) string {
 }
 
 func fetchWeather() {
-	
+
 	mutex.Lock()
 	lat := cityLat
 	lng := cityLng
 	city := currentCity
 	mutex.Unlock()
 
-	
+	client := &http.Client{Timeout: 8 * time.Second}
+
 	weatherURL := fmt.Sprintf("https://api.open-meteo.com/v1/forecast?latitude=%.2f&longitude=%.2f&current_weather=true", lat, lng)
-	weatherResp, err := http.Get(weatherURL)
+	weatherResp, err := client.Get(weatherURL)
 	if err != nil {
 		log.Println("Error fetching weather:", err)
 		return
 	}
 	defer weatherResp.Body.Close()
+	if weatherResp.StatusCode != http.StatusOK {
+		log.Printf("Weather API returned status %d", weatherResp.StatusCode)
+		return
+	}
 
 	var w WeatherResponse
 	if err := json.NewDecoder(weatherResp.Body).Decode(&w); err != nil {
@@ -130,26 +131,28 @@ func fetchWeather() {
 		PM10:        "N/A",
 	}
 
-	
 	aqiURL := fmt.Sprintf("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=%.2f&longitude=%.2f&current=pm2_5,pm10,european_aqi,us_aqi,european_aqi_pm2_5,european_aqi_pm10", lat, lng)
-	aqiResp, err := http.Get(aqiURL)
+	aqiResp, err := client.Get(aqiURL)
 	if err != nil {
 		log.Println("Error fetching AQI (continuing with weather only):", err)
 	} else {
 		defer aqiResp.Body.Close()
-		var aq AirQualityResponse
-		if err := json.NewDecoder(aqiResp.Body).Decode(&aq); err != nil {
-			log.Println("Error decoding AQI:", err)
+		if aqiResp.StatusCode != http.StatusOK {
+			log.Printf("AQI API returned status %d", aqiResp.StatusCode)
 		} else {
-			newData.AQI = aq.Current.USAQI
-			newData.AQILevel = getAQILevel(aq.Current.USAQI)
-			newData.PM25 = fmt.Sprintf("%.1f", aq.Current.PM25)
-			newData.PM10 = fmt.Sprintf("%.1f", aq.Current.PM10)
-			log.Printf("AQI fetched: US AQI=%d, PM2.5=%.1f, PM10=%.1f", aq.Current.USAQI, aq.Current.PM25, aq.Current.PM10)
+			var aq AirQualityResponse
+			if err := json.NewDecoder(aqiResp.Body).Decode(&aq); err != nil {
+				log.Println("Error decoding AQI:", err)
+			} else {
+				newData.AQI = aq.Current.USAQI
+				newData.AQILevel = getAQILevel(aq.Current.USAQI)
+				newData.PM25 = fmt.Sprintf("%.1f", aq.Current.PM25)
+				newData.PM10 = fmt.Sprintf("%.1f", aq.Current.PM10)
+				log.Printf("AQI fetched: US AQI=%d, PM2.5=%.1f, PM10=%.1f", aq.Current.USAQI, aq.Current.PM25, aq.Current.PM10)
+			}
 		}
 	}
 
-	
 	mutex.Lock()
 	weatherData = newData
 	mutex.Unlock()
@@ -177,7 +180,6 @@ func handleWeather(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		
 		if req.Latitude < -90 || req.Latitude > 90 {
 			jsonError(w, "Invalid latitude: must be between -90 and 90", http.StatusBadRequest)
 			return
@@ -197,10 +199,8 @@ func handleWeather(w http.ResponseWriter, r *http.Request) {
 		cityLng = req.Longitude
 		mutex.Unlock()
 
-		
 		go saveConfig()
 
-		
 		fetchWeather()
 
 		log.Printf("🌤️  Weather city changed: %s (%.2f, %.2f)", req.City, req.Latitude, req.Longitude)

@@ -13,7 +13,6 @@ func initMoonPhase() {
 	log.Println("🌙 Moon phase utilizing internal calculation")
 }
 
-
 func handleMoonPhaseRefresh(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -40,11 +39,11 @@ func handleMoonPhaseRefresh(w http.ResponseWriter, r *http.Request) {
 }
 
 func startMoonPhaseFetcher() {
-	
+
 	updateMoonPhaseData()
 
 	go func() {
-		
+
 		ticker := time.NewTicker(4 * time.Hour)
 		for range ticker.C {
 			updateMoonPhaseData()
@@ -52,19 +51,19 @@ func startMoonPhaseFetcher() {
 	}()
 }
 
-
 func updateMoonPhaseData() {
-	phase := calculateMoonPhase()
+	cyclePos := calculateCyclePosition()
+	phase := int(math.Round(cyclePos*8.0)) % 8
 	phaseName := getMoonPhaseName(phase)
-	illumination := float64(calculateIllumination(phase)) / 100.0
+	illumination := calculatePreciseIllumination(cyclePos)
 
 	mutex.Lock()
 	moonPhaseData = MoonPhaseData{
 		PhaseName:     phaseName,
-		PhaseAngle:    float64(phase) * 45.0, 
+		PhaseAngle:    float64(phase) * 45.0,
 		Illumination:  illumination,
-		Constellation: "", 
-		DistanceKM:    "", 
+		Constellation: "",
+		DistanceKM:    "",
 		FetchedAt:     time.Now().Format(time.RFC3339),
 	}
 	moonPhaseLastFetch = time.Now()
@@ -72,35 +71,38 @@ func updateMoonPhaseData() {
 
 	log.Printf("🌙 Updated moon phase: %s (%.0f%% illuminated)", phaseName, illumination*100)
 
-	
 	saveConfig()
 }
 
 const synodicMonth = 29.53058867
 
-
-func calculateMoonPhase() int {
+func calculateCyclePosition() float64 {
 	now := time.Now()
-	
+
 	if displayLocation != nil {
 		now = now.In(displayLocation)
 	}
 
-	
 	referenceNewMoon := time.Date(2000, 1, 6, 18, 14, 0, 0, time.UTC)
 
-	
 	daysSince := now.Sub(referenceNewMoon).Hours() / 24.0
 
-	
 	cyclePosition := math.Mod(daysSince, synodicMonth) / synodicMonth
 	if cyclePosition < 0 {
 		cyclePosition += 1.0
 	}
 
-	
-	
-	phase := int(math.Round(cyclePosition * 8.0)) % 8
+	return cyclePosition
+}
+
+func calculatePreciseIllumination(cyclePos float64) float64 {
+	return (1.0 - math.Cos(2.0*math.Pi*cyclePos)) / 2.0
+}
+
+func calculateMoonPhase() int {
+	cyclePosition := calculateCyclePosition()
+
+	phase := int(math.Round(cyclePosition*8.0)) % 8
 
 	return phase
 }
@@ -122,16 +124,6 @@ func getMoonPhaseName(phase int) string {
 	return "Unknown"
 }
 
-
-func calculateIllumination(phase int) int {
-	
-	illuminations := []int{0, 25, 50, 75, 100, 75, 50, 25}
-	if phase >= 0 && phase < len(illuminations) {
-		return illuminations[phase]
-	}
-	return 0
-}
-
 func getPhaseIndex(phaseName string) int {
 	phases := map[string]int{
 		"New Moon":        0,
@@ -140,7 +132,7 @@ func getPhaseIndex(phaseName string) int {
 		"Waxing Gibbous":  3,
 		"Full Moon":       4,
 		"Waning Gibbous":  5,
-		"Third Quarter":   6, 
+		"Third Quarter":   6,
 		"Last Quarter":    6,
 		"Waning Crescent": 7,
 	}
@@ -178,35 +170,29 @@ func generateMoonBitmap(illumination float64, phaseName string) ([]int, int, int
 			dy := float64(y - centerY)
 			dist := math.Sqrt(dx*dx + dy*dy)
 
-			
 			if dist > float64(radius) {
 				continue
 			}
 
-			
 			normalizedX := dx / float64(radius)
 
 			var shouldLight bool
 
 			if illumination <= 0.02 {
-				
+
 				shouldLight = dist >= float64(radius-1)
 			} else if illumination >= 0.98 {
-				
+
 				shouldLight = true
 			} else {
-				
-				
+
 				terminator := (illumination - 0.5) * 2.0
 
 				if isWaxing {
-					
-					
-					
+
 					shouldLight = normalizedX >= -terminator
 				} else {
-					
-					
+
 					shouldLight = normalizedX <= terminator
 				}
 			}
@@ -217,7 +203,6 @@ func generateMoonBitmap(illumination float64, phaseName string) ([]int, int, int
 		}
 	}
 
-	
 	for angle := 0.0; angle < 360.0; angle += 1.0 {
 		rad := angle * math.Pi / 180.0
 		x := int(float64(centerX) + float64(radius)*math.Cos(rad))
@@ -228,8 +213,8 @@ func generateMoonBitmap(illumination float64, phaseName string) ([]int, int, int
 	return bitmap, size, size
 }
 
-func generateMoonPhaseFrame(duration int, data MoonPhaseData) Frame {
-	
+func generateMoonPhaseFrame(duration int, data MoonPhaseData, headers bool) Frame {
+
 	if data.PhaseName == "" {
 		updateMoonPhaseData()
 		mutex.Lock()
@@ -249,7 +234,7 @@ func generateMoonPhaseFrame(duration int, data MoonPhaseData) Frame {
 		{Type: "bitmap", X: bitmapX, Y: bitmapY, Width: width, Height: height, Bitmap: bitmap},
 	}
 
-	if showHeaders {
+	if headers {
 		displayStr := fmt.Sprintf("%s %s", data.PhaseName, illuminationStr)
 		elements = append(elements, Element{
 			Type:  "text",

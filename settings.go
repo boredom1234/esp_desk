@@ -197,6 +197,8 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(settings)
 		return
 	}
+
+	jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
 func handleToggleHeaders(w http.ResponseWriter, r *http.Request) {
@@ -368,10 +370,9 @@ var saveConfigChan = make(chan struct{}, 1)
 func startConfigSaver() {
 	go func() {
 		for range saveConfigChan {
-			
+
 			time.Sleep(500 * time.Millisecond)
 
-			
 		drainLoop:
 			for {
 				select {
@@ -391,7 +392,7 @@ func saveConfig() {
 	select {
 	case saveConfigChan <- struct{}{}:
 	default:
-		
+
 	}
 }
 
@@ -451,6 +452,7 @@ func writeConfigToDisk() {
 	}
 	file.Close()
 
+	_ = os.Remove(configFile)
 	if err := os.Rename(tempFile, configFile); err != nil {
 		log.Printf("Error renaming config file: %v", err)
 		os.Remove(tempFile)
@@ -679,10 +681,6 @@ func handleAnalogSettings(w http.ResponseWriter, r *http.Request) {
 	jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
-
-
-
-
 func handleTimeSettings(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -721,7 +719,6 @@ func handleTimeSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		mutex.Unlock()
 
-		
 		go saveConfig()
 
 		if len(changes) > 0 {

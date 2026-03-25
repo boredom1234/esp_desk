@@ -39,7 +39,7 @@ function renderCycleItems(items, updateLocalState = true) {
       e.stopPropagation();
     });
 
-    checkbox.addEventListener("change", (e) => {
+    checkbox.addEventListener("change", () => {
       toggleCycleItem(item.id);
     });
 
@@ -306,16 +306,9 @@ function initDisplayCycleDragDrop() {
   });
 
   newList.querySelectorAll(".cycle-item").forEach((item) => {
-    const itemId = item.dataset.id;
     const checkbox = item.querySelector('input[type="checkbox"]');
-    const deleteBtn = item.querySelector(".cycle-delete-btn");
-
     if (checkbox) {
       checkbox.addEventListener("mousedown", (e) => e.stopPropagation());
-      checkbox.addEventListener("change", () => toggleCycleItem(itemId));
-    }
-    if (deleteBtn) {
-      deleteBtn.addEventListener("click", () => deleteCycleItem(itemId));
     }
   });
 }

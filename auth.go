@@ -7,28 +7,25 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"time"
 )
 
-
-
-
-
-
 func generateToken() string {
 	bytes := make([]byte, 32)
-	rand.Read(bytes)
+	if _, err := rand.Read(bytes); err != nil {
+		fallback := sha256.Sum256([]byte(time.Now().String()))
+		return hex.EncodeToString(fallback[:])
+	}
 	return hex.EncodeToString(bytes)
 }
-
 
 func hashPassword(password string) string {
 	hash := sha256.Sum256([]byte(password))
 	return hex.EncodeToString(hash[:])
 }
-
 
 func isValidToken(token string) bool {
 	if token == "" {
@@ -44,7 +41,7 @@ func isValidToken(token string) bool {
 	}
 
 	if time.Now().After(expiry) {
-		
+
 		authMutex.Lock()
 		delete(authTokens, token)
 		authMutex.Unlock()
@@ -54,10 +51,9 @@ func isValidToken(token string) bool {
 	return true
 }
 
-
 func createSession() string {
 	token := generateToken()
-	expiry := time.Now().Add(24 * time.Hour) 
+	expiry := time.Now().Add(24 * time.Hour)
 
 	authMutex.Lock()
 	authTokens[token] = expiry
@@ -65,7 +61,6 @@ func createSession() string {
 
 	return token
 }
-
 
 func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -77,7 +72,6 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		
 		cookie, err := r.Cookie("esp_desk_token")
 		if err == nil && isValidToken(cookie.Value) {
 			next(w, r)
@@ -88,20 +82,14 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-
 func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	
-	clientIP := r.RemoteAddr
-	if forwardedFor := r.Header.Get("X-Forwarded-For"); forwardedFor != "" {
-		clientIP = strings.Split(forwardedFor, ",")[0]
-	}
+	clientIP := getClientIP(r)
 
-	
 	if checkRateLimit(clientIP) {
 		log.Printf("Rate limited login attempt from %s", clientIP)
 		w.Header().Set("Content-Type", "application/json")
@@ -121,7 +109,6 @@ func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
 	submittedHash := hashPassword(req.Password)
 	if subtle.ConstantTimeCompare([]byte(submittedHash), []byte(dashboardPasswordHash)) != 1 {
 		recordFailedLogin(clientIP)
@@ -135,14 +122,11 @@ func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
 	clearLoginAttempts(clientIP)
 
-	
 	token := createSession()
 	log.Printf("Successful login from %s", clientIP)
 
-	
 	http.SetCookie(w, &http.Cookie{
 		Name:     "esp_desk_token",
 		Value:    token,
@@ -150,7 +134,7 @@ func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   r.TLS != nil,
 		SameSite: http.SameSiteStrictMode,
-		MaxAge:   86400, 
+		MaxAge:   86400,
 	})
 
 	w.Header().Set("Content-Type", "application/json")
@@ -159,7 +143,6 @@ func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 		"token":   token,
 	})
 }
-
 
 func handleAuthVerify(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -175,7 +158,6 @@ func handleAuthVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
 	cookie, err := r.Cookie("esp_desk_token")
 	if err == nil && isValidToken(cookie.Value) {
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -191,14 +173,12 @@ func handleAuthVerify(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-
 func handleAuthLogout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	
 	authHeader := r.Header.Get("Authorization")
 	token := strings.TrimPrefix(authHeader, "Bearer ")
 
@@ -208,7 +188,6 @@ func handleAuthLogout(w http.ResponseWriter, r *http.Request) {
 		authMutex.Unlock()
 	}
 
-	
 	cookie, err := r.Cookie("esp_desk_token")
 	if err == nil {
 		authMutex.Lock()
@@ -216,7 +195,6 @@ func handleAuthLogout(w http.ResponseWriter, r *http.Request) {
 		authMutex.Unlock()
 	}
 
-	
 	http.SetCookie(w, &http.Cookie{
 		Name:     "esp_desk_token",
 		Value:    "",
@@ -230,11 +208,6 @@ func handleAuthLogout(w http.ResponseWriter, r *http.Request) {
 		"success": true,
 	})
 }
-
-
-
-
-
 
 func cleanupExpiredTokens() {
 	ticker := time.NewTicker(1 * time.Hour)
@@ -255,11 +228,6 @@ func cleanupExpiredTokens() {
 	}
 }
 
-
-
-
-
-
 func checkRateLimit(ip string) bool {
 	loginAttemptsMutex.RLock()
 	attempt, exists := loginAttempts[ip]
@@ -269,7 +237,6 @@ func checkRateLimit(ip string) bool {
 		return false
 	}
 
-	
 	if time.Since(attempt.LastReset) > loginLockoutTime {
 		loginAttemptsMutex.Lock()
 		delete(loginAttempts, ip)
@@ -279,7 +246,6 @@ func checkRateLimit(ip string) bool {
 
 	return attempt.Count >= maxLoginAttempts
 }
-
 
 func recordFailedLogin(ip string) {
 	loginAttemptsMutex.Lock()
@@ -291,7 +257,6 @@ func recordFailedLogin(ip string) {
 		return
 	}
 
-	
 	if time.Since(attempt.LastReset) > loginLockoutTime {
 		attempt.Count = 1
 		attempt.LastReset = time.Now()
@@ -300,13 +265,11 @@ func recordFailedLogin(ip string) {
 	}
 }
 
-
 func clearLoginAttempts(ip string) {
 	loginAttemptsMutex.Lock()
 	delete(loginAttempts, ip)
 	loginAttemptsMutex.Unlock()
 }
-
 
 func cleanupLoginAttempts() {
 	ticker := time.NewTicker(5 * time.Minute)
@@ -320,4 +283,25 @@ func cleanupLoginAttempts() {
 		}
 		loginAttemptsMutex.Unlock()
 	}
+}
+
+func getClientIP(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil || host == "" {
+		host = r.RemoteAddr
+	}
+
+	remoteIP := net.ParseIP(strings.TrimSpace(host))
+	if remoteIP != nil {
+		if forwardedFor := r.Header.Get("X-Forwarded-For"); forwardedFor != "" &&
+			(remoteIP.IsLoopback() || remoteIP.IsPrivate()) {
+			parts := strings.Split(forwardedFor, ",")
+			candidate := strings.TrimSpace(parts[0])
+			if parsed := net.ParseIP(candidate); parsed != nil {
+				return candidate
+			}
+		}
+	}
+
+	return strings.TrimSpace(host)
 }
