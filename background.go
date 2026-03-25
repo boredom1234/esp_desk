@@ -6,6 +6,19 @@ import (
 	"time"
 )
 
+func applyAutoFrames(newFrames []Frame, localIsCustomMode bool) {
+	if localIsCustomMode {
+		return
+	}
+
+	mutex.Lock()
+	frames = newFrames
+	if len(frames) == 0 || index < 0 || index >= len(frames) {
+		index = 0
+	}
+	mutex.Unlock()
+}
+
 func updateLoop() {
 	go func() {
 		fetchWeather()
@@ -15,7 +28,6 @@ func updateLoop() {
 		}
 	}()
 
-	
 	ticker := time.NewTicker(100 * time.Millisecond)
 	var lastPomodoroTick time.Time
 	var pomodoroAccumulator time.Duration
@@ -395,11 +407,6 @@ func updateLoop() {
 			}
 		}
 
-		mutex.Lock()
-		frames = newFrames
-		if len(frames) == 0 || index < 0 || index >= len(frames) {
-			index = 0
-		}
-		mutex.Unlock()
+		applyAutoFrames(newFrames, localIsCustomMode)
 	}
 }

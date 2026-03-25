@@ -270,3 +270,126 @@ func TestGenerateSnakeFrameHonorsHeaderFlag(t *testing.T) {
 		t.Fatal("expected score text when headers=true")
 	}
 }
+
+func TestHandleCustomTextDisablesGifMode(t *testing.T) {
+	oldFrames := frames
+	oldIndex := index
+	oldCustomMode := isCustomMode
+	oldGifMode := isGifMode
+	defer func() {
+		frames = oldFrames
+		index = oldIndex
+		isCustomMode = oldCustomMode
+		isGifMode = oldGifMode
+	}()
+
+	isCustomMode = false
+	isGifMode = true
+	frames = []Frame{{Version: 1, Duration: 100, Clear: true, Elements: []Element{{Type: "text", Value: "old"}}}}
+	index = 0
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/custom/text", strings.NewReader(`{"text":"Hello","centered":true}`))
+	handleCustomText(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+	if isGifMode {
+		t.Fatal("expected isGifMode=false after custom text")
+	}
+	if !isCustomMode {
+		t.Fatal("expected isCustomMode=true after custom text")
+	}
+	if len(frames) != 1 {
+		t.Fatalf("expected 1 frame, got %d", len(frames))
+	}
+	if !hasTextElement(frames[0].Elements, "Hello") {
+		t.Fatal("expected custom text frame to contain submitted text")
+	}
+}
+
+func TestHandleCustomDisablesGifMode(t *testing.T) {
+	oldFrames := frames
+	oldIndex := index
+	oldCustomMode := isCustomMode
+	oldGifMode := isGifMode
+	defer func() {
+		frames = oldFrames
+		index = oldIndex
+		isCustomMode = oldCustomMode
+		isGifMode = oldGifMode
+	}()
+
+	isCustomMode = false
+	isGifMode = true
+	frames = nil
+	index = 0
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/custom", strings.NewReader(`{"text":"Plain"}`))
+	handleCustom(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+	if isGifMode {
+		t.Fatal("expected isGifMode=false after custom content")
+	}
+	if !isCustomMode {
+		t.Fatal("expected isCustomMode=true after custom content")
+	}
+	if len(frames) != 1 {
+		t.Fatalf("expected 1 frame, got %d", len(frames))
+	}
+	if !hasTextElement(frames[0].Elements, "Plain") {
+		t.Fatal("expected custom frame to contain submitted text")
+	}
+}
+
+func TestApplyAutoFramesSkipsWhenCustomMode(t *testing.T) {
+	oldFrames := frames
+	oldIndex := index
+	defer func() {
+		frames = oldFrames
+		index = oldIndex
+	}()
+
+	frames = []Frame{{Version: 1, Duration: 100, Clear: true, Elements: []Element{{Type: "text", Value: "keep"}}}}
+	index = 0
+	newFrames := []Frame{{Version: 1, Duration: 100, Clear: true, Elements: []Element{{Type: "text", Value: "replace"}}}}
+
+	applyAutoFrames(newFrames, true)
+
+	if len(frames) != 1 {
+		t.Fatalf("expected frame count to stay 1, got %d", len(frames))
+	}
+	if !hasTextElement(frames[0].Elements, "keep") {
+		t.Fatal("expected existing frame to remain unchanged in custom mode")
+	}
+}
+
+func TestApplyAutoFramesReplacesWhenNotCustomMode(t *testing.T) {
+	oldFrames := frames
+	oldIndex := index
+	defer func() {
+		frames = oldFrames
+		index = oldIndex
+	}()
+
+	frames = []Frame{{Version: 1, Duration: 100, Clear: true, Elements: []Element{{Type: "text", Value: "old"}}}}
+	index = 99
+	newFrames := []Frame{{Version: 1, Duration: 100, Clear: true, Elements: []Element{{Type: "text", Value: "new"}}}}
+
+	applyAutoFrames(newFrames, false)
+
+	if len(frames) != 1 {
+		t.Fatalf("expected frame count to be 1, got %d", len(frames))
+	}
+	if !hasTextElement(frames[0].Elements, "new") {
+		t.Fatal("expected frames to be replaced when not in custom mode")
+	}
+	if index != 0 {
+		t.Fatalf("expected index clamped to 0, got %d", index)
+	}
+}

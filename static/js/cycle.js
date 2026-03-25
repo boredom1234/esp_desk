@@ -39,10 +39,6 @@ function renderCycleItems(items, updateLocalState = true) {
       e.stopPropagation();
     });
 
-    checkbox.addEventListener("change", () => {
-      toggleCycleItem(item.id);
-    });
-
     const checkmark = document.createElement("span");
     checkmark.className = "checkmark";
 
@@ -309,6 +305,9 @@ function initDisplayCycleDragDrop() {
     const checkbox = item.querySelector('input[type="checkbox"]');
     if (checkbox) {
       checkbox.addEventListener("mousedown", (e) => e.stopPropagation());
+      checkbox.addEventListener("change", () => {
+        toggleCycleItem(item.dataset.id);
+      });
     }
   });
 }
